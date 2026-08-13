@@ -87,6 +87,16 @@ METRIKA = """<!-- Yandex.Metrika counter -->
 <noscript><div><img src="https://mc.yandex.ru/watch/111586112" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->"""
 
+GTAG = """<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-PPN27D6JXS"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-PPN27D6JXS');
+</script>
+<!-- /Google tag -->"""
+
 
 def head(title, desc, canonical, extra=""):
     return f"""<!doctype html>
@@ -109,6 +119,7 @@ def head(title, desc, canonical, extra=""):
 <link rel="stylesheet" href="/assets/styles.css">
 {extra}
 {METRIKA}
+{GTAG}
 </head>
 <body>
 <div id="wrapper">"""
