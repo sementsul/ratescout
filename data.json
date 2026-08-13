@@ -4,7 +4,9 @@
     "domain": "ratescout.ru",
     "ref": "1116359",
     "tagline": "Разведка лучших курсов обмена в надёжных обменниках",
-    "lang": "ru"
+    "lang": "ru",
+    "owner": "Семенцул Максим Геннадиевич",
+    "owner_status": "самозанятый (НПД)"
   },
     "_comment_bc": "поле bc = слаг направления BestChange для deep-link /<bc_from>-to-<bc_to>.html. Верифицированы: tether-trc20, bitcoin, sberbank. Остальные — предварительно; в Фазе 2 берём авторитетный маппинг (ID/слаг) из партнёрского API.",
   "currencies": {

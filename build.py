@@ -87,7 +87,7 @@ def head(title, desc, canonical, extra=""):
 <meta property="og:site_name" content="{S['name']}">
 <meta name="robots" content="index,follow">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0f6b34">
+<meta name="theme-color" content="#111111">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/styles.css">
 {extra}
@@ -112,7 +112,8 @@ def footer():
   <div class="links"><a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> ·
     <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a></div>
   <div class="fine">18+. Информация справочная, не является финансовой рекомендацией. Курсы меняются.
-    © {S['name']} {S['domain']}. <span class="erid">Реклама. ERID: — (регистрируется в ОРД)</span></div>
+    © {S['name']} {S['domain']}.<br>
+    <span class="erid">Реклама. Рекламодатель: {S.get('owner_status','')} {S.get('owner','')}. ERID: — (регистрируется в ОРД)</span></div>
 </footer>
 <script src="/assets/catalog.js"></script>
 <script src="/assets/app.js"></script>
@@ -136,7 +137,6 @@ def converter_html(preset_from=""):
   <button class="swap" id="cSwap" type="button">⇅ поменять</button>
   <label>Получаю<select id="cTo"></select></label>
   <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">Найти лучший курс →</a>
-  <div class="hint">Переход в BestChange. По партнёрской ссылке мы можем получать вознаграждение.</div>
 </div>"""
 
 
@@ -289,8 +289,7 @@ def compliance_pages():
 <li>если контрагент незнаком.</li></ul>
 <h2>Как проверить</h2>
 <p>AML-проверку можно выполнить через BestChange: вводите адрес — получаете отчёт о рисках. Доступны пакеты (ваучеры).</p>
-<a class="cta" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">Сделать AML-проверку в BestChange →</a>
-<p class="hint">Переход в BestChange. По партнёрской ссылке мы можем получать вознаграждение.</p>""")
+<a class="cta" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">Сделать AML-проверку →</a>""")
     render_page("raskrytie", "Раскрытие информации и дисклеймеры",
                 "Партнёрское раскрытие и правовая информация RateScout (РФ и США).",
                 f"""<h1>Раскрытие информации и дисклеймеры</h1>
@@ -302,6 +301,9 @@ def compliance_pages():
 <h2>Соответствие законодательству</h2>
 <ul><li><b>РФ:</b> рекламные материалы маркируются (ERID) и учитываются в ОРД; ПДн — по 152-ФЗ (см. Политику).</li>
 <li><b>США:</b> affiliate-раскрытие по FTC; сервис недоступен под санкциями (OFAC).</li></ul>
+<h2>Сведения о владельце сайта (рекламодателе)</h2>
+<p>{S.get('owner_status','')} <b>{S.get('owner','')}</b>. Сайт {S['domain']} — информационный сервис
+   мониторинга курсов; владелец не является обменным пунктом и не проводит операции.</p>
 <p class="hint">Правовые тексты — черновик, требуют проверки юристом перед публикацией.</p>""")
     render_page("politika", "Политика конфиденциальности",
                 "Как RateScout обрабатывает данные и cookie (152-ФЗ).",
@@ -328,7 +330,7 @@ def static_files():
     write("manifest.webmanifest", json.dumps({
         "name": S["name"] + " — мониторинг курсов обмена", "short_name": S["name"],
         "description": S["tagline"], "start_url": "/", "scope": "/", "display": "standalone",
-        "background_color": "#f4f1e6", "theme_color": "#0f6b34", "lang": "ru",
+        "background_color": "#111111", "theme_color": "#111111", "lang": "ru",
         "icons": [{"src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
     }, ensure_ascii=False, indent=2))
     write("sw.js", "const C='ratescout-v1';\n"
