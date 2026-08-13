@@ -1,113 +1,99 @@
 #!/usr/bin/env python3
-"""Тянет курсы BestChange по партнёрскому API и кладёт в rates.json.
+"""Тянет курсы BestChange из публичного дампа базы и кладёт в rates.json.
 
-🔴 БЕЗОПАСНОСТЬ: ключ читается ТОЛЬКО из окружения (BESTCHANGE_API_KEY) — из GitHub Secret
-в раннере Actions. В код, в rates.json и в опубликованный сайт ключ НЕ попадает.
-Запускается на этапе СБОРКИ (CI), не в браузере.
+Источник по умолчанию: http://api.bestchange.ru/info.zip (БЕЗ ключа) — bm_rates.dat/bm_cy.dat.
+Формат bm_rates.dat (cp1251, ';'):
+  id_from ; id_to ; id_exchanger ; rate_from ; rate_to ; reserve ; ...
+«Сколько получаем за 1 отдаваемого» = rate_to / rate_from. Лучший курс = максимум по обменникам.
 
-Формат курсов BestChange — «экспорт» (ZIP с bm_*.dat, разделитель ';'):
-  bm_rates.dat: id_from;id_to;id_exchanger;rate;reserve;...
-Мы берём ЛУЧШИЙ курс на пару (id_from,id_to) + число обменников + суммарный резерв,
-маппим id→slug по currencies.json и пишем rates.json:
-  {"generated_at": <ts>, "pairs": {"<from_slug>>​<to_slug>": {"rate": "..","count": N,"reserve": ".."}}}
+ID валют в дампе совпадают с currencies.json (те же id из clk()).
 
-Эндпоинт партнёрского экспорта задаётся в BESTCHANGE_RATES_URL (из партнёрских доков bestchange.app),
-ключ подставляется в него ({key}) — точный URL зависит от аккаунта, поэтому берём из окружения, не хардкодим.
+🔴 Ключ (BESTCHANGE_API_KEY) для базовых курсов НЕ нужен и в дамп не отправляется.
+   Если задан BESTCHANGE_RATES_URL — берём его (партнёрский эндпоинт), иначе публичный дамп.
+
+Выход: rates.json {"generated_at": ts, "pairs": {"<from_slug>>​<to_slug>": {"rate","count","reserve"}}}
 """
 import io
 import json
 import os
-import sys
 import time
 import urllib.request
 import zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_URL = "http://api.bestchange.ru/info.zip"
 
 
-def load_env():
-    p = os.path.join(ROOT, ".env")
-    if os.path.exists(p):
-        for line in open(p, encoding="utf-8"):
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
-
-
-def id_to_slug():
+def id2slug():
     cat = json.load(open(os.path.join(ROOT, "currencies.json"), encoding="utf-8"))
     return {info["id"]: slug for slug, info in cat["currencies"].items()}
 
 
-def download(url):
+def download(url, key=None):
+    if key:
+        url = url.replace("{key}", key)
     req = urllib.request.Request(url, headers={"User-Agent": "RateScout/1.0"})
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=120) as r:
         return r.read()
 
 
-def parse_rates(raw):
-    """raw — ZIP с bm_rates.dat/bm_exch.dat ИЛИ сам bm_rates.dat (bytes)."""
-    data = None
+def rates_dat_from(raw):
     try:
         z = zipfile.ZipFile(io.BytesIO(raw))
-        name = next((n for n in z.namelist() if n.endswith("rates.dat")), None)
-        if name:
-            data = z.read(name)
+        name = next((n for n in z.namelist() if n.endswith("bm_rates.dat")), None)
+        if not name:
+            raise SystemExit("❌ в архиве нет bm_rates.dat")
+        return z.read(name)
     except zipfile.BadZipFile:
-        data = raw
-    if data is None:
-        raise SystemExit("❌ в экспорте не найден bm_rates.dat")
-    text = data.decode("utf-8", "replace")
-    best = {}   # (from_id,to_id) -> {rate,count,reserve_sum}
+        return raw   # уже сам .dat
+
+
+def fmt(v):
+    if v == 0:
+        return "0"
+    return f"{v:.6g}"
+
+
+def build_pairs(rates_bytes, i2s):
+    text = rates_bytes.decode("cp1251", "replace")
+    agg = {}   # (fid,tid) -> [best_gpg, count, reserve_sum]
     for line in text.splitlines():
-        parts = line.split(";")
-        if len(parts) < 5:
+        p = line.split(";")
+        if len(p) < 6:
             continue
         try:
-            fid, tid = int(parts[0]), int(parts[1])
-            rate = float(parts[3])
-            reserve = float(parts[4]) if parts[4] else 0.0
+            fid, tid = int(p[0]), int(p[1])
+            rf, rt = float(p[3]), float(p[4])
+            reserve = float(p[5]) if p[5] else 0.0
         except ValueError:
             continue
-        k = (fid, tid)
-        b = best.setdefault(k, {"rate": rate, "count": 0, "reserve": 0.0})
-        b["count"] += 1
-        b["reserve"] += reserve
-        if rate > b["rate"]:      # «лучший» = максимум получаемого (упрощённо; уточнить направление сортировки)
-            b["rate"] = rate
-    return best
+        if rf <= 0:
+            continue
+        gpg = rt / rf                      # получаем за 1 отдаваемого
+        a = agg.get((fid, tid))
+        if a is None:
+            agg[(fid, tid)] = [gpg, 1, reserve]
+        else:
+            a[1] += 1
+            a[2] += reserve
+            if gpg > a[0]:
+                a[0] = gpg
+    pairs = {}
+    for (fid, tid), (gpg, cnt, res) in agg.items():
+        fs, ts = i2s.get(fid), i2s.get(tid)
+        if fs and ts:
+            pairs[f"{fs}>{ts}"] = {"rate": fmt(gpg), "count": cnt, "reserve": fmt(res)}
+    return pairs
 
 
 def main():
-    load_env()
-    key = os.environ.get("BESTCHANGE_API_KEY")
-    url_tpl = os.environ.get("BESTCHANGE_RATES_URL")
-    if not key:
-        raise SystemExit("❌ нет BESTCHANGE_API_KEY (локально — в .env; в CI — GitHub Secret)")
-    if not url_tpl:
-        raise SystemExit("❌ нет BESTCHANGE_RATES_URL — задай URL экспорта из партнёрских доков "
-                          "(bestchange.app), с плейсхолдером {key}. Ключ подставится из окружения.")
-    url = url_tpl.replace("{key}", key)
-
-    raw = download(url)
-    best = parse_rates(raw)
-    i2s = id_to_slug()
-
-    pairs = {}
-    for (fid, tid), b in best.items():
-        fs, ts = i2s.get(fid), i2s.get(tid)
-        if not fs or not ts:
-            continue
-        pairs[f"{fs}>{ts}"] = {
-            "rate": f"{b['rate']:.6g}",
-            "count": b["count"],
-            "reserve": f"{b['reserve']:.0f}",
-        }
+    key = os.environ.get("BESTCHANGE_API_KEY") or None
+    url = os.environ.get("BESTCHANGE_RATES_URL") or DEFAULT_URL
+    raw = download(url, key)
+    pairs = build_pairs(rates_dat_from(raw), id2slug())
     out = {"generated_at": int(time.time()), "pairs": pairs}
     json.dump(out, open(os.path.join(ROOT, "rates.json"), "w", encoding="utf-8"), ensure_ascii=False)
-    # ключ НЕ логируем и НЕ пишем
-    print(f"✅ rates.json: пар {len(pairs)} (обновлено)")
+    print(f"✅ rates.json: направлений {len(pairs)} (источник: {'партнёрский' if os.environ.get('BESTCHANGE_RATES_URL') else 'публичный дамп'})")
 
 
 if __name__ == "__main__":

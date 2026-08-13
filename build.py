@@ -53,6 +53,19 @@ if os.path.exists(_rp):
 def rate_of(frm, to):
     return RATES.get(f"{frm}>{to}")
 
+
+def fmt_rate(s):
+    """Человекочитаемый курс без научной нотации."""
+    try:
+        v = float(s)
+    except (TypeError, ValueError):
+        return s
+    if v >= 1000:
+        return f"{v:,.0f}".replace(",", " ")
+    if v >= 1:
+        return f"{v:,.2f}".replace(",", " ")
+    return f"{v:.4g}"
+
 DISCLOSURE = ("RateScout — независимый информационный сервис мониторинга курсов. Мы не обменный пункт и не "
               "проводим операции. Ссылки ведут в сервис BestChange (подбор лучших курсов в надёжных обменниках); "
               "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
@@ -192,7 +205,7 @@ def render_currency(slug, info):
     for c in CATS:
         def _row(ts, ti):
             r = rate_of(slug, ts)
-            rr = f' <b class="rt">{r["rate"]}</b>' if r else ''
+            rr = f' <b class="rt">{fmt_rate(r["rate"])}</b>' if r else ''
             return (f'<li><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
                     f'{name} → {ti["name"]} <span>{ti["ticker"]}</span>{rr}</a></li>')
         rows = "".join(_row(ts, ti) for ts, ti in GROUPED.get(c, []) if ts != slug)
