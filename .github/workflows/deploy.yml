@@ -47,7 +47,7 @@ jobs:
 
       - name: Guard — ключ НЕ должен попасть в сборку
         run: |
-          if grep -rqF "$BESTCHANGE_API_KEY" dist/ ; then
+          if [ -n "$BESTCHANGE_API_KEY" ] && grep -rqF "$BESTCHANGE_API_KEY" dist/ ; then
             echo "🔴 КЛЮЧ ОБНАРУЖЕН В dist/ — прерываю деплой"; exit 1
           fi
           echo "✅ ключа в dist/ нет"
