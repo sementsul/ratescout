@@ -113,6 +113,7 @@ def head(title, desc, canonical, extra=""):
 <meta property="og:url" content="{BASE_URL}{canonical}">
 <meta property="og:site_name" content="{S['name']}">
 <meta name="robots" content="index,follow">
+<meta name="yandex-verification" content="4b39ef5046fa7e8a">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
