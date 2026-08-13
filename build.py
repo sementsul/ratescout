@@ -92,29 +92,33 @@ def head(title, desc, canonical, extra=""):
 <link rel="stylesheet" href="/assets/styles.css">
 {extra}
 </head>
-<body>"""
+<body>
+<div id="wrapper">"""
 
 
-HEADER = f"""<header class="site">
-  <a class="brand" href="/"><span class="logo">[◎]</span> {S['name']}<span class="tld">.ru</span></a>
-  <nav>
-    <a href="/">Монитор</a>
-    <a href="/o-servise/">Что такое BestChange</a>
-    <a href="/aml/">AML-проверка</a>
-    <a href="/raskrytie/">Раскрытие</a>
-  </nav>
-</header>"""
+HEADER = f"""<div id="header">
+  <h1 id="logotop"><a href="/"><span class="logo">[◎]</span> {S['name']}<span class="tld">.ru</span></a></h1>
+</div>
+<div id="topnav" class="doscyan dosborder">
+  <ul id="menu-top">
+    <li><a href="/">Монитор</a></li>
+    <li><a href="/o-servise/">Что такое BestChange</a></li>
+    <li><a href="/aml/">AML-проверка</a></li>
+    <li><a href="/raskrytie/">Раскрытие</a></li>
+  </ul>
+</div>"""
 
 
 def footer():
-    return f"""<footer class="site">
+    return f"""<div id="footer">
   <div class="disc">{DISCLOSURE}</div>
   <div class="links"><a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> ·
     <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a></div>
-  <div class="fine">18+. Информация справочная, не является финансовой рекомендацией. Курсы меняются.
+  <div class="fine">18+. Информация носит справочный характер, не является рекламой, офертой или финансовой рекомендацией. Курсы меняются.
     © {S['name']} {S['domain']}.<br>
-    <span class="erid">Реклама. Рекламодатель: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}. ERID: — (регистрируется в ОРД)</span></div>
-</footer>
+    <span class="erid">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span></div>
+</div>
+</div>
 <script src="/assets/catalog.js"></script>
 <script src="/assets/app.js"></script>
 </body></html>"""
@@ -131,7 +135,7 @@ def write(path, html):
 
 
 def converter_html(preset_from=""):
-    return f"""<div class="conv" id="conv" data-from="{preset_from}">
+    return f"""<div class="conv dosblue dosborder" id="conv" data-from="{preset_from}">
   <h3>Калькулятор направления</h3>
   <label>Отдаю<select id="cFrom"></select></label>
   <button class="swap" id="cSwap" type="button">⇅ поменять</button>
@@ -143,12 +147,11 @@ def converter_html(preset_from=""):
 # ---------------- главная = монитор-каталог ----------------
 def render_home():
     total = len(CUR)
-    # каталог по категориям (ссылки на страницы валют)
-    cat_boxes = ""
+    cat_html = ""
     for c in CATS:
         items = "".join(f'<li><a href="{cpage(slug)}">{info["name"]} <span>{info["ticker"]}</span></a></li>'
-                         for slug, info in GROUPED.get(c, []))
-        cat_boxes += f'<div class="catbox"><h3>{c} <em>{len(GROUPED.get(c, []))}</em></h3><ul>{items}</ul></div>'
+                        for slug, info in GROUPED.get(c, []))
+        cat_html += f'<h2 class="news">{c} <span class="cnt">{len(GROUPED.get(c, []))}</span></h2><ul class="dlist">{items}</ul>'
 
     ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
                  "url": BASE_URL, "description": S["tagline"]})
@@ -156,38 +159,30 @@ def render_home():
     desc = ("Мониторинг курсов обмена криптовалют и денег: сравните лучшие курсы в надёжных обменниках через "
             f"BestChange. {total} валют, все направления, AML-проверка адресов.")
     body = f"""{HEADER}
-<main>
-<div class="hero-strip">
-  <pre class="ascii">  ____       _        ____                  _
+<div id="main">
+  <div id="content">
+    <pre class="ascii">  ____       _        ____                  _
  |  _ \\ __ _| |_ ___ / ___|  ___ ___  _   _| |_
  | |_) / _` | __/ _ \\\\___ \\ / __/ _ \\| | | | __|
  |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
-  <h1>Мониторинг лучших курсов обмена</h1>
-  <p class="lead">{S['name']} сравнивает предложения надёжных обменников через <b>BestChange</b> по
-     <b>{total}</b> валютам. Выберите направление в калькуляторе или валюту в каталоге ниже.</p>
+    <div class="dosblue dosborder">
+      <b>{S['name']}</b> — мониторинг лучших курсов обмена. Сравниваем предложения надёжных обменников через
+      <b>BestChange</b> по <b>{total}</b> валютам и ведём к безопасному обмену. <a href="/o-servise/">Что такое BestChange →</a>
+    </div>
+    <h2 class="news">Каталог валют <span class="cnt">{total}</span></h2>
+    {cat_html}
+  </div>
+  <div id="sidebar">
+    {converter_html()}
+    <div class="sblock"><h3>Разделы</h3><ul>
+      <li><a href="/o-servise/">Что такое BestChange</a></li>
+      <li><a href="/aml/">AML-проверка адреса</a></li>
+      <li><a href="/raskrytie/">Раскрытие и дисклеймеры</a></li>
+    </ul></div>
+  </div>
+  <div class="clearboth"></div>
 </div>
-
-<div class="monitor">
-  <aside class="filters">{converter_html()}</aside>
-  <section class="rows">
-    <div class="rates-head"><h2 style="margin:0">Каталог валют</h2>
-      <span>всего: <span class="count">{total}</span></span></div>
-    <div class="catgrid">{cat_boxes}</div>
-  </section>
-</div>
-
-<section class="about">
-  <h2>Что такое BestChange и зачем он нужен</h2>
-  <p><b>BestChange</b> — мониторинг обменных пунктов: собирает курсы десятков надёжных обменников и показывает,
-     где выгоднее обменять криптовалюту или валюту. RateScout помогает подобрать направление среди {total} валют
-     и ведёт в BestChange к проверенному обменнику. <a href="/o-servise/">Подробнее →</a></p>
-</section>
-<section class="aml-cta">
-  <h2>Проверяйте криптоадреса (AML)</h2>
-  <p>Перед обменом полезно проверить адрес на связь с мошенничеством и санкциями. <a href="/aml/">Как сделать AML-проверку →</a></p>
-</section>
-</main>
 {ld}
 {footer()}"""
     write("index.html", head(title, desc, "/", ld) + body)
@@ -210,7 +205,7 @@ def render_currency(slug, info):
                     f'{name} → {ti["name"]} <span>{ti["ticker"]}</span>{rr}</a></li>')
         rows = "".join(_row(ts, ti) for ts, ti in GROUPED.get(c, []) if ts != slug)
         if rows:
-            dir_blocks += f'<div class="dirbox"><h3>{name} → {c}</h3><ul>{rows}</ul></div>'
+            dir_blocks += f'<h2 class="news">{name} → {c}</h2><ul class="dlist">{rows}</ul>'
 
     crumbs = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Монитор", "item": BASE_URL},
@@ -223,34 +218,37 @@ def render_currency(slug, info):
          "acceptedAnswer": {"@type": "Answer",
           "text": "Обмен идёт в проверенных пунктах BestChange с рейтингом и резервами. Для крипто рекомендуем AML-проверку адреса."}}]}
     body = f"""{HEADER}
-<main class="doc">
-<nav class="crumbs"><a href="/">Монитор</a> / {name} <span class="tk">{ticker}</span></nav>
-<h1>Обмен {name} <span class="tk">{ticker}</span></h1>
-<p>Сравните лучшие курсы обмена <b>{name} ({ticker})</b> в надёжных обменниках через мониторинг
-   <b>BestChange</b> и выберите направление ниже. RateScout ведёт вас к проверенному пункту; сам обмен
-   вы совершаете на сайте обменника.</p>
-
-<div class="monitor">
-  <aside class="filters">{converter_html(slug)}</aside>
-  <section class="rows">
-    <h2>Направления обмена {ticker}</h2>
-    <div class="dirgrid">{dir_blocks}</div>
-  </section>
+<div id="main">
+  <div id="content">
+    <nav class="crumbs"><a href="/">Монитор</a> / {name} <span class="tk">{ticker}</span></nav>
+    <h1>Обмен {name} <span class="tk">{ticker}</span></h1>
+    <p>Справочная сводка курсов обмена <b>{name} ({ticker})</b> в обменниках из мониторинга
+       <b>BestChange</b>. Выберите направление ниже; обмен совершается на сайте выбранного обменника.</p>
+    <h2 class="news">Направления обмена {ticker}</h2>
+    {dir_blocks}
+    <h2 class="news">Как обменять {name}</h2>
+    <ol class="steps">
+      <li>Выберите направление обмена {ticker} выше.</li>
+      <li>В BestChange сравните курс, резерв и рейтинг обменников.</li>
+      <li>Для крипто — сделайте <a href="/aml/">AML-проверку адреса</a>.</li>
+      <li>Перейдите в выбранный обменник и проведите операцию.</li>
+    </ol>
+    <h2 class="news">Частые вопросы</h2>
+    <details><summary>Как обменять {name} ({ticker})?</summary>
+      <p>Через мониторинг BestChange — он показывает курсы в надёжных обменниках.</p></details>
+    <details><summary>Безопасно ли менять {ticker}?</summary>
+      <p>Обмен в проверенных пунктах BestChange. Для крипто рекомендуем AML-проверку адреса.</p></details>
+  </div>
+  <div id="sidebar">
+    {converter_html(slug)}
+    <div class="sblock"><h3>Разделы</h3><ul>
+      <li><a href="/">Все валюты</a></li>
+      <li><a href="/aml/">AML-проверка адреса</a></li>
+      <li><a href="/o-servise/">Что такое BestChange</a></li>
+    </ul></div>
+  </div>
+  <div class="clearboth"></div>
 </div>
-
-<h2>Как обменять {name} на выгодных условиях</h2>
-<ol class="steps">
-  <li>Выберите направление обмена {ticker} выше.</li>
-  <li>В BestChange сравните курс, резерв и рейтинг обменников.</li>
-  <li>Для крипто — сделайте <a href="/aml/">AML-проверку адреса</a>.</li>
-  <li>Перейдите в выбранный обменник и проведите операцию.</li>
-</ol>
-<h2>Частые вопросы</h2>
-<details><summary>Как обменять {name} ({ticker}) выгодно?</summary>
-  <p>Через мониторинг BestChange — он показывает лучший курс среди надёжных обменников.</p></details>
-<details><summary>Безопасно ли менять {ticker}?</summary>
-  <p>Обмен в проверенных пунктах BestChange. Для крипто рекомендуем AML-проверку адреса.</p></details>
-</main>
 {jsonld(crumbs)}{jsonld(faq)}
 {footer()}"""
     write(f"valuta/{slug}/index.html", head(title, desc, canonical) + body)
@@ -259,10 +257,12 @@ def render_currency(slug, info):
 def render_page(slug, title, desc, body_html):
     canonical = f"/{slug}/"
     body = f"""{HEADER}
-<main class="doc">
-<nav class="crumbs"><a href="/">Монитор</a> / {title}</nav>
-{body_html}
-</main>
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / {title}</nav>
+    {body_html}
+  </div>
+</div>
 {footer()}"""
     write(f"{slug}/index.html", head(f"{title} | {S['name']}", desc, canonical) + body)
 
@@ -299,9 +299,11 @@ def compliance_pages():
 <h2>Дисклеймер</h2><p>Информация справочная, не является финансовой/инвестиционной/юридической рекомендацией.
    Курсы меняются. Решение об обмене — самостоятельно и на свой риск. 18+.</p>
 <h2>Соответствие законодательству</h2>
-<ul><li><b>РФ:</b> рекламные материалы маркируются (ERID) и учитываются в ОРД; ПДн — по 152-ФЗ (см. Политику).</li>
+<ul><li><b>РФ:</b> сайт — информационный ресурс (справочная информация о курсах и обменниках), не ведёт активного
+   продвижения; при таком характере контента маркировка рекламы (ERID/ОРД) не требуется. Персональные данные —
+   по 152-ФЗ (см. Политику). Если формат сменится на рекламный — материалы будут промаркированы.</li>
 <li><b>США:</b> affiliate-раскрытие по FTC; сервис недоступен под санкциями (OFAC).</li></ul>
-<h2>Сведения о владельце сайта (рекламодателе)</h2>
+<h2>Сведения о владельце сайта</h2>
 <p>{S.get('owner_status','')} <b>{S.get('owner','')}</b>, ИНН {S.get('owner_inn','')}. Сайт {S['domain']} —
    информационный сервис мониторинга курсов; владелец не является обменным пунктом и не проводит операции.</p>
 <p class="hint">Правовые тексты — черновик, требуют проверки юристом перед публикацией.</p>""")
