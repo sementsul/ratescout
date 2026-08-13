@@ -1,0 +1,62 @@
+name: Build & Deploy RateScout
+
+# 🔴 Ключ BestChange живёт ТОЛЬКО в GitHub Secrets и используется здесь, в раннере.
+# В опубликованный сайт (dist/) попадают лишь курсы — ключа там нет.
+# Настрой секреты: Settings → Secrets and variables → Actions:
+#   BESTCHANGE_API_KEY   — партнёрский ключ
+#   BESTCHANGE_RATES_URL — URL экспорта курсов с плейсхолдером {key} (из доков bestchange.app)
+
+on:
+  schedule:
+    - cron: "17 * * * *"      # каждый час — свежие курсы
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch rates (key from Secret — NOT committed, NOT in output)
+        env:
+          BESTCHANGE_API_KEY: ${{ secrets.BESTCHANGE_API_KEY }}
+          BESTCHANGE_RATES_URL: ${{ secrets.BESTCHANGE_RATES_URL }}
+        # необязательно: пока секреты не заданы — сайт публикуется без цифр курсов
+        run: python3 fetch_rates.py || echo "⚠️ курсы пропущены (секреты не заданы) — собираю без них"
+
+      - name: Build static site
+        run: python3 build.py
+
+      - name: Guard — ключ НЕ должен попасть в сборку
+        run: |
+          if grep -rqF "$BESTCHANGE_API_KEY" dist/ ; then
+            echo "🔴 КЛЮЧ ОБНАРУЖЕН В dist/ — прерываю деплой"; exit 1
+          fi
+          echo "✅ ключа в dist/ нет"
+        env:
+          BESTCHANGE_API_KEY: ${{ secrets.BESTCHANGE_API_KEY }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

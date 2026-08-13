@@ -1,0 +1,15 @@
+# секреты — НИКОГДА в репозиторий
+.env
+.env.*
+!.env.example
+
+# генерится в CI (fetch_rates.py) — не коммитим
+rates.json
+
+# сборка и мусор
+dist/
+build/
+__pycache__/
+*.pyc
+*.spec
+.DS_Store
