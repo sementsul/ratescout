@@ -52,7 +52,7 @@
     var f = elFrom.value, t = elTo.value;
     if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = "Выберите разные валюты"; return; }
     elGo.href = deep(f, t);
-    elGo.textContent = "Найти курс: " + bySlug[f].t + " → " + bySlug[t].t + " →";
+    elGo.textContent = "Открыть: " + bySlug[f].t + " → " + bySlug[t].t + " →";
   }
   elFrom.addEventListener("change", update);
   elTo.addEventListener("change", update);
