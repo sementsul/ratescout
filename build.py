@@ -9,6 +9,7 @@ SEO: страница на КАЖДУЮ валюту (/valuta/<slug>/) со вс
 import json
 import os
 import shutil
+from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
@@ -400,11 +401,21 @@ def catalog_js():
 
 
 def static_files():
-    urls = ["/", "/o-servise/", "/aml/", "/raskrytie/", "/politika/"] + [cpage(s) for s in CUR]
-    items = "\n".join(f"  <url><loc>{BASE_URL}{u}</loc><changefreq>hourly</changefreq></url>" for u in urls)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    def u_entry(loc, freq, pri):
+        return (f"  <url><loc>{BASE_URL}{loc}</loc><lastmod>{today}</lastmod>"
+                f"<changefreq>{freq}</changefreq><priority>{pri}</priority></url>")
+
+    items = [u_entry("/", "hourly", "1.0")]
+    items += [u_entry(cpage(s), "hourly", "0.6") for s in CUR]       # страницы валют — курсы меняются
+    items += [u_entry(u, "monthly", "0.4") for u in ("/o-servise/", "/aml/", "/raskrytie/", "/politika/")]
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n'
-          f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{items}\n</urlset>')
-    write("robots.txt", f"User-agent: *\nAllow: /\nSitemap: {BASE_URL}/sitemap.xml\n")
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(items) + "\n</urlset>")
+    write("robots.txt",
+          "User-agent: *\n"
+          "Allow: /\n"
+          f"Sitemap: {BASE_URL}/sitemap.xml\n")
     write("CNAME", S["domain"] + "\n")
     write("manifest.webmanifest", json.dumps({
         "name": S["name"] + " — мониторинг курсов обмена", "short_name": S["name"],
