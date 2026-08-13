@@ -289,7 +289,8 @@ def compliance_pages():
 <li>если контрагент незнаком.</li></ul>
 <h2>Как проверить</h2>
 <p>AML-проверку можно выполнить через BestChange: вводите адрес — получаете отчёт о рисках. Доступны пакеты (ваучеры).</p>
-<a class="cta" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">Сделать AML-проверку →</a>""")
+<a class="cta" href="https://www.bestchange.ru/report/?p={REF}" target="_blank" rel="nofollow noopener sponsored">Сделать AML-проверку →</a>
+<p>Подробнее о том, как это работает — в <a href="https://www.bestchange.ru/wiki/amlfaq.html?p={REF}" target="_blank" rel="nofollow noopener sponsored">FAQ по AML-проверке</a>.</p>""")
     render_page("raskrytie", "Раскрытие информации и дисклеймеры",
                 "Партнёрское раскрытие и правовая информация RateScout (РФ и США).",
                 f"""<h1>Раскрытие информации и дисклеймеры</h1>
