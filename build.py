@@ -22,6 +22,10 @@ REF = S["ref"]
 
 
 def bc_link(frm, to):
+    f, t = CUR.get(frm, {}), CUR.get(to, {})
+    # новые валюты (без BestChange-слага) — числовая ссылка по id; остальные — слаг
+    if f.get("num") or t.get("num"):
+        return f"https://www.bestchange.ru/index.php?mt=rates&from={f.get('id')}&to={t.get('id')}&p={REF}"
     return f"https://www.bestchange.ru/{frm}-to-{to}.html?p={REF}"
 
 

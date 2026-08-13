@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
-"""Тянет курсы BestChange из публичного дампа базы и кладёт в rates.json.
+"""Обновление данных RateScout из публичного дампа BestChange (api.bestchange.ru/info.zip).
 
-Источник по умолчанию: http://api.bestchange.ru/info.zip (БЕЗ ключа) — bm_rates.dat/bm_cy.dat.
-Формат bm_rates.dat (cp1251, ';'):
-  id_from ; id_to ; id_exchanger ; rate_from ; rate_to ; reserve ; ...
-«Сколько получаем за 1 отдаваемого» = rate_to / rate_from. Лучший курс = максимум по обменникам.
+Делает две вещи из ОДНОГО дампа (без ключа):
+  1) СИНХРОНИЗИРУЕТ каталог валют currencies.json из bm_cy.dat — добавляет новые валюты,
+     убирает удалённые, обновляет категории. Существующие слаги/URL сохраняются (стабильный SEO).
+  2) СЧИТАЕТ курсы из bm_rates.dat → rates.json (лучший курс/резерв/число обменников на пару).
 
-ID валют в дампе совпадают с currencies.json (те же id из clk()).
+Формат bm_cy.dat (cp1251, ';'):  id ; code ; name ; ticker ; iso ; CAT ; bitmask
+  CAT: 0=Криптовалюты 1=Digital currencies 2=Bank accounts and cards 3=Online banking 4=Money transfers 5=Cash
+Формат bm_rates.dat: id_from ; id_to ; id_exch ; rate_from ; rate_to ; reserve ; …
 
-🔴 Ключ (BESTCHANGE_API_KEY) для базовых курсов НЕ нужен и в дамп не отправляется.
-   Если задан BESTCHANGE_RATES_URL — берём его (партнёрский эндпоинт), иначе публичный дамп.
-
-Выход: rates.json {"generated_at": ts, "pairs": {"<from_slug>>​<to_slug>": {"rate","count","reserve"}}}
+🔴 Ключ (BESTCHANGE_API_KEY) для дампа НЕ нужен. Если задан BESTCHANGE_RATES_URL — берём его.
 """
 import io
 import json
 import os
+import re
 import time
 import urllib.request
 import zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_URL = "http://api.bestchange.ru/info.zip"
-
-
-def id2slug():
-    cat = json.load(open(os.path.join(ROOT, "currencies.json"), encoding="utf-8"))
-    return {info["id"]: slug for slug, info in cat["currencies"].items()}
+CATCODE = {"0": "Криптовалюты", "1": "Digital currencies", "2": "Bank accounts and cards",
+           "3": "Online banking", "4": "Money transfers", "5": "Cash"}
+CAT_ORDER = ["Криптовалюты", "Digital currencies", "Bank accounts and cards",
+             "Online banking", "Money transfers", "Cash", "Прочее"]
 
 
 def download(url, key=None):
@@ -37,27 +36,68 @@ def download(url, key=None):
         return r.read()
 
 
-def rates_dat_from(raw):
-    try:
-        z = zipfile.ZipFile(io.BytesIO(raw))
-        name = next((n for n in z.namelist() if n.endswith("bm_rates.dat")), None)
-        if not name:
-            raise SystemExit("❌ в архиве нет bm_rates.dat")
-        return z.read(name)
-    except zipfile.BadZipFile:
-        return raw   # уже сам .dat
+def _member(zf, suffix):
+    n = next((n for n in zf.namelist() if n.endswith(suffix)), None)
+    return zf.read(n).decode("cp1251", "replace") if n else None
+
+
+def _slugify(s, cid, taken):
+    base = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-") or f"cur{cid}"
+    slug = base
+    if slug in taken:
+        slug = f"{base}-{cid}"
+    return slug
+
+
+def sync_catalog(zf):
+    """Обновить currencies.json из bm_cy.dat: +новые, -удалённые, категории. Слаги существующих сохраняем."""
+    cy = _member(zf, "bm_cy.dat")
+    if not cy:
+        print("⚠️ в дампе нет bm_cy.dat — каталог не синхронизирован")
+        return
+    path = os.path.join(ROOT, "currencies.json")
+    existing = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {"currencies": {}}
+    ex_by_id = {info["id"]: (slug, info) for slug, info in existing["currencies"].items()}
+
+    out, taken = {}, set(existing["currencies"].keys())
+    added, kept = 0, 0
+    for line in cy.splitlines():
+        p = line.split(";")
+        if len(p) < 6:
+            continue
+        try:
+            cid = int(p[0])
+        except ValueError:
+            continue
+        name, ticker, cat = p[2].strip(), p[3].strip(), CATCODE.get(p[5], "Прочее")
+        if cid in ex_by_id:                      # существующая — сохраняем слаг/bc/имя, обновляем категорию
+            slug, info = ex_by_id[cid]
+            info = dict(info); info["category"] = cat
+            out[slug] = info; kept += 1
+        else:                                    # новая — добавляем (deep-link будет числовым)
+            slug = _slugify(ticker or name, cid, taken)
+            taken.add(slug)
+            out[slug] = {"id": cid, "name": name, "ticker": ticker, "category": cat, "num": True}
+            added += 1
+    removed = len(existing["currencies"]) - kept
+    cats = [c for c in CAT_ORDER if any(v["category"] == c for v in out.values())]
+    json.dump({"categories": cats, "currencies": out},
+              open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"каталог: всего {len(out)} (сохранено {kept}, добавлено {added}, удалено {removed})")
+
+
+def id2slug():
+    cat = json.load(open(os.path.join(ROOT, "currencies.json"), encoding="utf-8"))
+    return {info["id"]: slug for slug, info in cat["currencies"].items()}
 
 
 def fmt(v):
-    if v == 0:
-        return "0"
-    return f"{v:.6g}"
+    return "0" if v == 0 else f"{v:.6g}"
 
 
-def build_pairs(rates_bytes, i2s):
-    text = rates_bytes.decode("cp1251", "replace")
-    agg = {}   # (fid,tid) -> [best_gpg, count, reserve_sum]
-    for line in text.splitlines():
+def build_pairs(rates_text, i2s):
+    agg = {}
+    for line in rates_text.splitlines():
         p = line.split(";")
         if len(p) < 6:
             continue
@@ -69,13 +109,12 @@ def build_pairs(rates_bytes, i2s):
             continue
         if rf <= 0:
             continue
-        gpg = rt / rf                      # получаем за 1 отдаваемого
+        gpg = rt / rf
         a = agg.get((fid, tid))
         if a is None:
             agg[(fid, tid)] = [gpg, 1, reserve]
         else:
-            a[1] += 1
-            a[2] += reserve
+            a[1] += 1; a[2] += reserve
             if gpg > a[0]:
                 a[0] = gpg
     pairs = {}
@@ -90,10 +129,19 @@ def main():
     key = os.environ.get("BESTCHANGE_API_KEY") or None
     url = os.environ.get("BESTCHANGE_RATES_URL") or DEFAULT_URL
     raw = download(url, key)
-    pairs = build_pairs(rates_dat_from(raw), id2slug())
-    out = {"generated_at": int(time.time()), "pairs": pairs}
-    json.dump(out, open(os.path.join(ROOT, "rates.json"), "w", encoding="utf-8"), ensure_ascii=False)
-    print(f"✅ rates.json: направлений {len(pairs)} (источник: {'партнёрский' if os.environ.get('BESTCHANGE_RATES_URL') else 'публичный дамп'})")
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        raise SystemExit("❌ ответ не ZIP — проверь BESTCHANGE_RATES_URL")
+
+    sync_catalog(zf)                                     # 1) каталог валют (+/-)
+    rates_text = _member(zf, "bm_rates.dat")             # 2) курсы
+    if rates_text is None:
+        raise SystemExit("❌ в дампе нет bm_rates.dat")
+    pairs = build_pairs(rates_text, id2slug())
+    json.dump({"generated_at": int(time.time()), "pairs": pairs},
+              open(os.path.join(ROOT, "rates.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"курсы: направлений {len(pairs)}")
 
 
 if __name__ == "__main__":
