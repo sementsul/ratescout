@@ -97,7 +97,7 @@ def head(title, desc, canonical, extra=""):
 
 
 HEADER = f"""<div id="header">
-  <h1 id="logotop"><a href="/"><span class="logo">[◎]</span> {S['name']}<span class="tld">.ru</span></a></h1>
+  <h1 id="logotop"><a href="/"><span class="logo">[⇄]</span> {S['name']}<span class="tld">.ru</span></a></h1>
 </div>
 <div id="topnav" class="doscyan dosborder">
   <ul id="menu-top">
