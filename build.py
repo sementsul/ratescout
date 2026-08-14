@@ -8,6 +8,7 @@ SEO: страница на КАЖДУЮ валюту (/valuta/<slug>/) со вс
 """
 import json
 import os
+import re
 import shutil
 from datetime import datetime, timezone
 
@@ -92,6 +93,59 @@ def fmt_rate(s):
     if v >= 1:
         return f"{v:,.2f}".replace(",", " ")
     return f"{v:.4g}"
+
+
+NET = {"TRC20": "TRON (TRC20)", "ERC20": "Ethereum (ERC20)", "BEP20": "BNB Smart Chain (BEP20)",
+       "BEP2": "Binance Chain (BEP2)", "POLYGON": "Polygon", "ARBITRUM": "Arbitrum",
+       "OPTIMISM": "Optimism", "AVAX": "Avalanche", "AVALANCHE": "Avalanche", "SOL": "Solana",
+       "SPL": "Solana (SPL)", "NEAR": "NEAR", "TON": "TON", "LN": "Lightning Network", "OMNI": "Omni"}
+STABLE = {"USDT", "USDC", "DAI", "TUSD", "USDP", "BUSD", "PYUSD", "USDR", "USDQ", "UUSD", "USDS"}
+
+
+def _net(name):
+    toks = set(re.split(r"[^A-Za-z0-9]+", name.upper()))
+    for k, v in NET.items():
+        if k in toks:
+            return v
+    return None
+
+
+def about_currency(slug, info):
+    """Уникальный справочный блок про валюту (снижает thin-content, добавляет ключевые слова)."""
+    name, ticker, cat = info["name"], info["ticker"], info["category"]
+    net = _net(name)
+    links = ['<a href="/blog/slovar-terminov-obmena/">Словарь терминов</a>']
+    if cat == "Криптовалюты":
+        kind = "стейблкоин, стоимость которого привязана к доллару США" if ticker in STABLE else "криптовалюта"
+        s = f"<b>{name}</b> ({ticker}) — {kind}."
+        if net:
+            s += f" Сеть выпуска — {net}; от выбора сети зависят комиссия за перевод и совместимость адресов."
+        s += (f" На этой странице собраны справочные курсы обмена {ticker} на другие криптовалюты, банки, "
+              f"платёжные системы и наличные — по данным мониторинга обменных пунктов BestChange.")
+        links = (['<a href="/blog/usdt-seti-trc20-erc20-bep20/">Сети USDT</a>'] if ticker in STABLE else []) + \
+                ['<a href="/blog/komissii-setey-tron-eth-bsc/">Комиссии сетей</a>',
+                 '<a href="/blog/chto-takoe-aml-proverka/">AML-проверка</a>'] + links
+    elif cat == "Bank accounts and cards":
+        s = (f"<b>{name}</b> ({ticker}) — банковская карта/реквизиты. Обмен обычно проходит переводом на карту "
+             f"или счёт. Ниже — справочные курсы направлений с участием {name}.")
+    elif cat == "Online banking":
+        s = (f"<b>{name}</b> ({ticker}) — банк/онлайн-банкинг. Перевод выполняется через приложение или "
+             f"реквизиты банка. Ниже — справочные курсы направлений с {name}.")
+    elif cat == "Money transfers":
+        s = (f"<b>{name}</b> ({ticker}) — система денежных переводов. Ниже — справочные курсы направлений "
+             f"с участием {name} по данным мониторинга BestChange.")
+    elif cat == "Cash":
+        s = (f"<b>{name}</b> ({ticker}) — наличные. Обмен наличными проводится в офисах обменных пунктов "
+             f"(в поддерживаемых городах). Ниже — справочные курсы направлений с {name}.")
+    elif cat == "Digital currencies":
+        s = (f"<b>{name}</b> ({ticker}) — электронная платёжная система / цифровая валюта. Ниже — справочные "
+             f"курсы направлений обмена {name}.")
+    else:
+        s = f"<b>{name}</b> ({ticker}). Ниже — справочные курсы направлений обмена."
+    facts = (f'<ul class="facts"><li>Тикер: <b>{ticker}</b></li><li>Категория: {cat}</li>'
+             + (f"<li>Сеть: {net}</li>" if net else "") + "</ul>")
+    return (f'<h2 class="news">О валюте {name}</h2><p>{s}</p>{facts}'
+            f'<p class="related">Полезное: {" · ".join(links)}</p>')
 
 
 def load_articles():
@@ -303,6 +357,7 @@ def render_currency(slug, info):
     <h1>Обмен {name} <span class="tk">{ticker}</span></h1>
     <p>Справочная сводка курсов обмена <b>{name} ({ticker})</b> в обменниках из мониторинга
        <b>BestChange</b>. Выберите направление ниже; обмен совершается на сайте выбранного обменника.</p>
+    {about_currency(slug, info)}
     <h2 class="news">Направления обмена {ticker}</h2>
     {dir_blocks}
     <h2 class="news">Как обменять {name}</h2>

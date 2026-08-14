@@ -56,6 +56,10 @@ h2.news .cnt{float:right;color:#ffff55}
 .dlist a span{color:#888;font-size:.82rem}
 .rt{color:#55ff55;float:right}
 .tk{color:#55ffff;font-weight:700}
+.facts{list-style:none;margin:6px 0;padding:0}
+.facts li{padding:1px 0}
+.facts li:before{content:"\25A0 ";color:#f55}
+.related{color:#777;font-size:.85rem;margin:6px 0 14px}
 .catcount{color:#ffff55}
 @media(max-width:600px){.dlist{columns:1}}
 
