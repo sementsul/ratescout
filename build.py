@@ -1259,8 +1259,9 @@ def render_widget_page(lang):
         lead = ("Разместите на своём сайте живой курс или мини-конвертер обмена — обновляются автоматически, "
                 "бесплатно. Достаточно вставить код в HTML страницы.")
         t_rate, t_conv, h_pairs, h_how = "Виджет курса", "Виджет-конвертер (ввод суммы)", "Доступные пары (data-pair)", "Как это работает"
+        t_cfg, cfg_lead, l_give, l_get = "Конструктор виджета — любая пара", "Выберите любую пару из каталога проекта — получите готовый код и предпросмотр.", "Отдаю", "Получаю"
         how = ["Скопируйте код нужного виджета и вставьте в HTML страницы.",
-               "Курс: атрибут <code>data-pair</code> задаёт пару. Конвертер: <code>data-widget=\"converter\"</code>.",
+               "Курс: <code>data-pair</code> (популярная) или <code>data-from</code>+<code>data-to</code> (любая пара). Конвертер: <code>data-widget=\"converter\"</code>.",
                "Скрипт сам подтянет актуальные курсы и обновит виджет.",
                "Несколько виджетов на странице — вставьте несколько блоков <code>div</code>."]
     else:
@@ -1270,8 +1271,9 @@ def render_widget_page(lang):
         lead = ("Put a live rate or a mini exchange converter on your site — they update automatically, for free. "
                 "Just paste the code into your page's HTML.")
         t_rate, t_conv, h_pairs, h_how = "Rate widget", "Converter widget (amount input)", "Available pairs (data-pair)", "How it works"
+        t_cfg, cfg_lead, l_give, l_get = "Widget builder — any pair", "Pick any pair from the project catalog — get ready code and a preview.", "From", "To"
         how = ["Copy the code of the widget you want and paste it into your page's HTML.",
-               "Rate: the <code>data-pair</code> attribute sets the pair. Converter: <code>data-widget=\"converter\"</code>.",
+               "Rate: <code>data-pair</code> (popular) or <code>data-from</code>+<code>data-to</code> (any pair). Converter: <code>data-widget=\"converter\"</code>.",
                "The script pulls current rates and updates the widget.",
                "For several widgets on a page — add several <code>div</code> blocks."]
     how_html = "".join(f"<li>{s}</li>" for s in how)
@@ -1290,6 +1292,35 @@ def render_widget_page(lang):
     <h2 class="news">{t_conv}</h2>
     <div style="{demo_style}"><div class="ratescout-widget" data-widget="converter"></div></div>
     <pre class="code-embed"><code>{esc(code_conv)}</code></pre>
+
+    <h2 class="news">{t_cfg}</h2>
+    <p>{cfg_lead}</p>
+    <div class="conv dosblue dosborder" style="max-width:420px">
+      <label>{l_give}<select id="cfgFrom"></select></label>
+      <label>{l_get}<select id="cfgTo"></select></label>
+    </div>
+    <div style="{demo_style}"><div class="ratescout-widget" id="cfgPreview" data-from="bitcoin" data-to="sberbank"></div></div>
+    <pre class="code-embed"><code id="cfgCode"></code></pre>
+    <script>
+    (function(){{
+      var fromS=document.getElementById('cfgFrom'),toS=document.getElementById('cfgTo'),
+          prev=document.getElementById('cfgPreview'),code=document.getElementById('cfgCode');
+      if(!fromS)return;
+      fetch('/widget-rates.json').then(function(r){{return r.json();}}).then(function(d){{
+        var cur=d.cur,slugs=Object.keys(cur).sort(function(a,b){{return cur[a].n.localeCompare(cur[b].n);}});
+        var opts=slugs.map(function(s){{return '<option value="'+s+'">'+cur[s].n+' ('+cur[s].t+')</option>';}}).join('');
+        fromS.innerHTML=opts;toS.innerHTML=opts;
+        if(cur['bitcoin'])fromS.value='bitcoin';if(cur['sberbank'])toS.value='sberbank';
+        function upd(){{
+          var f=fromS.value,t=toS.value;
+          prev.setAttribute('data-from',f);prev.setAttribute('data-to',t);
+          code.textContent='<div class="ratescout-widget" data-from="'+f+'" data-to="'+t+'"></div>\\n<script src="{BASE_URL}/widget.js" async><\\/script>';
+          if(window.RateScoutWidget)window.RateScoutWidget.refresh();
+        }}
+        fromS.addEventListener('change',upd);toS.addEventListener('change',upd);upd();
+      }}).catch(function(){{}});
+    }})();
+    </script>
 
     <h2 class="news">{h_pairs}</h2>
     <p class="related">{pairs_list}</p>
@@ -1749,6 +1780,16 @@ def write_widget():
     open(os.path.join(DIST, "widget-data.json"), "w", encoding="utf-8").write(json.dumps(data, ensure_ascii=False))
     src = open(os.path.join(ROOT, "widget.src.js"), encoding="utf-8").read()
     open(os.path.join(DIST, "widget.js"), "w", encoding="utf-8").write(src.replace("{{BASE}}", BASE_URL))
+    # полная карта курсов для режима «любая пара»/конвертер (тянется только когда нужно)
+    nested = {}
+    for k, v in RATES.items():
+        f, t = k.split(">", 1)
+        if f in CUR and t in CUR:
+            nested.setdefault(f, {})[t] = v["rate"]
+    curmap = {s: {"n": i["name"], "t": i["ticker"]} for s, i in CUR.items()}
+    open(os.path.join(DIST, "widget-rates.json"), "w", encoding="utf-8").write(
+        json.dumps({"updated": data["updated"], "cur": curmap, "rates": nested},
+                   ensure_ascii=False, separators=(",", ":")))
 
 
 def copy_assets():
