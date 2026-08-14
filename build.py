@@ -687,7 +687,7 @@ def rate_table(slug, info, lang, n=12):
     trs = ""
     for cnt, ts, ti, r in rows:
         trs += (f'<tr><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
-                f'{info["ticker"]} → {ti["ticker"]} <span class="op">{openw} →</span></a></td>'
+                f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
                 f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td>'
                 f'<td class="num">{cnt}</td>'
                 f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
@@ -772,7 +772,7 @@ def render_currency(slug, info, lang):
             r = rate_of(slug, ts)
             rr = f' <b class="rt">{fmt_rate(r["rate"])}</b>' if r else ''
             rows += (f'<li><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
-                     f'{name} → {ti["name"]} <span>{ti["ticker"]}</span>{rr}</a></li>')
+                     f'→ {ti["name"]} <span>{ti["ticker"]}</span>{rr}</a></li>')
         if rows:
             dir_blocks += f'<h2 class="news">{name} → {cat_name(c, lang)}</h2><ul class="dlist">{rows}</ul>'
     if lang == "ru":
@@ -1320,7 +1320,7 @@ def render_bank_hub(to_slug, lang):
     trs = ""
     for cnt, fs, fi, r in rows:
         trs += (f'<tr><td class="d"><a href="{bc_link(fs, to_slug)}" target="_blank" rel="nofollow noopener sponsored">'
-                f'{fi["ticker"]} → {tT} <span class="op">{openw} →</span></a></td>'
+                f'{fi["name"]} <span>{fi["ticker"]}</span></a></td>'
                 f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td><td class="num">{cnt}</td>'
                 f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
     faq_ld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
