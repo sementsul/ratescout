@@ -125,7 +125,10 @@ def fmt_rate(s):
         return f"{v:,.0f}".replace(",", " ")
     if v >= 1:
         return f"{v:,.2f}".replace(",", " ")
-    return f"{v:.4g}"
+    if v >= 0.01:
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+    # очень малые значения — фиксированная запись без научной нотации
+    return (f"{v:.12f}".rstrip("0").rstrip(".")) or "0"
 
 
 NET = {"TRC20": "TRON (TRC20)", "ERC20": "Ethereum (ERC20)", "BEP20": "BNB Smart Chain (BEP20)",
