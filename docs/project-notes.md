@@ -7,13 +7,13 @@
 ## Что где
 | Файл | Назначение |
 |---|---|
-| `build.py` | генератор статики → `dist/` (главная + 330 страниц валют + комплаенс + sitemap/robots/manifest/sw) |
-| `fetch_rates.py` | из дампа `api.bestchange.ru/info.zip` (без ключа): синхрон каталога `currencies.json` (bm_cy.dat) + курсы `rates.json` (bm_rates.dat) |
+| `build.py` | генератор статики → `dist/`: главная + 330 страниц валют (/valuta/) + 100 лендингов пар (/obmen/, из top.json) + блог (/blog/, из articles/) + комплаенс + sitemap/robots/manifest/sw + og-image |
+| `fetch_rates.py` | из дампа `api.bestchange.ru/info.zip` (без ключа): синхрон `currencies.json` (bm_cy.dat) + `rates.json` (bm_rates.dat) + топ-пары `top.json` (bm_top.dat) |
 | `parse_catalog.py` | разовый парсер каталога из сохранённого HTML (первичный сид; дальше каталог обновляет fetch_rates) |
 | `currencies.json` | каталог валют (slug→{id,name,ticker,category[,num]}); в CI обновляется в раннере |
 | `data.json` | `site`: name/domain/ref/owner/owner_inn/owner_email/tagline |
 | `articles/` | markdown-статьи блога (frontmatter title/description/date/slug) |
-| `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄) |
+| `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄), og-image.png (1200x630 баннер) |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → build → deploy на Pages (guard: ключ не в dist) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дневного отключения cron |
 
