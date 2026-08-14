@@ -160,6 +160,10 @@
 ### UC-25. sitemap.xml + robots.txt (улучшены) ✅
 - sitemap: 335 URL с lastmod (по дате пересборки), priority (главная 1.0/валюты 0.6/юр 0.4), changefreq (валюты hourly, юр monthly); валидный XML. robots.txt: Allow + Sitemap. Оба уже генерились в static_files(); улучшены. Далее — отправить sitemap в GSC/Вебмастер.
 
+### UC-26. Блог (SEO-контент) ✅
+- Движок: articles/*.md (frontmatter title/description/date/slug) → md_render → /blog/ и /blog/<slug>/ с Article-schema+Breadcrumb; в меню и sitemap; markdown ставится в CI (фолбэк, если нет). Стартовые: сети USDT, комиссии, AML, глоссарий — нейтральный тон, внутренние ссылки на /valuta/. Живой: ratescout.ru/blog/.
+- ⏭ Далее по плану: обогащение страниц валют уникальным текстом (per-currency контент на канонической странице, НЕ дубли в блоге); топ-пары из bm_top.dat; og:image.
+
 ## Дорожная карта (по порядку)
 0. ⏳ Каталог: распарсить полный список валют → `currencies.json`; монитор на полный список.
 1. ✅ SEO-каркас + монитор (структура bestchange, тема doshaven) на моках.
