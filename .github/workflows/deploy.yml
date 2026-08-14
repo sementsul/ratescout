@@ -79,3 +79,8 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      # Пинг IndexNow только при реальных изменениях (push/ручной запуск), НЕ на почасовом cron
+      - name: Ping IndexNow (Яндекс/Bing)
+        if: github.event_name != 'schedule'
+        run: python3 indexnow.py || echo "IndexNow пропущен"

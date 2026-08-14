@@ -42,6 +42,7 @@ CATS = CAT["categories"]
 S = SITE
 BASE_URL = f"https://{S['domain']}"
 REF = S["ref"]
+INDEXNOW_KEY = "b394aeced6a92ed48a09e2bd30099905"  # публичный ключ IndexNow (ключ-файл на сайте)
 
 LANGS = ["ru", "en"]
 PREF = {"ru": "", "en": "/en"}
@@ -1014,6 +1015,8 @@ def static_files():
         ".then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r})"
         ".catch(()=>caches.match(e.request))));")
     open(os.path.join(DIST, ".nojekyll"), "w").write("")
+    # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
+    open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
 
 
 def copy_assets():
