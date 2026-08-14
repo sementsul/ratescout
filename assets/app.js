@@ -31,6 +31,13 @@
     });
   })();
 
+  // ---- запомнить ручной выбор языка (клик по переключателю в шапке) ----
+  Array.prototype.forEach.call(document.querySelectorAll(".langsw"), function (a) {
+    a.addEventListener("click", function () {
+      try { localStorage.setItem("rs_lang", a.getAttribute("data-lang")); } catch (e) {}
+    });
+  });
+
   var conv = document.getElementById("conv");
   if (!C || !conv) return;
 

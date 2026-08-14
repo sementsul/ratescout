@@ -197,6 +197,20 @@ GTAG = """<!-- Google tag (gtag.js) -->
 <!-- /Google tag -->"""
 
 
+# Ранний выбор языка: если пользователь НЕ выбирал вручную (нет rs_lang) — редирект
+# на версию под язык браузера (ru → корень, иначе → /en/). Ручной выбор (клик по .langsw)
+# сохраняется в localStorage и отключает автоопределение. Ботов не трогаем (SEO).
+LANGREDIR = """<script>(function(){try{
+var ua=navigator.userAgent||"";if(/bot|crawl|spider|slurp|bing|yandex|google/i.test(ua))return;
+var p=location.pathname,isEn=p==="/en"||p.indexOf("/en/")===0,cur=isEn?"en":"ru";
+var s=localStorage.getItem("rs_lang"),want;
+if(s==="ru"||s==="en"){want=s;}else{var n=(navigator.languages&&navigator.languages[0])||navigator.language||"en";want=/^ru\\b/i.test(n)?"ru":"en";}
+if(want===cur)return;
+var t=want==="en"?("/en"+(p==="/"?"/":p)):p.replace(/^\\/en(\\/|$)/,"/");
+location.replace(t+location.search+location.hash);
+}catch(e){}})();</script>"""
+
+
 def hreflangs(path):
     tags = []
     for lg in LANGS:
@@ -212,6 +226,7 @@ def head(lang, title, desc, path, extra=""):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{LANGREDIR}
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <link rel="canonical" href="{canonical}">
@@ -244,7 +259,7 @@ def head(lang, title, desc, path, extra=""):
 
 def header(lang, path):
     other = "en" if lang == "ru" else "ru"
-    switch = f'<a class="langsw" href="{PREF[other]}{path}">{"EN" if other == "en" else "RU"}</a>'
+    switch = f'<a class="langsw" data-lang="{other}" href="{PREF[other]}{path}">{"EN" if other == "en" else "RU"}</a>'
     return f"""<div id="header">
   <h1 id="logotop"><a href="{PREF[lang]}/"><span class="logo">[⇄]</span> {S['name']}<span class="tld">.ru</span></a></h1>
   {switch}
