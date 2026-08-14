@@ -870,6 +870,12 @@ def render_blog(lang):
         return
     def dsearch(a):
         return (a["title"] + " " + a.get("description", "") + " " + a["slug"]).lower().replace('"', "&quot;")
+    # индекс ВСЕХ статей для сквозного поиска (встраивается в каждую страницу блога, ~15 записей)
+    index = [{"t": a["title"], "d": a.get("description", ""), "dt": a.get("date", ""),
+              "u": f"{PREF[lang]}/blog/{a['slug']}/",
+              "k": (a["title"] + " " + a.get("description", "") + " " + a["slug"]).lower()} for a in arts]
+    index_script = ('<script type="application/json" id="blogIndex">'
+                    + json.dumps(index, ensure_ascii=False).replace("</", "<\\/") + '</script>')
     pages = (len(arts) + BLOG_PER_PAGE - 1) // BLOG_PER_PAGE
     if lang == "ru":
         base_title = f"Блог — гайды по обмену криптовалют и валют | {S['name']}"
@@ -911,6 +917,7 @@ def render_blog(lang):
     <ul class="bloglist" id="bloglist">{cards}</ul>
     <p id="bnores" class="related" hidden>{tr(lang,'blog_noresults')}</p>
     {pager_html(lang, p, pages)}
+    {index_script}
   </div>
 </div>
 {ld}

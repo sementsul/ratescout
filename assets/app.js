@@ -38,20 +38,42 @@
     });
   });
 
-  // ---- поиск по статьям блога (на странице /blog/) ----
+  // ---- сквозной поиск по ВСЕМ статьям блога (индекс встроен в страницу) ----
   (function () {
     var bq = document.getElementById("bq"), list = document.getElementById("bloglist");
     if (!bq || !list) return;
-    var items = Array.prototype.slice.call(list.querySelectorAll("li"));
     var nores = document.getElementById("bnores");
+    var pager = document.querySelector(".pager");
+    var origHTML = list.innerHTML;                       // пагинированный список текущей страницы
+    var INDEX = [];
+    var idxEl = document.getElementById("blogIndex");
+    if (idxEl) { try { INDEX = JSON.parse(idxEl.textContent); } catch (e) { INDEX = []; } }
+    function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
     bq.addEventListener("input", function () {
-      var v = bq.value.trim().toLowerCase(), shown = 0;
-      items.forEach(function (li) {
-        var hit = !v || (li.getAttribute("data-search") || "").indexOf(v) >= 0;
-        li.style.display = hit ? "" : "none";
-        if (hit) shown++;
-      });
-      if (nores) nores.hidden = shown > 0;
+      var v = bq.value.trim().toLowerCase();
+      if (!v) {                                          // пусто — вернуть исходную страницу + пейджер
+        list.innerHTML = origHTML;
+        if (pager) pager.style.display = "";
+        if (nores) nores.hidden = true;
+        return;
+      }
+      if (INDEX.length) {                                // сквозной поиск по всем статьям
+        var hits = INDEX.filter(function (a) { return a.k.indexOf(v) >= 0; });
+        list.innerHTML = hits.map(function (a) {
+          return '<li><a href="' + a.u + '">' + esc(a.t) + '</a>' +
+                 '<div class="apreview">' + esc(a.d) + '</div>' +
+                 '<div class="adate">' + esc(a.dt) + '</div></li>';
+        }).join("");
+        if (pager) pager.style.display = "none";         // при поиске пагинация не нужна
+        if (nores) nores.hidden = hits.length > 0;
+      } else {                                           // фолбэк: фильтр текущей страницы
+        var shown = 0;
+        Array.prototype.forEach.call(list.querySelectorAll("li"), function (li) {
+          var hit = (li.getAttribute("data-search") || "").indexOf(v) >= 0;
+          li.style.display = hit ? "" : "none"; if (hit) shown++;
+        });
+        if (nores) nores.hidden = shown > 0;
+      }
     });
   })();
 
