@@ -191,6 +191,24 @@ if os.path.exists(_tp):
         TOP = []
 TOP_SET = {(p["from"], p["to"]) for p in TOP}
 
+# Высокоинтентные пары: топ-крипта → главные RUB-направления (только где есть реальный курс).
+# Дают SEO-страницы под запросы «обменять <крипта> на <банк>/наличные/СБП», без пустышек.
+HI_FROM = ["tether-trc20", "bitcoin", "tether-bep20", "tether-erc20", "ethereum",
+           "litecoin", "monero", "tron", "usdcoin", "tether-ton"]
+HI_TO = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub", "mir",
+         "alfaclick", "vtb", "gazprombank", "yoomoney", "raiffeisen-bank", "ozon"]
+EXTRA_PAIRS = []
+for _f in HI_FROM:
+    for _t in HI_TO:
+        if _f in CUR and _t in CUR and (_f, _t) not in TOP_SET and RATES.get(f"{_f}>{_t}"):
+            EXTRA_PAIRS.append({"from": _f, "to": _t})
+
+# Все пары, для которых генерим страницы (топ + высокоинтентные), с дедупом.
+PAIR_PAGES = TOP + EXTRA_PAIRS
+_seen = set()
+PAIR_PAGES = [p for p in PAIR_PAGES if not ((p["from"], p["to"]) in _seen or _seen.add((p["from"], p["to"])))]
+PAIR_SET = {(p["from"], p["to"]) for p in PAIR_PAGES}
+
 
 def fmt_rate(s):
     try:
@@ -757,7 +775,7 @@ def render_pair(f, t, lang):
                  "Сравните курс, резерв и рейтинг обменников."] + \
                 ([f'Для криптовалюты — сделайте <a href="{PREF[lang]}/aml/">AML-проверку адреса</a>.'] if fi["category"] == "Криптовалюты" else []) + \
                 ["Проведите обмен на сайте выбранного обменника."]
-        rev = f'<a href="{pair_url(lang, t, f)}">Обратный обмен: {tN} → {fN}</a> · ' if (t, f) in TOP_SET else ""
+        rev = f'<a href="{pair_url(lang, t, f)}">Обратный обмен: {tN} → {fN}</a> · ' if (t, f) in PAIR_SET else ""
         rel = f'{rev}<a href="{cpage(lang, f)}">О валюте {fN}</a> · <a href="{cpage(lang, t)}">О валюте {tN}</a>'
         q1 = f"Какой курс обмена {fN} на {tN}?"
         a1 = (f"Лучшее значение — <b>{fmt_rate(r['rate'])} {tT}</b> за 1 {fT} среди {r['count']} обменников. Справочно, меняется." if r else "Курс уточняется в мониторинге BestChange.")
@@ -775,7 +793,7 @@ def render_pair(f, t, lang):
                  "Compare rate, reserve and exchanger rating."] + \
                 ([f'For crypto — do an <a href="{PREF[lang]}/aml/">AML check of the address</a>.'] if fi["category"] == "Криптовалюты" else []) + \
                 ["Complete the exchange on the chosen exchanger's site."]
-        rev = f'<a href="{pair_url(lang, t, f)}">Reverse: {tN} → {fN}</a> · ' if (t, f) in TOP_SET else ""
+        rev = f'<a href="{pair_url(lang, t, f)}">Reverse: {tN} → {fN}</a> · ' if (t, f) in PAIR_SET else ""
         rel = f'{rev}<a href="{cpage(lang, f)}">About {fN}</a> · <a href="{cpage(lang, t)}">About {tN}</a>'
         q1 = f"What is the {fN} to {tN} rate?"
         a1 = (f"Best value — <b>{fmt_rate(r['rate'])} {tT}</b> per 1 {fT} across {r['count']} exchangers. For reference, it changes." if r else "The rate is confirmed in the BestChange monitor.")
@@ -1130,7 +1148,7 @@ def static_files():
         pr = PREF[lg]
         items.append(u_entry(pr + "/", "hourly", "1.0" if lg == "ru" else "0.9"))
         items += [u_entry(pr + f"/valuta/{s}/", "hourly", "0.6") for s in CUR]
-        items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "hourly", "0.8") for p in TOP]
+        items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "hourly", "0.8") for p in PAIR_PAGES]
         if ARTS[lg]:
             items.append(u_entry(pr + "/blog/", "weekly", "0.7"))
             items += [u_entry(pr + f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS[lg]]
@@ -1185,7 +1203,7 @@ def main():
         render_rss(lang)
         for a in ARTS[lang]:
             render_article(a, lang)
-        for p in TOP:
+        for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
     static_files()
     copy_assets()
