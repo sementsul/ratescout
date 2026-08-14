@@ -59,7 +59,11 @@ img{border:none;max-width:100%}
 #main{overflow:hidden}
 #content{float:right;width:71%;padding:0 0 20px;min-height:400px}
 #sidebar{float:left;width:26%;padding:0 0 20px}
-@media(max-width:760px){#content,#sidebar{float:none;width:100%}}
+@media(max-width:760px){
+  #main{display:flex;flex-direction:column}
+  #content,#sidebar{float:none;width:100%}
+  #sidebar{order:-1}          /* калькулятор+поиск наверх, не под каталогом */
+}
 .clearboth{clear:both}
 
 /* заголовки-бары как h2.news */
