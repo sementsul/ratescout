@@ -160,6 +160,16 @@ def modified_iso():
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
+GLOSSARY = []
+_gp = os.path.join(ROOT, "glossary.json")
+if os.path.exists(_gp):
+    try:
+        GLOSSARY = json.load(open(_gp, encoding="utf-8")).get("terms", [])
+    except (ValueError, OSError):
+        GLOSSARY = []
+GLOSSARY_BY = {t["slug"]: t for t in GLOSSARY}
+
+
 HISTORY = {}
 _hp = os.path.join(ROOT, "history.json")
 if os.path.exists(_hp):
@@ -281,7 +291,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -297,7 +307,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -448,6 +458,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
+    <li><a href="{PREF[lang]}/slovar/">{tr(lang,'nav_glossary')}</a></li>
     <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
     <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
     <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
@@ -1210,6 +1221,71 @@ def render_category(cat, lang):
     write(lang, path, head(lang, title, desc, path) + body)
 
 
+def _gterm(t, lang):
+    return t["ru"] if lang == "ru" else t["en"]
+
+
+def _gdef(t, lang):
+    return t["def_ru"] if lang == "ru" else t["def_en"]
+
+
+def render_glossary(lang):
+    if not GLOSSARY:
+        return
+    terms = sorted(GLOSSARY, key=lambda t: _gterm(t, lang).lower())
+    # индекс /slovar/
+    lidx = "".join(f'<li><a href="{PREF[lang]}/slovar/{t["slug"]}/">{_gterm(t, lang)}</a>'
+                   f'<div class="apreview">{_gdef(t, lang)[:110]}…</div></li>' for t in terms)
+    if lang == "ru":
+        it, idesc = "Словарь терминов обмена криптовалют и валют", "Понятные определения терминов обмена: курс, резерв, спред, сеть, комиссия, AML, KYC, стейблкоин, эскроу и другие."
+        ih1, ilead = "Словарь терминов", "Короткие понятные определения терминов, которые встречаются при обмене криптовалют и валют."
+    else:
+        it, idesc = "Glossary of crypto and currency exchange terms", "Clear definitions of exchange terms: rate, reserve, spread, network, fee, AML, KYC, stablecoin, escrow and more."
+        ih1, ilead = "Glossary", "Short, clear definitions of the terms you meet when exchanging crypto and currencies."
+    ild = jsonld({"@context": "https://schema.org", "@type": "DefinedTermSet", "name": ih1,
+                  "url": f"{BASE_URL}{PREF[lang]}/slovar/"})
+    ibody = f"""{header(lang, "/slovar/")}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {ih1}</nav>
+    <h1>{ih1} <span class="cnt">{len(terms)}</span></h1><p>{ilead}</p>
+    <ul class="bloglist">{lidx}</ul>
+  </div>
+</div>
+{ild}
+{footer(lang)}"""
+    write(lang, "/slovar/", head(lang, f"{it} | {S['name']}", idesc, "/slovar/", ild) + ibody)
+    # страницы терминов
+    for t in GLOSSARY:
+        term, dfn, path = _gterm(t, lang), _gdef(t, lang), f"/slovar/{t['slug']}/"
+        see = [GLOSSARY_BY[s] for s in t.get("see", []) if s in GLOSSARY_BY]
+        see_html = ("".join(f'<li><a href="{PREF[lang]}/slovar/{s["slug"]}/">{_gterm(s, lang)}</a></li>' for s in see))
+        seeh = ("См. также" if lang == "ru" else "See also")
+        allh = ("Все термины" if lang == "ru" else "All terms")
+        title = f"{term} — что это простыми словами | {S['name']}" if lang == "ru" else f"{term} — meaning explained | {S['name']}"
+        desc = (dfn[:155]).rsplit(" ", 1)[0] + "…"
+        dt_ld = jsonld({"@context": "https://schema.org", "@type": "DefinedTerm", "name": term,
+                        "description": dfn, "inDefinedTermSet": f"{BASE_URL}{PREF[lang]}/slovar/",
+                        "url": BASE_URL + PREF[lang] + path})
+        crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+            {"@type": "ListItem", "position": 2, "name": ("Словарь" if lang == "ru" else "Glossary"), "item": BASE_URL + PREF[lang] + "/slovar/"},
+            {"@type": "ListItem", "position": 3, "name": term, "item": BASE_URL + PREF[lang] + path}]})
+        body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / <a href="{PREF[lang]}/slovar/">{'Словарь' if lang=='ru' else 'Glossary'}</a> / {term}</nav>
+    <h1>{term}</h1>
+    <div class="dosblue dosborder">{dfn}</div>
+    {f'<h2 class="news">{seeh}</h2><ul class="dlist">{see_html}</ul>' if see_html else ''}
+    <p class="related"><a href="{PREF[lang]}/slovar/">← {allh}</a> · <a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a> · <a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></p>
+  </div>
+</div>
+{dt_ld}{crumbs}
+{footer(lang)}"""
+        write(lang, path, head(lang, title, desc, path) + body)
+
+
 def render_editorial(lang):
     """Страница «О редакции» — сигналы доверия (E-E-A-T) для YMYL-ниши."""
     owner = S.get("owner", "")
@@ -1518,6 +1594,9 @@ def static_files():
         items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
         items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
+        if GLOSSARY:
+            items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
+            items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "redakciya")]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -1610,6 +1689,7 @@ def main():
         for _b in BANK_HUBS:
             render_bank_hub(_b, lang)
         render_editorial(lang)
+        render_glossary(lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
