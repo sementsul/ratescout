@@ -210,7 +210,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -226,7 +226,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -358,6 +358,7 @@ def header(lang, path):
   <ul id="menu-top">
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
+    <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
     <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
     <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
     <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
@@ -921,6 +922,89 @@ def render_article(a, lang):
     write(lang, path, head(lang, title, desc, path) + body)
 
 
+FAQ_ITEMS = {
+    "ru": [
+        ("Какая сеть USDT самая дешёвая для перевода?",
+         "Обычно TRC20 (TRON) — низкая и стабильная комиссия сети. BEP20 (BNB Smart Chain) тоже дешёвый. "
+         "ERC20 (Ethereum) дороже, комиссия зависит от загрузки сети. Сеть отправителя и получателя должна совпадать."),
+        ("Сколько идёт перевод USDT?",
+         "В сети TRC20 перевод обычно приходит за 1–5 минут после подтверждений. Скорость зависит от сети и её загрузки, "
+         "а также от числа подтверждений, которое требует получатель или обменник."),
+        ("Что такое резерв обменника?",
+         "Резерв — сколько валюты доступно у обменника по конкретному направлению прямо сейчас. Если резерв меньше вашей "
+         "суммы, обмен не пройдёт или займёт время. Резерв смотрят вместе с курсом и рейтингом."),
+        ("Чем обменник отличается от биржи?",
+         "Обменник проводит операцию по фиксированному курсу и резерву — быстро и без регистрации ордеров. Биржа — это "
+         "торговая площадка со стаканом заявок, где цену формируют покупатели и продавцы. Для разового обмена обычно берут обменник."),
+        ("Как выбрать лучший курс обмена?",
+         "Смотрите не только на верхний курс, но и на резерв, рейтинг и отзывы обменника, а также лимиты и комиссию сети. "
+         "Слишком выгодный курс иногда означает маленький резерв или скрытые условия. Сравнить помогает мониторинг BestChange."),
+        ("Что такое AML-проверка криптоадреса?",
+         "AML-проверка оценивает связь адреса или транзакции с мошенничеством, даркнетом и санкциями. Её делают до приёма "
+         "или обмена крупной суммы, чтобы снизить риск получить «грязные» монеты и блокировку средств."),
+        ("Безопасен ли обмен криптовалюты через обменник?",
+         "Риск снижается, если выбирать обменник с высоким рейтингом, историей и достаточным резервом из мониторинга, а для "
+         "криптовалюты делать AML-проверку адреса. Гарантий не даёт никто — решение об обмене вы принимаете самостоятельно."),
+        ("Что такое СБП и при чём тут обмен?",
+         "СБП — Система быстрых платежей Банка России: мгновенные переводы между банками по номеру телефона. Многие обменники "
+         "выдают рубли через СБП — это быстро и удобно; учитывайте лимиты вашего банка."),
+    ],
+    "en": [
+        ("Which USDT network is the cheapest for transfers?",
+         "Usually TRC20 (TRON) — a low, stable network fee. BEP20 (BNB Smart Chain) is also cheap. ERC20 (Ethereum) is "
+         "pricier and its fee depends on network load. The sender's and recipient's network must match."),
+        ("How long does a USDT transfer take?",
+         "On TRC20 a transfer usually arrives within 1–5 minutes after confirmations. Speed depends on the network and its "
+         "load, and on how many confirmations the recipient or exchanger requires."),
+        ("What is an exchanger's reserve?",
+         "Reserve is how much currency an exchanger has available for a given direction right now. If the reserve is smaller "
+         "than your amount, the exchange won't go through or will take time. Check reserve together with the rate and rating."),
+        ("How is an exchanger different from an exchange?",
+         "An exchanger completes the operation at a fixed rate and reserve — fast and without placing orders. An exchange is "
+         "a trading venue with an order book where buyers and sellers set the price. For a one-off swap people usually pick an exchanger."),
+        ("How do I choose the best exchange rate?",
+         "Look not only at the top rate but also at the exchanger's reserve, rating and reviews, plus limits and the network "
+         "fee. A rate that's too good can mean a small reserve or hidden terms. The BestChange monitor helps compare."),
+        ("What is a crypto address AML check?",
+         "An AML check assesses an address or transaction for links to fraud, darknet and sanctions. It's done before "
+         "receiving or exchanging a large amount to reduce the risk of getting 'dirty' coins and frozen funds."),
+        ("Is exchanging crypto through an exchanger safe?",
+         "Risk is lower if you pick an exchanger with a high rating, history and sufficient reserve from a monitor, and do an "
+         "address AML check for crypto. No one guarantees anything — you decide to exchange on your own."),
+        ("What is SBP and how does it relate to exchanging?",
+         "SBP is Russia's Faster Payments System: instant transfers between banks by phone number. Many exchangers pay out "
+         "rubles via SBP — fast and convenient; mind your bank's limits."),
+    ],
+}
+
+
+def render_faq(lang):
+    items = FAQ_ITEMS[lang]
+    path = "/faq/"
+    if lang == "ru":
+        title = f"Частые вопросы об обмене криптовалют и валют | {S['name']}"
+        desc = "Ответы на частые вопросы: сети USDT и комиссии, резерв, AML-проверка, СБП, как выбрать обменник и лучший курс."
+        h1, lead = "Частые вопросы", "Короткие ответы на популярные вопросы об обмене криптовалют и валют."
+    else:
+        title = f"Frequently asked questions about crypto and currency exchange | {S['name']}"
+        desc = "Answers to common questions: USDT networks and fees, reserve, AML check, SBP, how to choose an exchanger and the best rate."
+        h1, lead = "Frequently asked questions", "Short answers to popular questions about crypto and currency exchange."
+    qa = "".join(f'<details><summary>{q}</summary><p>{a}</p></details>' for q, a in items)
+    faq_ld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in items]})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {qa}
+  </div>
+</div>
+{faq_ld}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path, faq_ld) + body)
+
+
 def compliance_pages(lang):
     if lang == "ru":
         render_page(lang, "o-servise", "Что такое BestChange",
@@ -1050,6 +1134,7 @@ def static_files():
         if ARTS[lg]:
             items.append(u_entry(pr + "/blog/", "weekly", "0.7"))
             items += [u_entry(pr + f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS[lg]]
+        items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika")]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -1095,6 +1180,7 @@ def main():
         for slug, info in CUR.items():
             render_currency(slug, info, lang)
         compliance_pages(lang)
+        render_faq(lang)
         render_blog(lang)
         render_rss(lang)
         for a in ARTS[lang]:
