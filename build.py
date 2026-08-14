@@ -1540,6 +1540,47 @@ def static_files():
     open(os.path.join(DIST, ".nojekyll"), "w").write("")
     # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
+    write_llms()
+
+
+def write_llms():
+    """llms.txt (llmstxt.org) — карта сайта для AI-систем/ответных движков."""
+    B = BASE_URL
+    pop = [s for s in ["bitcoin", "tether-trc20", "ethereum", "tether-erc20", "tether-bep20",
+                       "litecoin", "monero", "tron", "usdcoin", "tether-ton"] if s in CUR]
+    lines = [
+        f"# {S['name']} — справочник курсов обмена криптовалют и валют",
+        "",
+        f"> Независимый справочник курсов обмена криптовалют и валют по данным мониторинга обменных пунктов "
+        f"BestChange. Не обменный пункт: данные справочные, курсы обновляются ежечасно. Языки: RU ({B}/) и EN ({B}/en/).",
+        "",
+        "## Основные разделы",
+        f"- [Главная — каталог курсов]({B}/): {len(CUR)} валют по категориям, живые курсы и калькулятор.",
+        f"- [Частые вопросы (FAQ)]({B}/faq/): сети USDT, комиссии, AML, резерв, СБП, обменник vs биржа.",
+        f"- [О редакции]({B}/redakciya/): кто ведёт сайт, источники данных, обновление, контакты.",
+        f"- [Что такое BestChange]({B}/o-servise/): как устроен мониторинг обменников.",
+        f"- [AML-проверка криптоадреса]({B}/aml/): зачем и как.",
+        "",
+        "## Категории валют",
+    ]
+    for c in CATS:
+        n = len(GROUPED.get(c, []))
+        if n:
+            lines.append(f"- [{cat_name(c,'ru')}]({B}/kategoriya/{CAT_SLUG[c]}/): {n} направлений.")
+    lines += ["", "## Популярные валюты"]
+    for s in pop:
+        lines.append(f"- [{CUR[s]['name']} ({CUR[s]['ticker']})]({B}/valuta/{s}/)")
+    lines += ["", "## Обмен крипты на банки/получателей"]
+    for b in BANK_HUBS:
+        lines.append(f"- [Обмен криптовалюты на {CUR[b]['name']}]({B}/na/{b}/)")
+    lines += ["", "## Блог (гайды)"]
+    for a in ARTS["ru"]:
+        lines.append(f"- [{a['title']}]({B}/blog/{a['slug']}/): {a.get('description','')}")
+    lines += ["", "## Данные и фиды",
+              f"- Sitemap: {B}/sitemap.xml",
+              f"- RSS блога: {B}/blog/rss.xml",
+              f"- Английская версия: {B}/en/", ""]
+    open(os.path.join(DIST, "llms.txt"), "w", encoding="utf-8").write("\n".join(lines))
 
 
 def copy_assets():
