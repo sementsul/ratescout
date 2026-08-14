@@ -264,6 +264,19 @@ BANK_HUB_LIST = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-ru
                  "mir", "alfaclick", "vtb", "gazprombank", "yoomoney"]
 
 
+# Пары для встраиваемого виджета: (ключ, from_slug, to_slug, показ_from, показ_to, url на нашем сайте)
+WIDGET_PAIRS = [
+    ("usdt-rub", "tether-trc20", "sberbank", "USDT", "RUB", "/na/sberbank/"),
+    ("btc-rub", "bitcoin", "sberbank", "BTC", "RUB", "/obmen/bitcoin-sberbank/"),
+    ("eth-rub", "ethereum", "sberbank", "ETH", "RUB", "/valuta/ethereum/"),
+    ("btc-usdt", "bitcoin", "tether-trc20", "BTC", "USDT", "/obmen/bitcoin-tether-trc20/"),
+    ("eth-usdt", "ethereum", "tether-trc20", "ETH", "USDT", "/valuta/ethereum/"),
+    ("ton-usdt", "ton", "tether-trc20", "TON", "USDT", "/valuta/ton/"),
+    ("trx-usdt", "tron", "tether-trc20", "TRX", "USDT", "/valuta/tron/"),
+    ("ltc-usdt", "litecoin", "tether-trc20", "LTC", "USDT", "/valuta/litecoin/"),
+]
+
+
 def _crypto_rate_count(to_slug):
     return sum(1 for fs, _ in GROUPED.get("Криптовалюты", []) if RATES.get(f"{fs}>{to_slug}"))
 
@@ -480,7 +493,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
-                 f'<a href="/redakciya/">О редакции</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
+                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span>")
@@ -489,7 +502,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
-                 f'<a href="/en/redakciya/">Editorial</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
+                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -1229,6 +1242,57 @@ def _gdef(t, lang):
     return t["def_ru"] if lang == "ru" else t["def_en"]
 
 
+def render_widget_page(lang):
+    """Страница /vidzhet/ — код для вставки виджета на чужой сайт + живое демо."""
+    path = "/vidzhet/"
+    code = ('<div class="ratescout-widget" data-pair="usdt-rub"></div>\n'
+            '<script src="' + BASE_URL + '/widget.js" async></script>')
+    demo = ('<div class="ratescout-widget" data-pair="usdt-rub"></div>'
+            '<div class="ratescout-widget" data-pair="btc-rub" style="margin-left:10px"></div>'
+            '<script src="/widget.js" async></script>')
+    pairs_list = ", ".join(f"<code>{k}</code>" for k, *_ in WIDGET_PAIRS)
+    esc = code.replace("<", "&lt;").replace(">", "&gt;")
+    if lang == "ru":
+        title = f"Виджет курсов обмена для сайта — бесплатно | {S['name']}"
+        desc = "Бесплатный встраиваемый виджет актуальных курсов обмена криптовалют для вашего сайта. Вставьте код — курсы обновляются автоматически."
+        h1 = "Виджет курсов для вашего сайта"
+        lead = ("Разместите на своём сайте живой курс обмена — обновляется автоматически, без вашего участия. "
+                "Бесплатно. Достаточно вставить код ниже в HTML страницы.")
+        h_code, h_demo, h_pairs, h_how = "Код для вставки", "Как выглядит", "Доступные пары (data-pair)", "Как это работает"
+        how = ["Скопируйте код и вставьте в HTML в нужном месте страницы.",
+               "Атрибут <code>data-pair</code> задаёт пару (см. список ниже).",
+               "Скрипт сам подтянет актуальный курс из нашего сервиса и обновит виджет.",
+               "Несколько виджетов на одной странице — просто вставьте несколько блоков <code>div</code>."]
+    else:
+        title = f"Free exchange-rate widget for your site | {S['name']}"
+        desc = "A free embeddable crypto exchange-rate widget for your website. Paste the code — rates update automatically."
+        h1 = "Rate widget for your website"
+        lead = ("Put a live exchange rate on your site — it updates automatically, hands-free. Free. Just paste the code below into your page's HTML.")
+        h_code, h_demo, h_pairs, h_how = "Embed code", "How it looks", "Available pairs (data-pair)", "How it works"
+        how = ["Copy the code and paste it into your page's HTML where you want it.",
+               "The <code>data-pair</code> attribute sets the pair (see the list below).",
+               "The script pulls the current rate from our service and updates the widget.",
+               "For several widgets on one page — just add several <code>div</code> blocks."]
+    how_html = "".join(f"<li>{s}</li>" for s in how)
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    <h2 class="news">{h_demo}</h2>
+    <div style="padding:14px;background:#0d0d0d;border:1px solid #333">{demo}</div>
+    <h2 class="news">{h_code}</h2>
+    <pre class="code-embed"><code>{esc}</code></pre>
+    <h2 class="news">{h_pairs}</h2>
+    <p class="related">{pairs_list}</p>
+    <h2 class="news">{h_how}</h2>
+    <ol class="steps">{how_html}</ol>
+  </div>
+</div>
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
 def render_glossary(lang):
     if not GLOSSARY:
         return
@@ -1594,6 +1658,7 @@ def static_files():
         items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
         items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
+        items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -1621,6 +1686,7 @@ def static_files():
     # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
     write_llms()
+    write_widget()
 
 
 def write_llms():
@@ -1663,6 +1729,29 @@ def write_llms():
     open(os.path.join(DIST, "llms.txt"), "w", encoding="utf-8").write("\n".join(lines))
 
 
+def write_widget():
+    """Встраиваемый виджет курсов: widget-data.json (данные) + widget.js (скрипт для чужих сайтов)."""
+    pairs = {}
+    for key, f, t, df, dt, url in WIDGET_PAIRS:
+        r = rate_of(f, t)
+        if r:
+            pairs[key] = {"from": df, "to": dt, "rate": fmt_rate(r["rate"]), "url": BASE_URL + url}
+    data = {"updated": updated_str("en").replace("Updated: ", ""), "base": BASE_URL, "pairs": pairs}
+    open(os.path.join(DIST, "widget-data.json"), "w", encoding="utf-8").write(json.dumps(data, ensure_ascii=False))
+    js = ("""(function(){var BASE="%s";
+function box(p){return '<div style="font:13px/1.4 system-ui,Arial,sans-serif;display:inline-block;'+
+'border:1px solid #d0d5dd;border-radius:8px;padding:10px 14px;background:#fff;color:#111;min-width:170px">'+
+'<div style="font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.04em">'+p.from+' \\u2192 '+p.to+'</div>'+
+'<div style="font-size:20px;font-weight:700;margin:2px 0">1 '+p.from+' = '+p.rate+' '+p.to+'</div>'+
+'<a href="'+p.url+'" target="_blank" rel="noopener" style="color:#0a66c2;text-decoration:none;font-weight:600">\\u041e\\u0431\\u043c\\u0435\\u043d\\u044f\\u0442\\u044c \\u2192</a>'+
+'<a href="'+BASE+'/" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:11px;color:#98a2b3;text-decoration:none">\\u041a\\u0443\\u0440\\u0441\\u044b: RateScout</a></div>';}
+function render(el,data){var k=(el.getAttribute("data-pair")||"usdt-rub").toLowerCase();var p=data.pairs[k];if(p)el.innerHTML=box(p);}
+function init(){var els=document.querySelectorAll(".ratescout-widget,#ratescout-widget,[data-ratescout-widget]");if(!els.length)return;
+fetch(BASE+"/widget-data.json").then(function(r){return r.json();}).then(function(d){Array.prototype.forEach.call(els,function(el){render(el,d);});}).catch(function(){});}
+if(document.readyState!=="loading")init();else document.addEventListener("DOMContentLoaded",init);})();""" % BASE_URL)
+    open(os.path.join(DIST, "widget.js"), "w", encoding="utf-8").write(js)
+
+
 def copy_assets():
     dst = os.path.join(DIST, "assets")
     if os.path.isdir(dst):
@@ -1690,6 +1779,7 @@ def main():
             render_bank_hub(_b, lang)
         render_editorial(lang)
         render_glossary(lang)
+        render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
