@@ -89,6 +89,20 @@ summary{cursor:pointer;color:#ffff55}
 .lead{color:#a8a8a8;max-width:820px}
 .ascii{color:#55ffff;white-space:pre;line-height:1.05;font-size:12px;margin:0 0 8px;overflow-x:auto}
 
+/* блог */
+.bloglist{list-style:none;margin:0;padding:0}
+.bloglist li{border:3px double #333;outline:3px solid #111;padding:10px 14px;margin:0 0 14px}
+.bloglist li a{font-size:1.05rem;color:#55ffff}
+.apreview{color:#a8a8a8;margin:4px 0 2px}
+.adate{color:#777;font-size:.8rem}
+.post{line-height:1.6}
+.post h1{margin:.2em 0 .4em}
+.post h2{margin:1.2em 0 .5em}
+.post ul,.post ol{padding-left:22px}
+.post li{margin:3px 0}
+.post a{color:#ffff55}
+.post code{background:#000;padding:1px 5px;border:1px solid #333}
+
 /* footer */
 #footer{clear:both;border-top:3px double #333;margin-top:10px;padding:16px 4px;color:#777;font-size:.8rem}
 #footer .disc{border:3px double #a8a8a8;outline:3px solid #111;padding:10px 12px;color:#a8a8a8}

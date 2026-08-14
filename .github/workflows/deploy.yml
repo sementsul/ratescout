@@ -35,6 +35,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install build deps (markdown для блога)
+        run: pip install --quiet markdown
+
       - name: Fetch rates (key from Secret — NOT committed, NOT in output)
         env:
           BESTCHANGE_API_KEY: ${{ secrets.BESTCHANGE_API_KEY }}

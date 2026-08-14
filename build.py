@@ -11,6 +11,28 @@ import os
 import shutil
 from datetime import datetime, timezone
 
+try:
+    import markdown as _md
+    def md_render(s):
+        return _md.markdown(s, extensions=["extra"])
+except ImportError:                                  # фолбэк без пакета markdown
+    def md_render(s):
+        out = []
+        for para in s.split("\n\n"):
+            para = para.strip()
+            if not para:
+                continue
+            if para.startswith("## "):
+                out.append(f"<h2>{para[3:]}</h2>")
+            elif para.startswith("# "):
+                out.append(f"<h1>{para[2:]}</h1>")
+            elif para.startswith("- "):
+                li = "".join(f"<li>{l[2:]}</li>" for l in para.splitlines() if l.startswith("- "))
+                out.append(f"<ul>{li}</ul>")
+            else:
+                out.append(f"<p>{para}</p>")
+        return "\n".join(out)
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
 SITE = json.load(open(os.path.join(ROOT, "data.json"), encoding="utf-8"))["site"]
@@ -70,6 +92,31 @@ def fmt_rate(s):
     if v >= 1:
         return f"{v:,.2f}".replace(",", " ")
     return f"{v:.4g}"
+
+
+def load_articles():
+    arts, d = [], os.path.join(ROOT, "articles")
+    if not os.path.isdir(d):
+        return arts
+    for fn in sorted(os.listdir(d)):
+        if not fn.endswith(".md"):
+            continue
+        raw = open(os.path.join(d, fn), encoding="utf-8").read()
+        meta, body = {}, raw
+        if raw.startswith("---"):
+            _, fm, body = raw.split("---", 2)
+            for line in fm.strip().splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    meta[k.strip()] = v.strip()
+        meta["html"] = md_render(body.strip())
+        if meta.get("slug"):
+            arts.append(meta)
+    arts.sort(key=lambda a: a.get("date", ""), reverse=True)
+    return arts
+
+
+ARTS = load_articles()
 
 DISCLOSURE = ("RateScout — независимый информационный сервис мониторинга курсов. Мы не обменный пункт и не "
               "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
@@ -133,6 +180,7 @@ HEADER = f"""<div id="header">
 <div id="topnav" class="doscyan dosborder">
   <ul id="menu-top">
     <li><a href="/">Монитор</a></li>
+    <li><a href="/blog/">Блог</a></li>
     <li><a href="/o-servise/">Что такое BestChange</a></li>
     <li><a href="/aml/">AML-проверка</a></li>
     <li><a href="/raskrytie/">Раскрытие</a></li>
@@ -298,6 +346,59 @@ def render_page(slug, title, desc, body_html):
     write(f"{slug}/index.html", head(f"{title} | {S['name']}", desc, canonical) + body)
 
 
+def render_blog():
+    if not ARTS:
+        return
+    cards = "".join(
+        f'<li><a href="/blog/{a["slug"]}/">{a["title"]}</a>'
+        f'<div class="apreview">{a.get("description","")}</div>'
+        f'<div class="adate">{a.get("date","")}</div></li>' for a in ARTS)
+    ld = jsonld({"@context": "https://schema.org", "@type": "Blog", "name": f"Блог {S['name']}",
+                 "url": f"{BASE_URL}/blog/"})
+    title = f"Блог — гайды по обмену криптовалют и валют | {S['name']}"
+    desc = "Статьи и гайды: сети USDT, комиссии, AML-проверка, словарь терминов обмена криптовалют и валют."
+    body = f"""{HEADER}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / Блог</nav>
+    <h1>Блог</h1>
+    <p>Справочные материалы и гайды об обмене криптовалют и валют.</p>
+    <ul class="bloglist">{cards}</ul>
+  </div>
+</div>
+{ld}
+{footer()}"""
+    write("blog/index.html", head(title, desc, "/blog/", ld) + body)
+
+
+def render_article(a):
+    slug, canonical = a["slug"], f"/blog/{a['slug']}/"
+    title = f"{a['title']} | {S['name']}"
+    desc = a.get("description", "")
+    art_ld = jsonld({"@context": "https://schema.org", "@type": "Article", "headline": a["title"],
+                     "description": desc, "datePublished": a.get("date", ""),
+                     "author": {"@type": "Organization", "name": S["name"]},
+                     "publisher": {"@type": "Organization", "name": S["name"]},
+                     "mainEntityOfPage": BASE_URL + canonical})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Блог", "item": f"{BASE_URL}/blog/"},
+        {"@type": "ListItem", "position": 2, "name": a["title"], "item": BASE_URL + canonical}]})
+    body = f"""{HEADER}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / <a href="/blog/">Блог</a> / {a['title']}</nav>
+    <article class="post">
+      <div class="adate">{a.get('date','')}</div>
+      {a['html']}
+    </article>
+    <p><a href="/blog/">← Все статьи</a></p>
+  </div>
+</div>
+{art_ld}{crumbs}
+{footer()}"""
+    write(f"blog/{slug}/index.html", head(title, desc, canonical) + body)
+
+
 def compliance_pages():
     render_page("o-servise", "Что такое BestChange",
                 "BestChange — мониторинг обменных пунктов: справочная информация о курсах обмена криптовалют и валют.",
@@ -409,6 +510,9 @@ def static_files():
 
     items = [u_entry("/", "hourly", "1.0")]
     items += [u_entry(cpage(s), "hourly", "0.6") for s in CUR]       # страницы валют — курсы меняются
+    if ARTS:                                                          # блог
+        items.append(u_entry("/blog/", "weekly", "0.7"))
+        items += [u_entry(f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS]
     items += [u_entry(u, "monthly", "0.4") for u in ("/o-servise/", "/aml/", "/raskrytie/", "/politika/")]
     write("sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n'
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(items) + "\n</urlset>")
@@ -447,10 +551,13 @@ def main():
     for slug, info in CUR.items():
         render_currency(slug, info)
     compliance_pages()
+    render_blog()
+    for a in ARTS:
+        render_article(a)
     static_files()
     copy_assets()
     catalog_js()   # ПОСЛЕ copy_assets: иначе copytree затрёт dist/assets
-    print(f"✅ dist/: главная + {len(CUR)} страниц валют + 4 комплаенс + sitemap/robots/manifest/sw/CNAME")
+    print(f"✅ dist/: главная + {len(CUR)} страниц валют + 4 комплаенс + {1+len(ARTS)} блог + sitemap/robots/manifest/sw/CNAME")
 
 
 if __name__ == "__main__":
