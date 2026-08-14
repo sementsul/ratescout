@@ -115,6 +115,9 @@ option{color:#a8a8a8}
 .rtbl td.d .op{color:#ffff55;font-size:.8rem}
 .rtbl tbody tr:hover{background:#161616}
 .updnote{color:#777;font-size:.8rem;margin:4px 0 14px}
+.chart{width:100%;height:120px;background:#0d0d0d;border:1px solid #333;display:block;margin:0 0 6px}
+.up{color:#55ff55}
+.down{color:#f55}
 
 /* doc pages */
 .crumbs{color:#777;font-size:.82rem;margin:6px 0}

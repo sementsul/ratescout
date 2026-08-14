@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write        # для коммита history.json обратно в репозиторий
   pages: write
   id-token: write
 
@@ -45,8 +45,24 @@ jobs:
         # необязательно: пока секреты не заданы — сайт публикуется без цифр курсов
         run: python3 fetch_rates.py || echo "⚠️ курсы пропущены (секреты не заданы) — собираю без них"
 
+      - name: Update rate history (daily snapshot → history.json)
+        run: python3 history.py || echo "⚠️ история пропущена"
+
       - name: Build static site
         run: python3 build.py
+
+      - name: Persist rate history back to repo (once/day, skip ci)
+        run: |
+          if ! git diff --quiet -- history.json; then
+            git config user.name "ratescout-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add history.json
+            git commit -m "chore(history): дневной снимок курсов [skip ci]"
+            git push
+            echo "✅ history.json обновлён и запушен"
+          else
+            echo "история без изменений — коммит не нужен"
+          fi
 
       - name: Guard — ключ НЕ должен попасть в сборку
         run: |

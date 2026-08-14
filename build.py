@@ -112,6 +112,62 @@ def updated_str(lang):
     return f"Обновлено: {dt}" if lang == "ru" else f"Updated: {dt}"
 
 
+HISTORY = {}
+_hp = os.path.join(ROOT, "history.json")
+if os.path.exists(_hp):
+    try:
+        HISTORY = json.load(open(_hp, encoding="utf-8")).get("series", {})
+    except (ValueError, OSError):
+        HISTORY = {}
+
+
+def svg_chart(points):
+    """Inline-SVG линия динамики (без JS/внешних либ). points=[[date,rate],...]."""
+    vals = [p[1] for p in points]
+    mn, mx = min(vals), max(vals)
+    W, H, pad = 600.0, 120.0, 8.0
+    span = (mx - mn) or (mx or 1.0)
+    n = len(points)
+    def xy(i, v):
+        x = pad + (W - 2 * pad) * (i / (n - 1) if n > 1 else 0)
+        y = pad + (H - 2 * pad) * (1 - (v - mn) / span)
+        return f"{x:.1f},{y:.1f}"
+    poly = " ".join(xy(i, v) for i, v in enumerate(vals))
+    last_x = pad + (W - 2 * pad)
+    last_y = pad + (H - 2 * pad) * (1 - (vals[-1] - mn) / span)
+    return (f'<svg class="chart" viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" '
+            f'role="img" aria-label="rate chart">'
+            f'<polyline fill="none" stroke="#55ff55" stroke-width="2" points="{poly}"/>'
+            f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3" fill="#ffff55"/></svg>')
+
+
+def currency_chart(slug, info, lang):
+    pts = HISTORY.get(slug, [])
+    if len(pts) < 2:
+        if lang == "ru":
+            return (f'<h2 class="news">Динамика цены {info["ticker"]} (USDT)</h2>'
+                    f'<p class="updnote">📈 Идёт накопление данных — график появится, когда наберётся история '
+                    f'(точек сейчас: {len(pts)}). Обновляется ежедневно.</p>') if pts else ""
+        return (f'<h2 class="news">{info["ticker"]} price trend (USDT)</h2>'
+                f'<p class="updnote">📈 Collecting data — the chart will appear once history builds up '
+                f'(points so far: {len(pts)}). Updated daily.</p>') if pts else ""
+    view = pts[-90:]
+    vals = [p[1] for p in view]
+    first, last = vals[0], vals[-1]
+    chg = (last - first) / first * 100 if first else 0
+    sign = "+" if chg >= 0 else ""
+    cls = "up" if chg >= 0 else "down"
+    if lang == "ru":
+        title = f"Динамика цены {info['ticker']} (USDT)"
+        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · за период {view[0][0]}…{view[-1][0]}: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, ежедневно.')
+    else:
+        title = f"{info['ticker']} price trend (USDT)"
+        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · over {view[0][0]}…{view[-1][0]}: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, daily.')
+    return f'<h2 class="news">{title}</h2>{svg_chart(view)}<p class="updnote">{note}</p>'
+
+
 def rate_of(frm, to):
     return RATES.get(f"{frm}>{to}")
 
@@ -637,6 +693,7 @@ def render_currency(slug, info, lang):
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
     {about_currency(slug, info, lang)}
+    {currency_chart(slug, info, lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
     <h2 class="news">{tr(lang,'directions')} {ticker}</h2>
