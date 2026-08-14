@@ -18,6 +18,7 @@
 - 🔺 Остаточный юр-риск (монетизация ссылками, AML-продукт) — финальная оценка за юристом.
 - ✅ **Блог** (): движок articles/*.md → страницы с Article-schema; стартовые гайды. Меню + sitemap.
 - ✅ **sitemap.xml** (335 URL, lastmod/priority/changefreq) + **robots.txt** — для GSC/Яндекс.Вебмастер.
+- ✅ **og:image** (1200x630 DOS-баннер) + Twitter card + Organization-schema.
 - ✅ **SEO-верификация:** meta Яндекс.Вебмастер (4b39ef5046fa7e8a) на всех страницах; sitemap https://ratescout.ru/sitemap.xml (335 URL).
 - ✅ **Веб-аналитика:** Яндекс.Метрика (id 111586112, Вебвизор/clickmap) + Google Analytics (G-PPN27D6JXS) на всех страницах; Вебвизор описан в Политике.
 - ✅ **Домен подключён: https://ratescout.ru** (кастомный домен в Pages, DNS A+AAAA, Let's Encrypt-сертификат `approved`, HTTPS принудительный).

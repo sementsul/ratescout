@@ -172,6 +172,10 @@
 - Из bm_top.dat (fetch_rates.build_top→top.json) — топ-100 пар → страницы /obmen/<from>-<to>/ (курс из rates.json, CTA deep-link, как обменять, FAQ+Breadcrumb schema, перелинковка на /valuta/ и обратную пару). Блок «Популярные направления» на главной (16) и страницах валют (по этой валюте). sitemap +100 (итого ~440).
 - ⏭ Далее: og:image, доп. schema, англ. версия.
 
+### UC-29. og:image + schema (шаг 4) ✅
+- og:image 1200x630 (DOS-баннер, PyMuPDF+DejaVuMono) + og:image:width/height/alt + Twitter summary_large_image на ВСЕХ страницах; Organization-schema на главной (logo=og-image). Красивые превью при шеринге в Telegram/соцсети.
+- Радиус: head() + render_home; assets/og-image.png.
+
 ## Дорожная карта (по порядку)
 0. ⏳ Каталог: распарсить полный список валют → `currencies.json`; монитор на полный список.
 1. ✅ SEO-каркас + монитор (структура bestchange, тема doshaven) на моках.
