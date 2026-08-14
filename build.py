@@ -1243,50 +1243,59 @@ def _gdef(t, lang):
 
 
 def render_widget_page(lang):
-    """Страница /vidzhet/ — код для вставки виджета на чужой сайт + живое демо."""
+    """Страница /vidzhet/ — галерея виджетов (курс + конвертер): код для вставки + живое демо."""
     path = "/vidzhet/"
-    code = ('<div class="ratescout-widget" data-pair="usdt-rub"></div>\n'
-            '<script src="' + BASE_URL + '/widget.js" async></script>')
-    demo = ('<div class="ratescout-widget" data-pair="usdt-rub"></div>'
-            '<div class="ratescout-widget" data-pair="btc-rub" style="margin-left:10px"></div>'
-            '<script src="/widget.js" async></script>')
+    def esc(c):
+        return c.replace("<", "&lt;").replace(">", "&gt;")
+    code_rate = ('<div class="ratescout-widget" data-pair="usdt-rub"></div>\n'
+                 '<script src="' + BASE_URL + '/widget.js" async></script>')
+    code_conv = ('<div class="ratescout-widget" data-widget="converter"></div>\n'
+                 '<script src="' + BASE_URL + '/widget.js" async></script>')
     pairs_list = ", ".join(f"<code>{k}</code>" for k, *_ in WIDGET_PAIRS)
-    esc = code.replace("<", "&lt;").replace(">", "&gt;")
     if lang == "ru":
-        title = f"Виджет курсов обмена для сайта — бесплатно | {S['name']}"
-        desc = "Бесплатный встраиваемый виджет актуальных курсов обмена криптовалют для вашего сайта. Вставьте код — курсы обновляются автоматически."
-        h1 = "Виджет курсов для вашего сайта"
-        lead = ("Разместите на своём сайте живой курс обмена — обновляется автоматически, без вашего участия. "
-                "Бесплатно. Достаточно вставить код ниже в HTML страницы.")
-        h_code, h_demo, h_pairs, h_how = "Код для вставки", "Как выглядит", "Доступные пары (data-pair)", "Как это работает"
-        how = ["Скопируйте код и вставьте в HTML в нужном месте страницы.",
-               "Атрибут <code>data-pair</code> задаёт пару (см. список ниже).",
-               "Скрипт сам подтянет актуальный курс из нашего сервиса и обновит виджет.",
-               "Несколько виджетов на одной странице — просто вставьте несколько блоков <code>div</code>."]
+        title = f"Виджеты курсов и конвертер для сайта — бесплатно | {S['name']}"
+        desc = "Бесплатные встраиваемые виджеты для сайта: живой курс обмена и мини-конвертер криптовалют. Вставьте код — обновляется автоматически."
+        h1 = "Виджеты для вашего сайта"
+        lead = ("Разместите на своём сайте живой курс или мини-конвертер обмена — обновляются автоматически, "
+                "бесплатно. Достаточно вставить код в HTML страницы.")
+        t_rate, t_conv, h_pairs, h_how = "Виджет курса", "Виджет-конвертер (ввод суммы)", "Доступные пары (data-pair)", "Как это работает"
+        how = ["Скопируйте код нужного виджета и вставьте в HTML страницы.",
+               "Курс: атрибут <code>data-pair</code> задаёт пару. Конвертер: <code>data-widget=\"converter\"</code>.",
+               "Скрипт сам подтянет актуальные курсы и обновит виджет.",
+               "Несколько виджетов на странице — вставьте несколько блоков <code>div</code>."]
     else:
-        title = f"Free exchange-rate widget for your site | {S['name']}"
-        desc = "A free embeddable crypto exchange-rate widget for your website. Paste the code — rates update automatically."
-        h1 = "Rate widget for your website"
-        lead = ("Put a live exchange rate on your site — it updates automatically, hands-free. Free. Just paste the code below into your page's HTML.")
-        h_code, h_demo, h_pairs, h_how = "Embed code", "How it looks", "Available pairs (data-pair)", "How it works"
-        how = ["Copy the code and paste it into your page's HTML where you want it.",
-               "The <code>data-pair</code> attribute sets the pair (see the list below).",
-               "The script pulls the current rate from our service and updates the widget.",
-               "For several widgets on one page — just add several <code>div</code> blocks."]
+        title = f"Rate and converter widgets for your site — free | {S['name']}"
+        desc = "Free embeddable widgets for your site: a live exchange rate and a mini crypto converter. Paste the code — updates automatically."
+        h1 = "Widgets for your website"
+        lead = ("Put a live rate or a mini exchange converter on your site — they update automatically, for free. "
+                "Just paste the code into your page's HTML.")
+        t_rate, t_conv, h_pairs, h_how = "Rate widget", "Converter widget (amount input)", "Available pairs (data-pair)", "How it works"
+        how = ["Copy the code of the widget you want and paste it into your page's HTML.",
+               "Rate: the <code>data-pair</code> attribute sets the pair. Converter: <code>data-widget=\"converter\"</code>.",
+               "The script pulls current rates and updates the widget.",
+               "For several widgets on a page — add several <code>div</code> blocks."]
     how_html = "".join(f"<li>{s}</li>" for s in how)
+    demo_style = "padding:14px;background:#0d0d0d;border:1px solid #333;margin:0 0 12px"
     body = f"""{header(lang, path)}
 <div id="main">
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1}</h1><p>{lead}</p>
-    <h2 class="news">{h_demo}</h2>
-    <div style="padding:14px;background:#0d0d0d;border:1px solid #333">{demo}</div>
-    <h2 class="news">{h_code}</h2>
-    <pre class="code-embed"><code>{esc}</code></pre>
+
+    <h2 class="news">{t_rate}</h2>
+    <div style="{demo_style}"><div class="ratescout-widget" data-pair="usdt-rub"></div>
+      <div class="ratescout-widget" data-pair="btc-rub" style="margin-left:10px"></div></div>
+    <pre class="code-embed"><code>{esc(code_rate)}</code></pre>
+
+    <h2 class="news">{t_conv}</h2>
+    <div style="{demo_style}"><div class="ratescout-widget" data-widget="converter"></div></div>
+    <pre class="code-embed"><code>{esc(code_conv)}</code></pre>
+
     <h2 class="news">{h_pairs}</h2>
     <p class="related">{pairs_list}</p>
     <h2 class="news">{h_how}</h2>
     <ol class="steps">{how_html}</ol>
+    <script src="/widget.js" async></script>
   </div>
 </div>
 {footer(lang)}"""
@@ -1738,18 +1747,8 @@ def write_widget():
             pairs[key] = {"from": df, "to": dt, "rate": fmt_rate(r["rate"]), "url": BASE_URL + url}
     data = {"updated": updated_str("en").replace("Updated: ", ""), "base": BASE_URL, "pairs": pairs}
     open(os.path.join(DIST, "widget-data.json"), "w", encoding="utf-8").write(json.dumps(data, ensure_ascii=False))
-    js = ("""(function(){var BASE="%s";
-function box(p){return '<div style="font:13px/1.4 system-ui,Arial,sans-serif;display:inline-block;'+
-'border:1px solid #d0d5dd;border-radius:8px;padding:10px 14px;background:#fff;color:#111;min-width:170px">'+
-'<div style="font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.04em">'+p.from+' \\u2192 '+p.to+'</div>'+
-'<div style="font-size:20px;font-weight:700;margin:2px 0">1 '+p.from+' = '+p.rate+' '+p.to+'</div>'+
-'<a href="'+p.url+'" target="_blank" rel="noopener" style="color:#0a66c2;text-decoration:none;font-weight:600">\\u041e\\u0431\\u043c\\u0435\\u043d\\u044f\\u0442\\u044c \\u2192</a>'+
-'<a href="'+BASE+'/" target="_blank" rel="noopener" style="display:block;margin-top:6px;font-size:11px;color:#98a2b3;text-decoration:none">\\u041a\\u0443\\u0440\\u0441\\u044b: RateScout</a></div>';}
-function render(el,data){var k=(el.getAttribute("data-pair")||"usdt-rub").toLowerCase();var p=data.pairs[k];if(p)el.innerHTML=box(p);}
-function init(){var els=document.querySelectorAll(".ratescout-widget,#ratescout-widget,[data-ratescout-widget]");if(!els.length)return;
-fetch(BASE+"/widget-data.json").then(function(r){return r.json();}).then(function(d){Array.prototype.forEach.call(els,function(el){render(el,d);});}).catch(function(){});}
-if(document.readyState!=="loading")init();else document.addEventListener("DOMContentLoaded",init);})();""" % BASE_URL)
-    open(os.path.join(DIST, "widget.js"), "w", encoding="utf-8").write(js)
+    src = open(os.path.join(ROOT, "widget.src.js"), encoding="utf-8").read()
+    open(os.path.join(DIST, "widget.js"), "w", encoding="utf-8").write(src.replace("{{BASE}}", BASE_URL))
 
 
 def copy_assets():
