@@ -1523,7 +1523,8 @@ def static_files():
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "\n".join(items) + "\n</urlset>")
     open(os.path.join(DIST, "robots.txt"), "w", encoding="utf-8").write(
-        f"User-agent: *\nAllow: /\nSitemap: {BASE_URL}/sitemap.xml\n")
+        f"User-agent: *\nAllow: /\nSitemap: {BASE_URL}/sitemap.xml\n"
+        f"# LLM guidance: {BASE_URL}/llms.txt\n")
     open(os.path.join(DIST, "CNAME"), "w", encoding="utf-8").write(S["domain"] + "\n")
     open(os.path.join(DIST, "manifest.webmanifest"), "w", encoding="utf-8").write(json.dumps({
         "name": S["name"] + " — мониторинг курсов обмена", "short_name": S["name"],
