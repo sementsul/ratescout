@@ -169,11 +169,11 @@ def currency_chart(slug, info, lang):
     if lang == "ru":
         title = f"Динамика цены {info['ticker']} (USDT)"
         note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · за период {view[0][0]}…{view[-1][0]}: "
-                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, ежедневно.')
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, обновление ежечасно.')
     else:
         title = f"{info['ticker']} price trend (USDT)"
         note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · over {view[0][0]}…{view[-1][0]}: "
-                f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, daily.')
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, hourly.')
     return f'<h2 class="news">{title}</h2>{svg_chart(view)}<p class="updnote">{note}</p>'
 
 
