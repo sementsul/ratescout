@@ -248,6 +248,20 @@ _seen = set()
 PAIR_PAGES = [p for p in PAIR_PAGES if not ((p["from"], p["to"]) in _seen or _seen.add((p["from"], p["to"])))]
 PAIR_SET = {(p["from"], p["to"]) for p in PAIR_PAGES}
 
+# Банковские хабы: «все монеты → конкретный получатель» (крупные RUB-направления).
+# Страница /na/<slug>/ агрегирует крипто→этот банк с курсами — высокоинтентный money-лендинг.
+BANK_HUB_LIST = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub",
+                 "mir", "alfaclick", "vtb", "gazprombank", "yoomoney"]
+
+
+def _crypto_rate_count(to_slug):
+    return sum(1 for fs, _ in GROUPED.get("Криптовалюты", []) if RATES.get(f"{fs}>{to_slug}"))
+
+
+# хабы, у которых реально ≥5 крипто-направлений (иначе не рендерим — не плодим тонкие)
+BANK_HUBS = [b for b in BANK_HUB_LIST if b in CUR and _crypto_rate_count(b) >= 5]
+BANK_HUB_SET = set(BANK_HUBS)
+
 
 def fmt_rate(s):
     try:
@@ -761,12 +775,18 @@ def render_currency(slug, info, lang):
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
                       "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
+    hub_cta = ""
+    if slug in BANK_HUB_SET:
+        hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
+                   + (f'→ Обмен криптовалюты на {name} (все монеты)' if lang == "ru"
+                      else f'→ Exchange crypto to {name} (all coins)') + '</a></p>')
     body = f"""{header(lang, path)}
 <div id="main">
   <div id="content">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {name} <span class="tk">{ticker}</span></nav>
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
+    {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
     {rate_table(slug, info, lang)}
@@ -816,7 +836,8 @@ def render_pair(f, t, lang):
                 ([f'Для криптовалюты — сделайте <a href="{PREF[lang]}/aml/">AML-проверку адреса</a>.'] if fi["category"] == "Криптовалюты" else []) + \
                 ["Проведите обмен на сайте выбранного обменника."]
         rev = f'<a href="{pair_url(lang, t, f)}">Обратный обмен: {tN} → {fN}</a> · ' if (t, f) in PAIR_SET else ""
-        rel = f'{rev}<a href="{cpage(lang, f)}">О валюте {fN}</a> · <a href="{cpage(lang, t)}">О валюте {tN}</a>'
+        hub = f'<a href="{PREF[lang]}/na/{t}/">Все монеты → {tN}</a> · ' if t in BANK_HUB_SET else ""
+        rel = f'{rev}{hub}<a href="{cpage(lang, f)}">О валюте {fN}</a> · <a href="{cpage(lang, t)}">О валюте {tN}</a>'
         q1 = f"Какой курс обмена {fN} на {tN}?"
         a1 = (f"Лучшее значение — <b>{fmt_rate(r['rate'])} {tT}</b> за 1 {fT} среди {r['count']} обменников. Справочно, меняется." if r else "Курс уточняется в мониторинге BestChange.")
         q2, a2 = "Безопасно ли это?", "Обмен идёт в пунктах из мониторинга BestChange с рейтингом и резервами. Для крипто рекомендуется AML-проверка адреса."
@@ -834,7 +855,8 @@ def render_pair(f, t, lang):
                 ([f'For crypto — do an <a href="{PREF[lang]}/aml/">AML check of the address</a>.'] if fi["category"] == "Криптовалюты" else []) + \
                 ["Complete the exchange on the chosen exchanger's site."]
         rev = f'<a href="{pair_url(lang, t, f)}">Reverse: {tN} → {fN}</a> · ' if (t, f) in PAIR_SET else ""
-        rel = f'{rev}<a href="{cpage(lang, f)}">About {fN}</a> · <a href="{cpage(lang, t)}">About {tN}</a>'
+        hub = f'<a href="{PREF[lang]}/na/{t}/">All coins → {tN}</a> · ' if t in BANK_HUB_SET else ""
+        rel = f'{rev}{hub}<a href="{cpage(lang, f)}">About {fN}</a> · <a href="{cpage(lang, t)}">About {tN}</a>'
         q1 = f"What is the {fN} to {tN} rate?"
         a1 = (f"Best value — <b>{fmt_rate(r['rate'])} {tT}</b> per 1 {fT} across {r['count']} exchangers. For reference, it changes." if r else "The rate is confirmed in the BestChange monitor.")
         q2, a2 = "Is it safe?", "The exchange runs in offices from BestChange monitoring with ratings and reserves. For crypto an address AML check is recommended."
@@ -1148,6 +1170,90 @@ def render_category(cat, lang):
     write(lang, path, head(lang, title, desc, path) + body)
 
 
+def render_bank_hub(to_slug, lang):
+    ti = CUR.get(to_slug)
+    if not ti:
+        return
+    name, tT = ti["name"], ti["ticker"]
+    # все крипто-валюты с курсом → этот получатель, по популярности
+    rows = []
+    for fs, fi in GROUPED.get("Криптовалюты", []):
+        r = rate_of(fs, to_slug)
+        if r:
+            rows.append((r.get("count", 0), fs, fi, r))
+    if len(rows) < 5:
+        return
+    rows.sort(key=lambda x: x[0], reverse=True)
+    path = f"/na/{to_slug}/"
+    if lang == "ru":
+        title = f"Обмен криптовалюты на {name} — курсы и все монеты ({len(rows)}) | {S['name']}"
+        desc = (f"Обмен криптовалюты на {name}: {len(rows)} направлений, лучшие курсы из мониторинга BestChange. "
+                f"USDT, Bitcoin, Ethereum и другие монеты на {name}. Калькулятор, AML-подсказки.")
+        intro = (f"Собраны направления обмена криптовалюты на <b>{name}</b> с лучшими курсами из мониторинга "
+                 f"<b>BestChange</b>. Выберите монету ниже — откроется список обменников по направлению.")
+        h1 = f"Обмен криптовалюты на {name}"
+        th = ("Монета", "Лучший курс", "Обменников", "Резерв, всего")
+        openw, howh = "Открыть", f"Как обменять крипту на {name}"
+        steps = [f"Выберите монету для обмена на {name} в таблице.",
+                 "В BestChange сравните курс, резерв и рейтинг обменников.",
+                 f'Для крипто — сделайте <a href="{PREF[lang]}/aml/">AML-проверку адреса</a>.',
+                 f"Проведите обмен и получите средства на {name}."]
+        note = "Лучший курс среди обменников; резерв — суммарный по направлению. " + updated_str(lang)
+        q1 = f"Как обменять USDT на {name}?"
+        a1 = f"Выберите направление USDT → {name} в таблице, сравните обменники в BestChange по курсу и резерву и проведите обмен."
+        guide = f'<a href="{PREF[lang]}/blog/kak-obmenyat-usdt-na-rubli/">Пошаговый гайд по выводу в рубли</a>'
+    else:
+        title = f"Exchange crypto to {name} — rates and all coins ({len(rows)}) | {S['name']}"
+        desc = (f"Exchange crypto to {name}: {len(rows)} directions, best rates from BestChange monitoring. "
+                f"USDT, Bitcoin, Ethereum and other coins to {name}. Calculator, AML tips.")
+        intro = (f"Directions to exchange crypto to <b>{name}</b> with the best rates from the <b>BestChange</b> "
+                 f"monitor. Pick a coin below — the exchanger list for that direction opens.")
+        h1 = f"Exchange crypto to {name}"
+        th = ("Coin", "Best rate", "Exchangers", "Total reserve")
+        openw, howh = "Open", f"How to exchange crypto to {name}"
+        steps = [f"Pick a coin to exchange to {name} in the table.",
+                 "On BestChange compare rate, reserve and exchanger rating.",
+                 f'For crypto — do an <a href="{PREF[lang]}/aml/">address AML check</a>.',
+                 f"Complete the exchange and receive funds to {name}."]
+        note = "Best rate among exchangers; reserve is the total for the direction. " + updated_str(lang)
+        q1 = f"How to exchange USDT to {name}?"
+        a1 = f"Pick the USDT → {name} direction in the table, compare exchangers on BestChange by rate and reserve, and complete the exchange."
+        guide = f'<a href="{PREF[lang]}/blog/kak-obmenyat-usdt-na-rubli/">Step-by-step cash-out guide</a>'
+    trs = ""
+    for cnt, fs, fi, r in rows:
+        trs += (f'<tr><td class="d"><a href="{bc_link(fs, to_slug)}" target="_blank" rel="nofollow noopener sponsored">'
+                f'{fi["ticker"]} → {tT} <span class="op">{openw} →</span></a></td>'
+                f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td><td class="num">{cnt}</td>'
+                f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
+    faq_ld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}}]})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    steps_html = "".join(f"<li>{s}</li>" for s in steps)
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1} <span class="cnt">{len(rows)}</span></h1>
+    <div class="dosblue dosborder">{intro}</div>
+    <div class="rtbl-wrap"><table class="rtbl"><thead><tr>
+      <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>
+    <p class="updnote">{note}</p>
+    <h2 class="news">{howh}</h2>
+    <ol class="steps">{steps_html}</ol>
+    <p class="related">{guide} · <a href="{cpage(lang, to_slug)}">{'О ' if lang=='ru' else 'About '}{name}</a></p>
+    <h2 class="news">{tr(lang,'faq')}</h2>
+    <details><summary>{q1}</summary><p>{a1}</p></details>
+  </div>
+</div>
+{faq_ld}{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
 def compliance_pages(lang):
     if lang == "ru":
         render_page(lang, "o-servise", "Что такое BestChange",
@@ -1280,6 +1386,7 @@ def static_files():
             items += [u_entry(pr + f"/blog/page/{p}/", "weekly", "0.5") for p in range(2, _bpages + 1)]
             items += [u_entry(pr + f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS[lg]]
         items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
+        items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika")]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
@@ -1328,6 +1435,8 @@ def main():
         compliance_pages(lang)
         for _c in CATS:
             render_category(_c, lang)
+        for _b in BANK_HUBS:
+            render_bank_hub(_b, lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
