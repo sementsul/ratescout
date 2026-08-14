@@ -37,6 +37,18 @@ img{border:none;max-width:100%}
 #menu-top{list-style:none;margin:0;padding:0;display:flex;gap:22px;flex-wrap:wrap}
 #menu-top li{padding:0}
 
+/* поиск по валютам */
+#search{position:relative;margin:0 0 14px;max-width:520px}
+#search input{width:100%;padding:9px 12px;border:3px double #55ffff;outline:3px solid #0000aa;
+  background:#000;color:#a8a8a8;font:inherit}
+#search input::placeholder{color:#5a7}
+#qres{display:none;position:absolute;z-index:50;left:0;right:0;top:100%;list-style:none;margin:0;padding:0;
+  background:#0000aa;border:3px double #55ffff;max-height:340px;overflow:auto}
+#qres li{padding:0}
+#qres a{display:block;padding:5px 10px;color:#fff}
+#qres a:hover{background:#00aaaa;color:#111;text-decoration:none}
+#qres a span{color:#ffff55;font-size:.82rem}
+
 /* main: content (справа, широкий) + sidebar (слева) */
 #main{overflow:hidden}
 #content{float:right;width:71%;padding:0 0 20px;min-height:400px}

@@ -283,6 +283,10 @@ HEADER = f"""<div id="header">
     <li><a href="/aml/">AML-проверка</a></li>
     <li><a href="/raskrytie/">Раскрытие</a></li>
   </ul>
+</div>
+<div id="search">
+  <input id="q" type="search" placeholder="Поиск валюты: BTC, USDT, Сбербанк…" autocomplete="off" aria-label="Поиск валюты">
+  <ul id="qres"></ul>
 </div>"""
 
 

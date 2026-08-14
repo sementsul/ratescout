@@ -3,6 +3,33 @@
 (function () {
   var C = window.__CATALOG__;
   var REF = window.__REF__ || "1116359";
+
+  // ---- поиск по валютам (на всех страницах) ----
+  (function () {
+    var q = document.getElementById("q"), qres = document.getElementById("qres");
+    if (!q || !qres || !C || !C.cur) return;
+    var all = Object.keys(C.cur).map(function (s) {
+      return { slug: s, n: C.cur[s].n, t: C.cur[s].t, key: (C.cur[s].n + " " + C.cur[s].t + " " + s).toLowerCase() };
+    });
+    function render(list) {
+      qres.innerHTML = list.map(function (x) {
+        return '<li><a href="/valuta/' + x.slug + '/">' + x.n + ' <span>' + x.t + '</span></a></li>';
+      }).join("");
+      qres.style.display = list.length ? "block" : "none";
+    }
+    q.addEventListener("input", function () {
+      var v = q.value.trim().toLowerCase();
+      if (!v) { render([]); return; }
+      render(all.filter(function (x) { return x.key.indexOf(v) >= 0; }).slice(0, 12));
+    });
+    q.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { var a = qres.querySelector("a"); if (a) location.href = a.getAttribute("href"); }
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target !== q && !qres.contains(e.target)) render([]);
+    });
+  })();
+
   var conv = document.getElementById("conv");
   if (!C || !conv) return;
 
