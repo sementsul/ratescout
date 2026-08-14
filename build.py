@@ -115,6 +115,12 @@ def updated_str(lang):
     return f"Обновлено: {dt}" if lang == "ru" else f"Updated: {dt}"
 
 
+def modified_iso():
+    """ISO-дата последнего обновления курсов — для schema dateModified (свежесть)."""
+    ts = RATES_GENERATED or int(datetime.now(timezone.utc).timestamp())
+    return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+
+
 HISTORY = {}
 _hp = os.path.join(ROOT, "history.json")
 if os.path.exists(_hp):
@@ -597,7 +603,11 @@ def render_home(lang):
     ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
                  "url": BASE_URL + PREF[lang] + "/", "inLanguage": LOCALE[lang], "description": S["tagline"]})
     org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
-                  "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png"})
+                  "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png",
+                  "email": S.get("owner_email", ""),
+                  "contactPoint": {"@type": "ContactPoint", "contactType":
+                                   ("customer support" if lang == "en" else "поддержка"),
+                                   "email": S.get("owner_email", "")}})
     if lang == "ru":
         title = f"{S['name']} — справочник курсов обмена: {total} валют"
         desc = (f"Справочник курсов обмена криптовалют и денег по {total} валютам на основе мониторинга обменных "
@@ -688,6 +698,9 @@ def render_currency(slug, info, lang):
     crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
         {"@type": "ListItem", "position": 2, "name": f"{name} ({ticker})", "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
+                      "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     body = f"""{header(lang, path)}
 <div id="main">
@@ -772,6 +785,9 @@ def render_pair(f, t, lang):
     crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
         {"@type": "ListItem", "position": 2, "name": f"{fT} → {tT}", "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
+                      "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     body = f"""{header(lang, path)}
 <div id="main">
@@ -885,9 +901,11 @@ def render_article(a, lang):
     title = f"{a['title']} | {S['name']}"
     desc = a.get("description", "")
     art_ld = jsonld({"@context": "https://schema.org", "@type": "Article", "headline": a["title"],
-                     "description": desc, "datePublished": a.get("date", ""), "inLanguage": LOCALE[lang],
+                     "description": desc, "datePublished": a.get("date", ""),
+                     "dateModified": a.get("modified", a.get("date", "")), "inLanguage": LOCALE[lang],
                      "author": {"@type": "Organization", "name": S["name"]},
-                     "publisher": {"@type": "Organization", "name": S["name"]},
+                     "publisher": {"@type": "Organization", "name": S["name"],
+                                   "logo": {"@type": "ImageObject", "url": f"{BASE_URL}/assets/og-image.png"}},
                      "mainEntityOfPage": BASE_URL + PREF[lang] + path})
     back = "← All articles" if lang == "en" else "← Все статьи"
     body = f"""{header(lang, path)}
