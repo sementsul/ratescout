@@ -4,6 +4,7 @@
 RU в корне (/), EN в /en/. hreflang между версиями, переключатель языка.
 Данные (курсы/каталог/пары) общие; локализуются только тексты и внутренние ссылки.
 """
+import hashlib
 import json
 import os
 import re
@@ -45,6 +46,15 @@ REF = S["ref"]
 LANGS = ["ru", "en"]
 PREF = {"ru": "", "en": "/en"}
 LOCALE = {"ru": "ru", "en": "en"}
+
+# Версии ассетов для кеш-бастинга (хеш содержимого) — заполняется в main() до рендера.
+# Стабильный путь /assets/app.js кешируется браузером; ?v=<hash> меняется только при
+# изменении файла и заставляет подхватить новую версию (важно для ежечасных пересборок).
+VER = {"css": "", "js": "", "cat": ""}
+
+
+def _h(s):
+    return hashlib.md5(s.encode("utf-8") if isinstance(s, str) else s).hexdigest()[:8]
 
 # перевод категорий для EN
 CAT_EN = {"Криптовалюты": "Cryptocurrencies", "Digital currencies": "Digital currencies",
@@ -250,7 +260,7 @@ def head(lang, title, desc, path, extra=""):
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/styles.css">
+<link rel="stylesheet" href="/assets/styles.css?v={VER['css']}">
 {extra}
 {METRIKA}
 {GTAG}
@@ -310,8 +320,8 @@ def footer(lang):
   <div class="fine">{fine}</div>
 </div>
 </div>
-<script src="/assets/catalog.js"></script>
-<script src="/assets/app.js"></script>
+<script src="/assets/catalog.js?v={VER['cat']}"></script>
+<script src="/assets/app.js?v={VER['js']}"></script>
 </body></html>"""
 
 
@@ -689,7 +699,8 @@ def render_blog(lang):
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1}</h1><p>{lead}</p>
-    <div id="blogsearch">
+    <div id="blogsearch" class="dosblue dosborder">
+      <h3>{tr(lang,'blog_search_ph').rstrip('…')}</h3>
       <input id="bq" type="search" placeholder="{tr(lang,'blog_search_ph')}" autocomplete="off" aria-label="{tr(lang,'blog_search_ph')}">
     </div>
     <ul class="bloglist" id="bloglist">{cards}</ul>
@@ -827,10 +838,13 @@ def compliance_pages(lang):
                     "Privacy")
 
 
-def write_catalog_js():
+def build_catalog_js():
     cur = {slug: {"n": i["name"], "t": i["ticker"], "c": i["category"]} for slug, i in CUR.items()}
-    js = "window.__CATALOG__=" + json.dumps({"order": CATS, "cur": cur}, ensure_ascii=False) + \
-         ";window.__REF__=" + json.dumps(REF) + ";"
+    return "window.__CATALOG__=" + json.dumps({"order": CATS, "cur": cur}, ensure_ascii=False) + \
+           ";window.__REF__=" + json.dumps(REF) + ";"
+
+
+def write_catalog_js(js):
     open(os.path.join(DIST, "assets", "catalog.js"), "w", encoding="utf-8").write(js)
 
 
@@ -883,6 +897,11 @@ def main():
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
     os.makedirs(DIST)
+    # версии ассетов (кеш-бастинг) — до рендера, чтобы попали в head/footer
+    catjs = build_catalog_js()
+    VER["css"] = _h(open(os.path.join(ROOT, "assets", "styles.css"), encoding="utf-8").read())
+    VER["js"] = _h(open(os.path.join(ROOT, "assets", "app.js"), encoding="utf-8").read())
+    VER["cat"] = _h(catjs)
     for lang in LANGS:
         render_home(lang)
         for slug, info in CUR.items():
@@ -895,8 +914,9 @@ def main():
             render_pair(p["from"], p["to"], lang)
     static_files()
     copy_assets()
-    write_catalog_js()
+    write_catalog_js(catjs)
     print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
+    print(f"   asset ver: css={VER['css']} js={VER['js']} cat={VER['cat']}")
 
 
 if __name__ == "__main__":
