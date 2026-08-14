@@ -49,6 +49,7 @@ INDEXNOW_KEY = "b394aeced6a92ed48a09e2bd30099905"  # публичный ключ
 LANGS = ["ru", "en"]
 PREF = {"ru": "", "en": "/en"}
 LOCALE = {"ru": "ru", "en": "en"}
+BLOG_PER_PAGE = 6            # статей на страницу блога (пагинация 1 2 3 …)
 
 # Версии ассетов для кеш-бастинга (хеш содержимого) — заполняется в main() до рендера.
 # Стабильный путь /assets/app.js кешируется браузером; ?v=<hash> меняется только при
@@ -843,44 +844,78 @@ def render_page(lang, slug, title, desc, body_html, crumb_title):
     write(lang, path, head(lang, f"{title} | {S['name']}", desc, path) + body)
 
 
+def blog_page_path(lang, p):
+    return f"{PREF[lang]}/blog/" if p == 1 else f"{PREF[lang]}/blog/page/{p}/"
+
+
+def pager_html(lang, cur, pages):
+    if pages <= 1:
+        return ""
+    parts = []
+    if cur > 1:
+        parts.append(f'<a class="pg-nav" href="{blog_page_path(lang, cur-1)}" rel="prev">←</a>')
+    for p in range(1, pages + 1):
+        if p == cur:
+            parts.append(f'<span class="pg-cur">{p}</span>')
+        else:
+            parts.append(f'<a href="{blog_page_path(lang, p)}">{p}</a>')
+    if cur < pages:
+        parts.append(f'<a class="pg-nav" href="{blog_page_path(lang, cur+1)}" rel="next">→</a>')
+    return f'<nav class="pager" aria-label="pagination">{"".join(parts)}</nav>'
+
+
 def render_blog(lang):
     arts = ARTS[lang]
     if not arts:
         return
     def dsearch(a):
         return (a["title"] + " " + a.get("description", "") + " " + a["slug"]).lower().replace('"', "&quot;")
-    cards = "".join(
-        f'<li data-search="{dsearch(a)}"><a href="{PREF[lang]}/blog/{a["slug"]}/">{a["title"]}</a>'
-        f'<div class="apreview">{a.get("description","")}</div><div class="adate">{a.get("date","")}</div></li>' for a in arts)
-    ld = jsonld({"@context": "https://schema.org", "@type": "Blog", "name": f"{S['name']} Blog",
-                 "url": f"{BASE_URL}{PREF[lang]}/blog/"})
-    ld += (f'\n<link rel="alternate" type="application/rss+xml" '
-           f'title="{S["name"]} {"блог" if lang=="ru" else "blog"} RSS" '
-           f'href="{PREF[lang]}/blog/rss.xml">')
+    pages = (len(arts) + BLOG_PER_PAGE - 1) // BLOG_PER_PAGE
     if lang == "ru":
-        title = f"Блог — гайды по обмену криптовалют и валют | {S['name']}"
+        base_title = f"Блог — гайды по обмену криптовалют и валют | {S['name']}"
         desc = "Статьи и гайды: сети USDT, комиссии, AML-проверка, словарь терминов обмена."
         h1, lead = "Блог", "Справочные материалы и гайды об обмене криптовалют и валют."
     else:
-        title = f"Blog — crypto and currency exchange guides | {S['name']}"
+        base_title = f"Blog — crypto and currency exchange guides | {S['name']}"
         desc = "Articles and guides: USDT networks, fees, AML check, exchange glossary."
         h1, lead = "Blog", "Reference materials and guides on crypto and currency exchange."
-    body = f"""{header(lang, "/blog/")}
+    for p in range(1, pages + 1):
+        path = ("/blog/" if p == 1 else f"/blog/page/{p}/")
+        chunk = arts[(p - 1) * BLOG_PER_PAGE: p * BLOG_PER_PAGE]
+        cards = "".join(
+            f'<li data-search="{dsearch(a)}"><a href="{PREF[lang]}/blog/{a["slug"]}/">{a["title"]}</a>'
+            f'<div class="apreview">{a.get("description","")}</div><div class="adate">{a.get("date","")}</div></li>'
+            for a in chunk)
+        title = base_title if p == 1 else (
+            f"Блог, страница {p} | {S['name']}" if lang == "ru" else f"Blog, page {p} | {S['name']}")
+        ld = jsonld({"@context": "https://schema.org", "@type": "Blog", "name": f"{S['name']} Blog",
+                     "url": f"{BASE_URL}{PREF[lang]}/blog/"})
+        ld += (f'\n<link rel="alternate" type="application/rss+xml" '
+               f'title="{S["name"]} {"блог" if lang=="ru" else "blog"} RSS" '
+               f'href="{PREF[lang]}/blog/rss.xml">')
+        if p > 1:
+            ld += f'\n<link rel="prev" href="{blog_page_path(lang, p-1)}">'
+        if p < pages:
+            ld += f'\n<link rel="next" href="{blog_page_path(lang, p+1)}">'
+        pageinfo = "" if p == 1 else (f' <span class="pg-of">— страница {p} из {pages}</span>' if lang == "ru"
+                                      else f' <span class="pg-of">— page {p} of {pages}</span>')
+        body = f"""{header(lang, path)}
 <div id="main">
   <div id="content" style="float:none;width:100%">
-    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
-    <h1>{h1}</h1><p>{lead}</p>
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / <a href="{PREF[lang]}/blog/">{h1}</a></nav>
+    <h1>{h1}{pageinfo}</h1><p>{lead}</p>
     <div id="blogsearch" class="dosblue dosborder">
       <h3>{tr(lang,'blog_search_ph').rstrip('…')}</h3>
       <input id="bq" type="search" placeholder="{tr(lang,'blog_search_ph')}" autocomplete="off" aria-label="{tr(lang,'blog_search_ph')}">
     </div>
     <ul class="bloglist" id="bloglist">{cards}</ul>
     <p id="bnores" class="related" hidden>{tr(lang,'blog_noresults')}</p>
+    {pager_html(lang, p, pages)}
   </div>
 </div>
 {ld}
 {footer(lang)}"""
-    write(lang, "/blog/", head(lang, title, desc, "/blog/", ld) + body)
+        write(lang, path, head(lang, title, desc, path, ld) + body)
 
 
 def render_rss(lang):
@@ -1151,6 +1186,8 @@ def static_files():
         items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "hourly", "0.8") for p in PAIR_PAGES]
         if ARTS[lg]:
             items.append(u_entry(pr + "/blog/", "weekly", "0.7"))
+            _bpages = (len(ARTS[lg]) + BLOG_PER_PAGE - 1) // BLOG_PER_PAGE
+            items += [u_entry(pr + f"/blog/page/{p}/", "weekly", "0.5") for p in range(2, _bpages + 1)]
             items += [u_entry(pr + f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS[lg]]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika")]
