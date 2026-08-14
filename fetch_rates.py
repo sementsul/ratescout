@@ -91,6 +91,28 @@ def id2slug():
     return {info["id"]: slug for slug, info in cat["currencies"].items()}
 
 
+def build_top(zf, i2s, limit=100):
+    """Топ-популярные направления из bm_top.dat (id_from;id_to;вес) → список слаг-пар (по популярности)."""
+    txt = _member(zf, "bm_top.dat")
+    if not txt:
+        return []
+    out = []
+    for line in txt.splitlines():
+        p = line.split(";")
+        if len(p) < 2:
+            continue
+        try:
+            fid, tid = int(p[0]), int(p[1])
+        except ValueError:
+            continue
+        fs, ts = i2s.get(fid), i2s.get(tid)
+        if fs and ts and fs != ts:
+            out.append({"from": fs, "to": ts, "w": p[2].strip() if len(p) > 2 else ""})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def fmt(v):
     return "0" if v == 0 else f"{v:.6g}"
 
@@ -138,10 +160,15 @@ def main():
     rates_text = _member(zf, "bm_rates.dat")             # 2) курсы
     if rates_text is None:
         raise SystemExit("❌ в дампе нет bm_rates.dat")
-    pairs = build_pairs(rates_text, id2slug())
+    i2s = id2slug()
+    pairs = build_pairs(rates_text, i2s)
     json.dump({"generated_at": int(time.time()), "pairs": pairs},
               open(os.path.join(ROOT, "rates.json"), "w", encoding="utf-8"), ensure_ascii=False)
     print(f"курсы: направлений {len(pairs)}")
+
+    top = build_top(zf, i2s)                             # 3) топ-направления для лендингов
+    json.dump({"pairs": top}, open(os.path.join(ROOT, "top.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"топ-направлений: {len(top)}")
 
 
 if __name__ == "__main__":

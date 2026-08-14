@@ -82,6 +82,39 @@ def rate_of(frm, to):
     return RATES.get(f"{frm}>{to}")
 
 
+# топ-популярные направления (bm_top.dat → top.json, генерится fetch_rates.py)
+TOP = []
+_tp = os.path.join(ROOT, "top.json")
+if os.path.exists(_tp):
+    try:
+        TOP = [p for p in json.load(open(_tp, encoding="utf-8")).get("pairs", [])
+               if p.get("from") in CUR and p.get("to") in CUR]
+    except (ValueError, OSError):
+        TOP = []
+TOP_SET = {(p["from"], p["to"]) for p in TOP}
+
+
+def pair_url(f, t):
+    return f"/obmen/{f}-{t}/"
+
+
+def popular_involving(slug, n=8):
+    return [p for p in TOP if p["from"] == slug or p["to"] == slug][:n]
+
+
+def pair_link_li(p):
+    return (f'<li><a href="{pair_url(p["from"], p["to"])}">'
+            f'{CUR[p["from"]]["name"]} <span>{CUR[p["from"]]["ticker"]}</span> → '
+            f'{CUR[p["to"]]["name"]} <span>{CUR[p["to"]]["ticker"]}</span></a></li>')
+
+
+def popular_block(slug):
+    pops = popular_involving(slug)
+    if not pops:
+        return ""
+    return f'<h2 class="news">Популярные направления</h2><ul class="dlist">{"".join(pair_link_li(p) for p in pops)}</ul>'
+
+
 def fmt_rate(s):
     """Человекочитаемый курс без научной нотации."""
     try:
@@ -303,6 +336,7 @@ def render_home():
       Справочник курсов обмена криптовалют и валют. Данные собраны из мониторинга обменных пунктов
       <b>BestChange</b> по <b>{total}</b> валютам и приведены для ознакомления.
       <a href="/o-servise/">Что такое BestChange →</a></div>
+    {('<h2 class="news">Популярные направления</h2><ul class="dlist">' + "".join(pair_link_li(p) for p in TOP[:16]) + "</ul>") if TOP else ""}
     <h2 class="news">Каталог валют <span class="cnt">{total}</span></h2>
     {cat_html}
   </div>
@@ -358,6 +392,7 @@ def render_currency(slug, info):
     <p>Справочная сводка курсов обмена <b>{name} ({ticker})</b> в обменниках из мониторинга
        <b>BestChange</b>. Выберите направление ниже; обмен совершается на сайте выбранного обменника.</p>
     {about_currency(slug, info)}
+    {popular_block(slug)}
     <h2 class="news">Направления обмена {ticker}</h2>
     {dir_blocks}
     <h2 class="news">Как обменять {name}</h2>
@@ -386,6 +421,63 @@ def render_currency(slug, info):
 {jsonld(crumbs)}{jsonld(faq)}
 {footer()}"""
     write(f"valuta/{slug}/index.html", head(title, desc, canonical) + body)
+
+
+def render_pair(f, t):
+    fi, ti = CUR.get(f), CUR.get(t)
+    if not fi or not ti:
+        return
+    fN, fT, tN, tT = fi["name"], fi["ticker"], ti["name"], ti["ticker"]
+    canonical = pair_url(f, t)
+    r = rate_of(f, t)
+    if r:
+        rate_line = (f'<div class="big">{fmt_rate(r["rate"])} <span>{tT} за 1 {fT}</span></div>'
+                     f'<div class="sub">по данным {r["count"]} обменников · суммарный резерв {fmt_rate(r["reserve"])} {tT}</div>')
+        rate_meta = f"курс {fmt_rate(r['rate'])} {tT} за 1 {fT}, {r['count']} обменников, "
+    else:
+        rate_line = '<div class="sub">курс уточняется в мониторинге</div>'
+        rate_meta = ""
+    title = f"Обмен {fN} на {tN}" + (f" — курс {fmt_rate(r['rate'])} {tT}/{fT}" if r else "") + f" | {S['name']}"
+    desc = (f"Обмен {fN} ({fT}) на {tN} ({tT}): {rate_meta}список обменников из мониторинга BestChange, "
+            f"как обменять, AML-проверка адреса.")
+    rev = f'<a href="{pair_url(t, f)}">Обратный обмен: {tN} → {fN}</a> · ' if (t, f) in TOP_SET else ""
+    faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": f"Какой курс обмена {fN} на {tN}?", "acceptedAnswer": {"@type": "Answer",
+         "text": (f"Лучшее значение — {fmt_rate(r['rate'])} {tT} за 1 {fT} среди {r['count']} обменников (мониторинг BestChange), значение справочное и меняется." if r else "Курс уточняется в мониторинге BestChange.")}},
+        {"@type": "Question", "name": f"Как обменять {fT} на {tT}?", "acceptedAnswer": {"@type": "Answer",
+         "text": "Откройте направление в BestChange, сравните курс и резерв обменников, выберите пункт и проведите операцию на его сайте. Для крипто рекомендуется AML-проверка адреса."}}]})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Монитор", "item": BASE_URL},
+        {"@type": "ListItem", "position": 2, "name": f"{fT} → {tT}", "item": BASE_URL + canonical}]})
+    aml = '<li>Для криптовалюты — сделайте <a href="/aml/">AML-проверку адреса</a>.</li>' if fi["category"] == "Криптовалюты" else ""
+    body = f"""{HEADER}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / {fT} → {tT}</nav>
+    <h1>Обмен {fN} <span class="tk">{fT}</span> на {tN} <span class="tk">{tT}</span></h1>
+    <div class="rate-box">
+      {rate_line}
+      <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">Открыть направление в BestChange →</a>
+    </div>
+    <h2 class="news">Как обменять {fT} на {tT}</h2>
+    <ol class="steps">
+      <li>Откройте список обменников BestChange по направлению {fN} → {tN}.</li>
+      <li>Сравните курс, резерв и рейтинг обменников.</li>
+      {aml}
+      <li>Проведите обмен на сайте выбранного обменника.</li>
+    </ol>
+    <p class="related">{rev}<a href="{cpage(f)}">О валюте {fN}</a> · <a href="{cpage(t)}">О валюте {tN}</a> ·
+       <a href="/blog/slovar-terminov-obmena/">Словарь терминов</a></p>
+    <h2 class="news">Частые вопросы</h2>
+    <details><summary>Какой курс обмена {fN} на {tN}?</summary>
+      <p>{('Лучшее значение — <b>'+fmt_rate(r['rate'])+' '+tT+'</b> за 1 '+fT+' среди '+str(r['count'])+' обменников. Справочно, меняется.') if r else 'Курс уточняется в мониторинге BestChange.'}</p></details>
+    <details><summary>Безопасно ли это?</summary>
+      <p>Обмен идёт в пунктах из мониторинга BestChange с рейтингом и резервами. Для крипто рекомендуется AML-проверка адреса.</p></details>
+  </div>
+</div>
+{faq}{crumbs}
+{footer()}"""
+    write(f"obmen/{f}-{t}/index.html", head(title, desc, canonical) + body)
 
 
 def render_page(slug, title, desc, body_html):
@@ -565,6 +657,7 @@ def static_files():
 
     items = [u_entry("/", "hourly", "1.0")]
     items += [u_entry(cpage(s), "hourly", "0.6") for s in CUR]       # страницы валют — курсы меняются
+    items += [u_entry(pair_url(p["from"], p["to"]), "hourly", "0.8") for p in TOP]   # лендинги топ-пар
     if ARTS:                                                          # блог
         items.append(u_entry("/blog/", "weekly", "0.7"))
         items += [u_entry(f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS]
@@ -609,10 +702,12 @@ def main():
     render_blog()
     for a in ARTS:
         render_article(a)
+    for p in TOP:
+        render_pair(p["from"], p["to"])
     static_files()
     copy_assets()
     catalog_js()   # ПОСЛЕ copy_assets: иначе copytree затрёт dist/assets
-    print(f"✅ dist/: главная + {len(CUR)} страниц валют + 4 комплаенс + {1+len(ARTS)} блог + sitemap/robots/manifest/sw/CNAME")
+    print(f"✅ dist/: главная + {len(CUR)} страниц валют + 4 комплаенс + {1+len(ARTS)} блог + {len(TOP)} пар + sitemap/robots/manifest/sw/CNAME")
 
 
 if __name__ == "__main__":
