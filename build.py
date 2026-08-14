@@ -135,6 +135,7 @@ TR = {
         "ticker": "Тикер", "category": "Категория", "network": "Сеть",
         "glossary": "Словарь терминов", "usdt_nets": "Сети USDT", "fees": "Комиссии сетей", "aml_link": "AML-проверка",
         "open_bc": "Открыть направление в BestChange →",
+        "blog_search_ph": "Поиск по статьям…", "blog_noresults": "Ничего не найдено. Попробуйте другой запрос.",
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
@@ -149,6 +150,7 @@ TR = {
         "ticker": "Ticker", "category": "Category", "network": "Network",
         "glossary": "Glossary", "usdt_nets": "USDT networks", "fees": "Network fees", "aml_link": "AML check",
         "open_bc": "Open direction on BestChange →",
+        "blog_search_ph": "Search articles…", "blog_noresults": "Nothing found. Try a different query.",
     },
 }
 
@@ -667,8 +669,10 @@ def render_blog(lang):
     arts = ARTS[lang]
     if not arts:
         return
+    def dsearch(a):
+        return (a["title"] + " " + a.get("description", "") + " " + a["slug"]).lower().replace('"', "&quot;")
     cards = "".join(
-        f'<li><a href="{PREF[lang]}/blog/{a["slug"]}/">{a["title"]}</a>'
+        f'<li data-search="{dsearch(a)}"><a href="{PREF[lang]}/blog/{a["slug"]}/">{a["title"]}</a>'
         f'<div class="apreview">{a.get("description","")}</div><div class="adate">{a.get("date","")}</div></li>' for a in arts)
     ld = jsonld({"@context": "https://schema.org", "@type": "Blog", "name": f"{S['name']} Blog",
                  "url": f"{BASE_URL}{PREF[lang]}/blog/"})
@@ -685,7 +689,11 @@ def render_blog(lang):
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1}</h1><p>{lead}</p>
-    <ul class="bloglist">{cards}</ul>
+    <div id="blogsearch">
+      <input id="bq" type="search" placeholder="{tr(lang,'blog_search_ph')}" autocomplete="off" aria-label="{tr(lang,'blog_search_ph')}">
+    </div>
+    <ul class="bloglist" id="bloglist">{cards}</ul>
+    <p id="bnores" class="related" hidden>{tr(lang,'blog_noresults')}</p>
   </div>
 </div>
 {ld}

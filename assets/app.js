@@ -38,6 +38,23 @@
     });
   });
 
+  // ---- поиск по статьям блога (на странице /blog/) ----
+  (function () {
+    var bq = document.getElementById("bq"), list = document.getElementById("bloglist");
+    if (!bq || !list) return;
+    var items = Array.prototype.slice.call(list.querySelectorAll("li"));
+    var nores = document.getElementById("bnores");
+    bq.addEventListener("input", function () {
+      var v = bq.value.trim().toLowerCase(), shown = 0;
+      items.forEach(function (li) {
+        var hit = !v || (li.getAttribute("data-search") || "").indexOf(v) >= 0;
+        li.style.display = hit ? "" : "none";
+        if (hit) shown++;
+      });
+      if (nores) nores.hidden = shown > 0;
+    });
+  })();
+
   var conv = document.getElementById("conv");
   if (!C || !conv) return;
 
