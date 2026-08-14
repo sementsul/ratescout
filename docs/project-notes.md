@@ -7,14 +7,16 @@
 ## Что где
 | Файл | Назначение |
 |---|---|
-| `build.py` | генератор статики → `dist/`: **две локали** RU (корень `/`) + EN (`/en/`). На каждую: главная + 330 валют (/valuta/) + 100 пар (/obmen/, из top.json) + блог (/blog/, из articles/ и articles/en/) + комплаенс. Плюс общие sitemap (обе локали, +hreflang)/robots/manifest/sw + og-image |
-| `fetch_rates.py` | из дампа `api.bestchange.ru/info.zip` (без ключа): синхрон `currencies.json` (bm_cy.dat) + `rates.json` (bm_rates.dat) + топ-пары `top.json` (bm_top.dat) |
+| `build.py` | генератор статики → `dist/` (~1110 стр.), **две локали** RU (`/`) + EN (`/en/`). Типы страниц на локаль: главная · 330 валют (`/valuta/`, +живая таблица курсов, калькулятор суммы, SVG-график динамики, «похожие валюты») · ~183 пары (`/obmen/`: top.json + высокоинтентные крипта→рубли) · 6 категорийных хабов (`/kategoriya/`) · 10 банковских хабов (`/na/<банк>/`, крипта→получатель) · блог с пагинацией и сквозным поиском (`/blog/`, `/blog/page/N/`) · FAQ (`/faq/`) · редакция (`/redakciya/`) · комплаенс · 404. Разметка: WebSite/Organization/BreadcrumbList/FAQPage/Article/WebPage(dateModified)/HowTo/ItemList. Плюс sitemap(+hreflang)/robots/manifest/sw/RSS(`/blog/rss.xml`)/IndexNow-ключ/og-image. Ассеты с кеш-бастингом `?v=<md5>` |
+| `fetch_rates.py` | из дампа `api.bestchange.ru/info.zip` (без ключа): синхрон `currencies.json` (bm_cy.dat) + `rates.json` (bm_rates.dat, +`generated_at`) + топ-пары `top.json` (bm_top.dat) |
+| `history.py` | почасовой снимок «цены в USDT» топ-валют → `history.json` (для SVG-графиков); в CI коммитится обратно `[skip ci]` |
+| `indexnow.py` | POST списка URL из sitemap в IndexNow (Яндекс/Bing) — в CI только на push, не на cron |
 | `parse_catalog.py` | разовый парсер каталога из сохранённого HTML (первичный сид; дальше каталог обновляет fetch_rates) |
 | `currencies.json` | каталог валют (slug→{id,name,ticker,category[,num]}); в CI обновляется в раннере |
 | `data.json` | `site`: name/domain/ref/owner/owner_inn/owner_email/tagline |
 | `articles/` | RU markdown-статьи блога (frontmatter title/description/date/slug); `articles/en/` — EN-переводы с теми же слагами |
 | `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄), og-image.png (1200x630 баннер) |
-| `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → build → deploy на Pages (guard: ключ не в dist) |
+| `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → history.py → build → guard(ключ не в dist) → deploy на Pages → (push) IndexNow; коммит history.json обратно (`contents:write`, `[skip ci]`) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дневного отключения cron |
 
 ## Запуск / деплой
@@ -47,6 +49,6 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - Абсолютные пути (`/assets`,`/valuta`) корректны только на корне домена (ratescout.ru), на github.io/ratescout — 404.
 
 ## Статус и что дальше
-Всё живое: домен+HTTPS, аналитика (Метрика 111586112 + GA G-PPN27D6JXS), Вебмастер-verification, sitemap отправлен в GSC/Яндекс. Опционально: cookie-баннер (ЕС), доп. микроразметка, расширение браузера/macOS-приложение (из старого плана).
+Всё живое: домен+HTTPS, аналитика (Метрика 111586112 + GA G-PPN27D6JXS), Яндекс.Вебмастер + **Google Search Console** подключены, sitemap отправлен. SEO-каркас сильно расширен (i18n RU/EN, ~1110 стр., хабы категорий/банков, блог 17 статей с пагинацией+сквозным поиском, живые таблицы/калькулятор/SVG-графики истории, HowTo/ItemList/WebPage-разметка, IndexNow, RSS, страница редакции для E-E-A-T, 404, preconnect). **Дальнейший рост — оффсайт** (ссылки/Telegram/Q&A): материалы в `dropzone/uploads/marketing-kit/` (сервер дропзоны на :8000). Оффсайт делает пользователь; ассистент готовит контент. Опционально: динамические OG-картинки, словарь терминов отдельными страницами, cookie-баннер (ЕС).
 
 Живой список сценариев/радиуса — `docs/ratescout.usecases.md`.
