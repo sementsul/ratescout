@@ -465,7 +465,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
-                 f'<a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
+                 f'<a href="/redakciya/">О редакции</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span>")
@@ -474,7 +474,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
-                 f'<a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
+                 f'<a href="/en/redakciya/">Editorial</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -1067,7 +1067,7 @@ def render_article(a, lang):
 <div id="main">
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / <a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a> / {a['title']}</nav>
-    <article class="post"><div class="adate">{a.get('date','')}</div>{a['html']}</article>
+    <article class="post"><div class="adate">{'Опубликовано' if lang=='ru' else 'Published'}: {a.get('date','')} · <a href="{PREF[lang]}/redakciya/">{'Редакция ' if lang=='ru' else 'Editorial · '}{S['name']}</a></div>{a['html']}</article>
     <p><a href="{PREF[lang]}/blog/">{back}</a></p>
   </div>
 </div>
@@ -1201,6 +1201,64 @@ def render_category(cat, lang):
 {faq_ld}{crumbs}{itemlist_ld([(i["name"], BASE_URL + cpage(lang, s)) for s, i in curs])}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
+
+
+def render_editorial(lang):
+    """Страница «О редакции» — сигналы доверия (E-E-A-T) для YMYL-ниши."""
+    owner = S.get("owner", "")
+    email = S.get("owner_email", "")
+    if lang == "ru":
+        title = "О редакции RateScout — кто ведёт сайт и как мы работаем"
+        desc = "Редакция RateScout: независимый справочник курсов обмена. Принципы, источники данных, обновление и контакты."
+        body = f"""<h1>О редакции RateScout</h1>
+<p><b>RateScout</b> — независимый информационный справочник курсов обмена криптовалют и валют. Мы не обменный
+   пункт и не проводим операции: наша задача — собрать и понятно показать данные, чтобы вы приняли решение сами.</p>
+<h2>Как мы работаем</h2>
+<ul>
+  <li><b>Источник данных</b> — мониторинг обменных пунктов <a href="{PREF[lang]}/o-servise/">BestChange</a>:
+      курсы, резервы и число обменников. Курсы на сайте обновляются <b>ежечасно</b>.</li>
+  <li><b>Нейтральность.</b> Мы не оцениваем обменники субъективно и не даём финансовых рекомендаций — только справочные данные.</li>
+  <li><b>Прозрачность.</b> Ссылки на обмен ведут в BestChange; по партнёрской программе мы можем получать
+      вознаграждение (<a href="{PREF[lang]}/raskrytie/">раскрытие</a>).</li>
+  <li><b>Актуальность.</b> Гайды и справочные страницы поддерживаются в актуальном состоянии; на страницах
+      курсов указано время последнего обновления.</li>
+</ul>
+<h2>Для кого это</h2>
+<p>Для тех, кто обменивает криптовалюту и валюты и хочет быстро сориентироваться в курсах, сетях, комиссиях и
+   безопасности (включая <a href="{PREF[lang]}/blog/chto-takoe-aml-proverka/">AML-проверку</a>).</p>
+<h2>Владелец и контакты</h2>
+<p>Владелец сайта: {S.get('owner_status','')} <b>{owner}</b>, ИНН {S.get('owner_inn','')}. Вопросы, уточнения,
+   сообщения об ошибках в данных — на <a href="mailto:{email}">{email}</a>. Мы за обратную связь: если заметили
+   неточность в курсе или тексте — напишите, поправим.</p>
+<p class="related"><a href="{PREF[lang]}/raskrytie/">Раскрытие и дисклеймеры</a> ·
+   <a href="{PREF[lang]}/politika/">Политика конфиденциальности</a></p>"""
+        crumb = "О редакции"
+    else:
+        title = "About the RateScout editorial team — who runs the site and how"
+        desc = "RateScout editorial team: an independent rate directory. Principles, data sources, updates and contacts."
+        body = f"""<h1>About the RateScout editorial team</h1>
+<p><b>RateScout</b> is an independent directory of crypto and currency exchange rates. We are not an exchange
+   office and do not process transactions: our job is to collect and clearly present data so you can decide yourself.</p>
+<h2>How we work</h2>
+<ul>
+  <li><b>Data source</b> — the <a href="{PREF[lang]}/o-servise/">BestChange</a> exchange monitor: rates,
+      reserves and exchanger counts. Rates on the site update <b>hourly</b>.</li>
+  <li><b>Neutrality.</b> We don't rate exchangers subjectively and don't give financial advice — reference data only.</li>
+  <li><b>Transparency.</b> Exchange links lead to BestChange; through the affiliate program we may earn a
+      commission (<a href="{PREF[lang]}/raskrytie/">disclosure</a>).</li>
+  <li><b>Freshness.</b> Guides and reference pages are kept current; rate pages show the last update time.</li>
+</ul>
+<h2>Who it's for</h2>
+<p>For anyone exchanging crypto and currencies who wants to quickly navigate rates, networks, fees and safety
+   (including an <a href="{PREF[lang]}/blog/chto-takoe-aml-proverka/">AML check</a>).</p>
+<h2>Owner and contacts</h2>
+<p>Site owner: <b>{owner}</b> (self-employed, RU tax ID {S.get('owner_inn','')}). Questions, corrections and
+   data-error reports — at <a href="mailto:{email}">{email}</a>. We welcome feedback: spotted an inaccuracy in a
+   rate or text? Let us know and we'll fix it.</p>
+<p class="related"><a href="{PREF[lang]}/raskrytie/">Disclosure</a> ·
+   <a href="{PREF[lang]}/politika/">Privacy policy</a></p>"""
+        crumb = "Editorial"
+    render_page(lang, "redakciya", title, desc, body, crumb)
 
 
 def render_bank_hub(to_slug, lang):
@@ -1453,7 +1511,7 @@ def static_files():
         items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
         items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
-        items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika")]
+        items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "redakciya")]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "\n".join(items) + "\n</urlset>")
@@ -1502,6 +1560,7 @@ def main():
             render_category(_c, lang)
         for _b in BANK_HUBS:
             render_bank_hub(_b, lang)
+        render_editorial(lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
