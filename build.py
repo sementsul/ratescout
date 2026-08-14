@@ -70,6 +70,44 @@ def cat_name(c, lang):
     return CAT_EN.get(c, c) if lang == "en" else c
 
 
+# слаги категорийных хабов (/kategoriya/<slug>/)
+CAT_SLUG = {"Криптовалюты": "kriptovalyuty", "Digital currencies": "cifrovye-valyuty",
+            "Bank accounts and cards": "bankovskie-karty", "Online banking": "onlayn-banking",
+            "Money transfers": "denezhnye-perevody", "Cash": "nalichnye", "Прочее": "prochee"}
+
+# уникальные вступления для хаб-страниц категорий (RU/EN)
+CAT_INTRO = {
+    "Криптовалюты": ("Криптовалюты — цифровые активы в блокчейн-сетях: Bitcoin, Ethereum, стейблкоины (USDT, "
+                     "USDC) и десятки других монет. При обмене важны сеть выпуска и её комиссия. Ниже — все "
+                     "криптовалюты каталога; на странице каждой собраны курсы всех направлений и калькулятор.",
+                     "Cryptocurrencies are digital assets on blockchain networks: Bitcoin, Ethereum, stablecoins "
+                     "(USDT, USDC) and dozens more. When exchanging, the issuing network and its fee matter. Below "
+                     "are all cryptocurrencies in the catalog; each page has rates for every direction and a calculator."),
+    "Digital currencies": ("Электронные платёжные системы и цифровые кошельки: YooMoney, Advanced Cash, Capitalist "
+                           "и другие. Ниже — все такие направления каталога с курсами обмена.",
+                           "Electronic payment systems and digital wallets: YooMoney, Advanced Cash, Capitalist and "
+                           "others. Below are all such directions in the catalog with exchange rates."),
+    "Bank accounts and cards": ("Банковские карты и реквизиты: Visa/Mastercard, Мир, СБП, переводы на счёт. Ниже — "
+                                "все карточные направления каталога с курсами обмена.",
+                                "Bank cards and details: Visa/Mastercard, Mir, SBP, transfers to account. Below are "
+                                "all card directions in the catalog with exchange rates."),
+    "Online banking": ("Онлайн-банкинг: Сбербанк, Т-Банк, ВТБ, Альфа-Банк и другие банки. Ниже — все банковские "
+                       "направления каталога; на странице каждого — курсы обмена и калькулятор.",
+                       "Online banking: Sberbank, T-Bank, VTB, Alfa-Bank and other banks. Below are all bank "
+                       "directions in the catalog; each page has exchange rates and a calculator."),
+    "Money transfers": ("Системы денежных переводов. Ниже — все такие направления каталога с курсами обмена.",
+                        "Money transfer systems. Below are all such directions in the catalog with exchange rates."),
+    "Cash": ("Наличные в разных валютах. Ниже — все наличные направления каталога; обмен проходит в офисе обменника.",
+             "Cash in various currencies. Below are all cash directions in the catalog; the exchange happens in the "
+             "exchanger's office."),
+    "Прочее": ("Прочие направления каталога.", "Other directions in the catalog."),
+}
+
+
+def cat_page(lang, cat):
+    return f"{PREF[lang]}/kategoriya/{CAT_SLUG.get(cat, 'prochee')}/"
+
+
 def bc_link(frm, to):
     f, t = CUR.get(frm, {}), CUR.get(to, {})
     if f.get("num") or t.get("num"):
@@ -619,7 +657,8 @@ def render_home(lang):
     for c in CATS:
         items = "".join(f'<li><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></li>'
                         for slug, info in GROUPED.get(c, []))
-        cat_html += f'<h2 class="news">{cat_name(c, lang)} <span class="cnt">{len(GROUPED.get(c, []))}</span></h2><ul class="dlist">{items}</ul>'
+        cat_html += (f'<h2 class="news"><a href="{cat_page(lang, c)}">{cat_name(c, lang)}</a> '
+                     f'<span class="cnt">{len(GROUPED.get(c, []))}</span></h2><ul class="dlist">{items}</ul>')
     ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
                  "url": BASE_URL + PREF[lang] + "/", "inLanguage": LOCALE[lang], "description": S["tagline"]})
     org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
@@ -1065,6 +1104,50 @@ def render_faq(lang):
     write(lang, path, head(lang, title, desc, path, faq_ld) + body)
 
 
+def render_category(cat, lang):
+    slug = CAT_SLUG.get(cat, "prochee")
+    path = f"/kategoriya/{slug}/"
+    curs = GROUPED.get(cat, [])
+    if not curs:
+        return
+    cname = cat_name(cat, lang)
+    intro = CAT_INTRO.get(cat, ("", ""))[0 if lang == "ru" else 1]
+    items = "".join(f'<li><a href="{cpage(lang, s)}">{i["name"]} <span>{i["ticker"]}</span></a></li>'
+                    for s, i in curs)
+    if lang == "ru":
+        title = f"{cname} — обмен: курсы и все направления ({len(curs)}) | {S['name']}"
+        desc = f"{cname} для обмена: {len(curs)} направлений, курсы из мониторинга BestChange, калькулятор, все направления обмена."
+        h1 = f"Обмен: {cname}"
+        q1, a1 = f"Сколько {cname.lower()} доступно для обмена?", f"В каталоге {len(curs)} направлений категории «{cname}». На странице каждого — курсы всех направлений обмена."
+        listh = f"Все направления категории «{cname}»"
+    else:
+        title = f"{cname} — exchange: rates and all directions ({len(curs)}) | {S['name']}"
+        desc = f"{cname} for exchange: {len(curs)} directions, rates from BestChange monitoring, calculator, all exchange directions."
+        h1 = f"Exchange: {cname}"
+        q1, a1 = f"How many {cname.lower()} are available to exchange?", f"The catalog has {len(curs)} directions in the “{cname}” category. Each page lists rates for all exchange directions."
+        listh = f"All directions in “{cname}”"
+    faq_ld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}}]})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": cname, "item": BASE_URL + PREF[lang] + path}]})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {cname}</nav>
+    <h1>{h1} <span class="cnt">{len(curs)}</span></h1>
+    <div class="dosblue dosborder">{intro}</div>
+    <h2 class="news">{listh}</h2>
+    <ul class="dlist">{items}</ul>
+    <h2 class="news">{tr(lang,'faq')}</h2>
+    <details><summary>{q1}</summary><p>{a1}</p></details>
+  </div>
+</div>
+{faq_ld}{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
 def compliance_pages(lang):
     if lang == "ru":
         render_page(lang, "o-servise", "Что такое BestChange",
@@ -1196,6 +1279,7 @@ def static_files():
             _bpages = (len(ARTS[lg]) + BLOG_PER_PAGE - 1) // BLOG_PER_PAGE
             items += [u_entry(pr + f"/blog/page/{p}/", "weekly", "0.5") for p in range(2, _bpages + 1)]
             items += [u_entry(pr + f"/blog/{a['slug']}/", "monthly", "0.6") for a in ARTS[lg]]
+        items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika")]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
@@ -1242,6 +1326,8 @@ def main():
         for slug, info in CUR.items():
             render_currency(slug, info, lang)
         compliance_pages(lang)
+        for _c in CATS:
+            render_category(_c, lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
