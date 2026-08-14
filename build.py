@@ -919,6 +919,9 @@ def render_pair(f, t, lang):
     <ol class="steps">{steps_html}</ol>
     {howto_ld(h_how, steps)}
     <p class="related">{rel} · <a href="{PREF[lang]}/blog/slovar-terminov-obmena/">{tr(lang,'glossary')}</a></p>
+    {(lambda ps: (f'<h2 class="news">{("Другие направления " if lang=="ru" else "Other directions for ")+fT}</h2>'
+                  f'<ul class="dlist">{"".join(pair_link_li(p, lang) for p in ps)}</ul>') if ps else "")(
+        [p for p in popular_involving(f) if not (p["from"]==f and p["to"]==t)][:6])}
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{q1}</summary><p>{a1}</p></details>
     <details><summary>{q2}</summary><p>{a2}</p></details>
