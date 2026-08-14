@@ -10,6 +10,8 @@ import os
 import re
 import shutil
 from datetime import datetime, timezone
+from email.utils import format_datetime
+from xml.sax.saxutils import escape as xml_escape
 
 try:
     import markdown as _md
@@ -817,6 +819,9 @@ def render_blog(lang):
         f'<div class="apreview">{a.get("description","")}</div><div class="adate">{a.get("date","")}</div></li>' for a in arts)
     ld = jsonld({"@context": "https://schema.org", "@type": "Blog", "name": f"{S['name']} Blog",
                  "url": f"{BASE_URL}{PREF[lang]}/blog/"})
+    ld += (f'\n<link rel="alternate" type="application/rss+xml" '
+           f'title="{S["name"]} {"блог" if lang=="ru" else "blog"} RSS" '
+           f'href="{PREF[lang]}/blog/rss.xml">')
     if lang == "ru":
         title = f"Блог — гайды по обмену криптовалют и валют | {S['name']}"
         desc = "Статьи и гайды: сети USDT, комиссии, AML-проверка, словарь терминов обмена."
@@ -841,6 +846,38 @@ def render_blog(lang):
 {ld}
 {footer(lang)}"""
     write(lang, "/blog/", head(lang, title, desc, "/blog/", ld) + body)
+
+
+def render_rss(lang):
+    arts = ARTS[lang]
+    if not arts:
+        return
+    base = BASE_URL + PREF[lang]
+    self_url = f"{base}/blog/rss.xml"
+    ttl = f"{S['name']} — блог" if lang == "ru" else f"{S['name']} — Blog"
+    dsc = ("Гайды по обмену криптовалют и валют." if lang == "ru"
+           else "Guides on crypto and currency exchange.")
+    items = ""
+    for a in arts:
+        try:
+            y, m, d = (int(x) for x in a.get("date", "").split("-"))
+            pub = format_datetime(datetime(y, m, d, tzinfo=timezone.utc))
+        except (ValueError, TypeError):
+            pub = ""
+        url = f"{base}/blog/{a['slug']}/"
+        items += (f"<item><title>{xml_escape(a['title'])}</title>"
+                  f"<link>{url}</link><guid isPermaLink=\"true\">{url}</guid>"
+                  + (f"<pubDate>{pub}</pubDate>" if pub else "")
+                  + f"<description>{xml_escape(a.get('description',''))}</description></item>")
+    rss = (f'<?xml version="1.0" encoding="UTF-8"?>\n'
+           f'<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'
+           f'<title>{xml_escape(ttl)}</title><link>{base}/blog/</link>'
+           f'<description>{xml_escape(dsc)}</description><language>{LOCALE[lang]}</language>'
+           f'<atom:link href="{self_url}" rel="self" type="application/rss+xml"/>'
+           f'{items}</channel></rss>')
+    full = os.path.join(DIST, (PREF[lang] + "/blog/rss.xml").strip("/"))
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    open(full, "w", encoding="utf-8").write(rss)
 
 
 def render_article(a, lang):
@@ -1041,6 +1078,7 @@ def main():
             render_currency(slug, info, lang)
         compliance_pages(lang)
         render_blog(lang)
+        render_rss(lang)
         for a in ARTS[lang]:
             render_article(a, lang)
         for p in TOP:

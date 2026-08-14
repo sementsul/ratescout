@@ -242,6 +242,11 @@ build.py кладёт публичный ключ-файл `/<key>.txt` в dist.
 URL на `api.indexnow.org` (Яндекс/Bing/Seznam). В CI шаг идёт ПОСЛЕ deploy и только `if github.event_name !=
 schedule` — на push/ручной запуск, НЕ на почасовом cron (иначе спам). Ключ не секрет (лежит на сайте).
 
+## UC-38 — RSS-лента блога
+`render_rss(lang)` пишет `/blog/rss.xml` (RU) и `/en/blog/rss.xml` (EN) из `ARTS[lang]` (RSS 2.0, pubDate
+RFC822, xml-escape). На странице блога — `<link rel="alternate" type="application/rss+xml">` для дискавери
+браузерами/агрегаторами/читалками. Радиус: блог RU+EN.
+
 ## Открытые пункты
 - Дизайн-тема не выбрана (оцениваем референсы; old-hard.ru как основной — отклонён: ретро вредит доверию/конверсии/SEO).
 - Поиск матчит имена как в дампе BestChange (латиница) — кириллические названия банков не находятся.
