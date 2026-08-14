@@ -250,6 +250,14 @@ def head(title, desc, canonical, extra=""):
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{BASE_URL}{canonical}">
 <meta property="og:site_name" content="{S['name']}">
+<meta property="og:image" content="{BASE_URL}/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{S['name']} — мониторинг курсов обмена">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{BASE_URL}/assets/og-image.png">
 <meta name="robots" content="index,follow">
 <meta name="yandex-verification" content="4b39ef5046fa7e8a">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -324,6 +332,9 @@ def render_home():
 
     ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
                  "url": BASE_URL, "description": S["tagline"]})
+    org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
+                  "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png",
+                  "description": S["tagline"]})
     title = f"{S['name']} — справочник курсов обмена: {total} валют"
     desc = (f"Справочник курсов обмена криптовалют и денег по {total} валютам на основе мониторинга обменных "
             "пунктов BestChange. Все направления, AML-проверка криптоадресов.")
@@ -353,7 +364,7 @@ def render_home():
   </div>
   <div class="clearboth"></div>
 </div>
-{ld}
+{org}
 {footer()}"""
     write("index.html", head(title, desc, "/", ld) + body)
 
