@@ -101,13 +101,39 @@
   function deep(frm, to) { return "https://www.bestchange.ru/" + frm + "-to-" + to + ".html?p=" + REF; }
 
   var OPEN = conv.getAttribute("data-open") || "Открыть";
+  var APPROX = conv.getAttribute("data-approx") || "≈";
   var SAMEMSG = OPEN === "Open" ? "Choose different currencies" : "Выберите разные валюты";
+
+  // встроенная карта лучших курсов {to: rate} для валюты-владельца (на странице валюты)
+  var RATES = null, ROWNER = "", elAmt = document.getElementById("cAmt"), elOut = document.getElementById("cOut");
+  var rn = document.getElementById("convRates");
+  if (rn) { try { RATES = JSON.parse(rn.textContent); ROWNER = rn.getAttribute("data-owner") || ""; } catch (e) { RATES = null; } }
+
+  function fmtNum(v) {
+    if (!isFinite(v)) return "";
+    if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+    if (v >= 1) return v.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+    if (v >= 0.01) return v.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+    return v.toFixed(10).replace(/0+$/, "").replace(/\.$/, "");
+  }
+  function estimate() {
+    if (!elOut) return;
+    var f = elFrom.value, t = elTo.value;
+    var amt = elAmt ? parseFloat(elAmt.value) : NaN;
+    // оценка возможна только для валюты-владельца встроенной карты
+    if (!RATES || f !== ROWNER || !RATES[t] || !(amt >= 0)) { elOut.textContent = ""; return; }
+    var got = amt * parseFloat(RATES[t]);
+    elOut.innerHTML = APPROX + " <b>" + fmtNum(got) + "</b> " + bySlug[t].t;
+  }
+
   function update() {
     var f = elFrom.value, t = elTo.value;
-    if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = SAMEMSG; return; }
+    if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return; }
     elGo.href = deep(f, t);
     elGo.textContent = OPEN + ": " + bySlug[f].t + " → " + bySlug[t].t + " →";
+    estimate();
   }
+  if (elAmt) elAmt.addEventListener("input", estimate);
   elFrom.addEventListener("change", update);
   elTo.addEventListener("change", update);
   if (elSwap) elSwap.addEventListener("click", function () {

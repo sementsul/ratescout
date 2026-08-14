@@ -157,6 +157,7 @@ TR = {
         "glossary": "Словарь терминов", "usdt_nets": "Сети USDT", "fees": "Комиссии сетей", "aml_link": "AML-проверка",
         "open_bc": "Открыть направление в BestChange →",
         "blog_search_ph": "Поиск по статьям…", "blog_noresults": "Ничего не найдено. Попробуйте другой запрос.",
+        "amount": "Сумма", "approx": "≈ получите",
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
@@ -172,6 +173,7 @@ TR = {
         "glossary": "Glossary", "usdt_nets": "USDT networks", "fees": "Network fees", "aml_link": "AML check",
         "open_bc": "Open direction on BestChange →",
         "blog_search_ph": "Search articles…", "blog_noresults": "Nothing found. Try a different query.",
+        "amount": "Amount", "approx": "≈ you get",
     },
 }
 
@@ -336,14 +338,35 @@ def footer(lang):
 </body></html>"""
 
 
-def converter_html(lang, preset_from=""):
-    return f"""<div class="conv dosblue dosborder" id="conv" data-from="{preset_from}" data-prefix="{PREF[lang]}" data-open="{'Open' if lang=='en' else 'Открыть'}">
+def outgoing_rates(slug):
+    """Карта лучших курсов {to_slug: rate} из данной валюты — для калькулятора на её странице."""
+    out = {}
+    pref = slug + ">"
+    for k, v in RATES.items():
+        if k.startswith(pref):
+            to = k[len(pref):]
+            if to in CUR:
+                out[to] = v["rate"]
+    return out
+
+
+def converter_html(lang, preset_from="", rates=None):
+    amt = res = rjson = ""
+    if rates:
+        amt = (f'<label class="amt">{tr(lang,"amount")}'
+               f'<input id="cAmt" type="number" min="0" step="any" value="1" inputmode="decimal"></label>')
+        res = '<div class="cest" id="cOut"></div>'
+        rjson = (f'<script type="application/json" id="convRates" data-owner="{preset_from}">'
+                 f'{json.dumps(rates, ensure_ascii=False)}</script>')
+    return f"""<div class="conv dosblue dosborder" id="conv" data-from="{preset_from}" data-prefix="{PREF[lang]}" data-open="{'Open' if lang=='en' else 'Открыть'}" data-approx="{tr(lang,'approx')}">
   <h3>{tr(lang,'calc')}</h3>
   <label>{tr(lang,'give')}<select id="cFrom"></select></label>
   <button class="swap" id="cSwap" type="button">{tr(lang,'swap')}</button>
   <label>{tr(lang,'get')}<select id="cTo"></select></label>
+  {amt}
+  {res}
   <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
-</div>"""
+</div>{rjson}"""
 
 
 # ---------------- «О валюте» ----------------
@@ -625,7 +648,7 @@ def render_currency(slug, info, lang):
     <details><summary>{faq_q2}</summary><p>{faq_a2}</p></details>
   </div>
   <div id="sidebar">
-    {converter_html(lang, slug)}
+    {converter_html(lang, slug, outgoing_rates(slug))}
     {search_box(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>

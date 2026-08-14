@@ -97,6 +97,8 @@ option{color:#a8a8a8}
   border:3px double #000;outline:3px solid #00aaaa;text-align:center;margin-top:8px}
 .cta:hover{background:#000;color:#ffff55}
 .conv .cta{width:100%}
+.cest{margin:2px 0 6px;color:#cfe;font-size:.95rem;min-height:1.1em}
+.cest b{color:#55ff55}
 .sblock{margin:0 0 18px}
 .sblock h3{color:#55ffff;font-size:.9rem;margin:0 0 6px;border-bottom:1px dotted #333;padding-bottom:2px}
 .sblock ul{list-style:none;margin:0;padding:0}
