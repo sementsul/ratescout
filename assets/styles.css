@@ -102,6 +102,18 @@ option{color:#a8a8a8}
 .sblock ul{list-style:none;margin:0;padding:0}
 .sblock li:before{content:"\25A0 ";color:#f55}
 
+/* живая таблица курсов */
+.rtbl-wrap{overflow-x:auto;margin:0 0 8px}
+.rtbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.rtbl th,.rtbl td{border:1px solid #333;padding:5px 9px;text-align:left;white-space:nowrap}
+.rtbl thead th{background:#00aaaa;color:#fff;border-color:#000}
+.rtbl td.num{text-align:right;color:#a8a8a8}
+.rtbl td.num b{color:#55ff55}
+.rtbl td.d a{color:#55ffff}
+.rtbl td.d .op{color:#ffff55;font-size:.8rem}
+.rtbl tbody tr:hover{background:#161616}
+.updnote{color:#777;font-size:.8rem;margin:4px 0 14px}
+
 /* doc pages */
 .crumbs{color:#777;font-size:.82rem;margin:6px 0}
 .steps{padding-left:4px;list-style:none}

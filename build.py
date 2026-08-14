@@ -93,12 +93,23 @@ def by_category():
 GROUPED = by_category()
 
 RATES = {}
+RATES_GENERATED = 0
 _rp = os.path.join(ROOT, "rates.json")
 if os.path.exists(_rp):
     try:
-        RATES = json.load(open(_rp, encoding="utf-8")).get("pairs", {})
+        _rj = json.load(open(_rp, encoding="utf-8"))
+        RATES = _rj.get("pairs", {})
+        RATES_GENERATED = int(_rj.get("generated_at", 0) or 0)
     except (ValueError, OSError):
         RATES = {}
+
+
+def updated_str(lang):
+    """Метка свежести данных курсов (UTC) для отображения на страницах."""
+    if not RATES_GENERATED:
+        return ""
+    dt = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return f"Обновлено: {dt}" if lang == "ru" else f"Updated: {dt}"
 
 
 def rate_of(frm, to):
@@ -455,6 +466,44 @@ def popular_block(slug, lang):
     return f'<h2 class="news">{tr(lang,"popular")}</h2><ul class="dlist">{"".join(pair_link_li(p, lang) for p in pops)}</ul>'
 
 
+def rate_table(slug, info, lang, n=12):
+    """Живая таблица лучших курсов направлений валюты: курс + число обменников + резерв."""
+    rows = []
+    for ts, ti in CUR.items():
+        if ts == slug:
+            continue
+        r = rate_of(slug, ts)
+        if not r:
+            continue
+        rows.append((r.get("count", 0), ts, ti, r))
+    if not rows:
+        return ""
+    rows.sort(key=lambda x: x[0], reverse=True)
+    rows = rows[:n]
+    if lang == "ru":
+        title = f"Лучшие курсы обмена {info['ticker']}"
+        h = ("Направление", "Лучший курс", "Обменников", "Резерв, всего")
+        note = "Лучший курс среди обменников; резерв — суммарный по направлению. Мониторинг BestChange, обновление ежечасно. " + updated_str(lang)
+        openw = "Открыть"
+    else:
+        title = f"Best {info['ticker']} exchange rates"
+        h = ("Direction", "Best rate", "Exchangers", "Total reserve")
+        note = "Best rate among exchangers; reserve is the total for the direction. BestChange monitor, hourly updates. " + updated_str(lang)
+        openw = "Open"
+    trs = ""
+    for cnt, ts, ti, r in rows:
+        trs += (f'<tr><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
+                f'{info["ticker"]} → {ti["ticker"]} <span class="op">{openw} →</span></a></td>'
+                f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td>'
+                f'<td class="num">{cnt}</td>'
+                f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
+    return (f'<h2 class="news">{title}</h2>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+            f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th></tr></thead>'
+            f'<tbody>{trs}</tbody></table></div>'
+            f'<p class="updnote">{note}</p>')
+
+
 # ---------------- страницы ----------------
 def render_home(lang):
     total = len(CUR)
@@ -565,6 +614,7 @@ def render_currency(slug, info, lang):
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
     {about_currency(slug, info, lang)}
+    {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
     <h2 class="news">{tr(lang,'directions')} {ticker}</h2>
     {dir_blocks}
