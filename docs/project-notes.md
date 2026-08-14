@@ -12,6 +12,7 @@
 | `parse_catalog.py` | разовый парсер каталога из сохранённого HTML (первичный сид; дальше каталог обновляет fetch_rates) |
 | `currencies.json` | каталог валют (slug→{id,name,ticker,category[,num]}); в CI обновляется в раннере |
 | `data.json` | `site`: name/domain/ref/owner/owner_inn/owner_email/tagline |
+| `articles/` | markdown-статьи блога (frontmatter title/description/date/slug) |
 | `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄) |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → build → deploy на Pages (guard: ключ не в dist) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дневного отключения cron |
