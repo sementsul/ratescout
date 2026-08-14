@@ -7,12 +7,12 @@
 ## Что где
 | Файл | Назначение |
 |---|---|
-| `build.py` | генератор статики → `dist/`: главная + 330 страниц валют (/valuta/) + 100 лендингов пар (/obmen/, из top.json) + блог (/blog/, из articles/) + комплаенс + sitemap/robots/manifest/sw + og-image |
+| `build.py` | генератор статики → `dist/`: **две локали** RU (корень `/`) + EN (`/en/`). На каждую: главная + 330 валют (/valuta/) + 100 пар (/obmen/, из top.json) + блог (/blog/, из articles/ и articles/en/) + комплаенс. Плюс общие sitemap (обе локали, +hreflang)/robots/manifest/sw + og-image |
 | `fetch_rates.py` | из дампа `api.bestchange.ru/info.zip` (без ключа): синхрон `currencies.json` (bm_cy.dat) + `rates.json` (bm_rates.dat) + топ-пары `top.json` (bm_top.dat) |
 | `parse_catalog.py` | разовый парсер каталога из сохранённого HTML (первичный сид; дальше каталог обновляет fetch_rates) |
 | `currencies.json` | каталог валют (slug→{id,name,ticker,category[,num]}); в CI обновляется в раннере |
 | `data.json` | `site`: name/domain/ref/owner/owner_inn/owner_email/tagline |
-| `articles/` | markdown-статьи блога (frontmatter title/description/date/slug) |
+| `articles/` | RU markdown-статьи блога (frontmatter title/description/date/slug); `articles/en/` — EN-переводы с теми же слагами |
 | `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄), og-image.png (1200x630 баннер) |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → build → deploy на Pages (guard: ключ не в dist) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дневного отключения cron |
@@ -32,6 +32,9 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **330 страниц валют** вместо ~109k пар: на каждой валюте — все направления ссылками.
 - **Правовой статус — информационный ресурс** (ОРД/ERID НЕ применяем): нейтральный тон, оценочные слова вычищены, AML-блок справочный (без кнопки оплаты). Оператор: самозанятый (НПД) Семенцул М.Г., ИНН 381616884622.
 - **Ключ BestChange** (если использовать партнёрский API вместо дампа) — только `.env`/GitHub Secret, guard в CI не пускает в `dist`.
+- **i18n:** RU в корне, EN в `/en/` (тот же контент, локализованы UI + описания категорий + комплаенс + блог). Между версиями — `hreflang` (ru/en/x-default) и переключатель языка `.langsw` в шапке. Данные (курсы/каталог/пары) общие. Слаги статей EN совпадают с RU (стабильные кросс-ссылки).
+- **Поиск по валютам** — DOS-бокс `#search` в сайдваре ПОД калькулятором (главная + страницы валют); фильтр по `catalog.js` в `app.js`, ссылки учитывают языковой префикс (`data-prefix`). Порядок скриптов: `catalog.js` ПЕРЕД `app.js` (иначе `window.__CATALOG__` undefined → поиск мёртв — так и было сломано).
+- **Данные BestChange латиницей:** названия банков/валют в дампе на английском (`Sberbank`, не «Сбербанк») → поиск по кириллице таких имён не найдёт (ограничение источника, не баг).
 
 ## Грабли (не наступать снова)
 - Парсинг: **проверять вывод ПЕРЕД удалением источника**; смотреть реальные байты (файл каталога был сохранён как DevTools-подсветка, не обычный HTML).

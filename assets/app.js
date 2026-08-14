@@ -8,12 +8,13 @@
   (function () {
     var q = document.getElementById("q"), qres = document.getElementById("qres");
     if (!q || !qres || !C || !C.cur) return;
+    var PRE = q.getAttribute("data-prefix") || "";
     var all = Object.keys(C.cur).map(function (s) {
       return { slug: s, n: C.cur[s].n, t: C.cur[s].t, key: (C.cur[s].n + " " + C.cur[s].t + " " + s).toLowerCase() };
     });
     function render(list) {
       qres.innerHTML = list.map(function (x) {
-        return '<li><a href="/valuta/' + x.slug + '/">' + x.n + ' <span>' + x.t + '</span></a></li>';
+        return '<li><a href="' + PRE + '/valuta/' + x.slug + '/">' + x.n + ' <span>' + x.t + '</span></a></li>';
       }).join("");
       qres.style.display = list.length ? "block" : "none";
     }
@@ -75,11 +76,13 @@
 
   function deep(frm, to) { return "https://www.bestchange.ru/" + frm + "-to-" + to + ".html?p=" + REF; }
 
+  var OPEN = conv.getAttribute("data-open") || "Открыть";
+  var SAMEMSG = OPEN === "Open" ? "Choose different currencies" : "Выберите разные валюты";
   function update() {
     var f = elFrom.value, t = elTo.value;
-    if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = "Выберите разные валюты"; return; }
+    if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = SAMEMSG; return; }
     elGo.href = deep(f, t);
-    elGo.textContent = "Открыть: " + bySlug[f].t + " → " + bySlug[t].t + " →";
+    elGo.textContent = OPEN + ": " + bySlug[f].t + " → " + bySlug[t].t + " →";
   }
   elFrom.addEventListener("change", update);
   elTo.addEventListener("change", update);

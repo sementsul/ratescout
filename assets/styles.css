@@ -37,17 +37,23 @@ img{border:none;max-width:100%}
 #menu-top{list-style:none;margin:0;padding:0;display:flex;gap:22px;flex-wrap:wrap}
 #menu-top li{padding:0}
 
-/* поиск по валютам */
-#search{position:relative;margin:0 0 14px;max-width:520px}
-#search input{width:100%;padding:9px 12px;border:3px double #55ffff;outline:3px solid #0000aa;
+/* поиск по валютам — DOS-бокс в сайдбаре под калькулятором */
+#search{position:relative}
+#search h3{margin:0 0 8px;color:#fff;font-size:.95rem}
+#search input{width:100%;padding:7px 10px;border:1px solid #55ffff;
   background:#000;color:#a8a8a8;font:inherit}
 #search input::placeholder{color:#5a7}
 #qres{display:none;position:absolute;z-index:50;left:0;right:0;top:100%;list-style:none;margin:0;padding:0;
   background:#0000aa;border:3px double #55ffff;max-height:340px;overflow:auto}
 #qres li{padding:0}
+#qres li:before{content:""}
 #qres a{display:block;padding:5px 10px;color:#fff}
 #qres a:hover{background:#00aaaa;color:#111;text-decoration:none}
 #qres a span{color:#ffff55;font-size:.82rem}
+
+/* переключатель языка */
+.langsw{border:2px solid #55ffff;padding:1px 9px;color:#ffff55;font-weight:700}
+.langsw:hover{background:#00aaaa;color:#111}
 
 /* main: content (справа, широкий) + sidebar (слева) */
 #main{overflow:hidden}
