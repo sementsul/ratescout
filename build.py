@@ -1299,23 +1299,33 @@ def render_widget_page(lang):
       <label>{l_give}<select id="cfgFrom"></select></label>
       <label>{l_get}<select id="cfgTo"></select></label>
     </div>
-    <div style="{demo_style}"><div class="ratescout-widget" id="cfgPreview" data-from="bitcoin" data-to="sberbank"></div></div>
+    <div style="{demo_style}"><div id="cfgPreview"></div></div>
     <pre class="code-embed"><code id="cfgCode"></code></pre>
     <script>
     (function(){{
       var fromS=document.getElementById('cfgFrom'),toS=document.getElementById('cfgTo'),
           prev=document.getElementById('cfgPreview'),code=document.getElementById('cfgCode');
       if(!fromS)return;
+      var CARD="font:13px/1.4 system-ui,Arial,sans-serif;display:inline-block;border:1px solid #d0d5dd;border-radius:8px;padding:10px 14px;background:#fff;color:#111;min-width:210px";
+      var LBL="font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.04em";
+      var BIG="font-size:20px;font-weight:700;margin:2px 0";
+      var LINK="color:#0a66c2;text-decoration:none;font-weight:600";
+      var ATTR="display:block;margin-top:6px;font-size:11px;color:#98a2b3;text-decoration:none";
+      function num(v){{v=parseFloat(String(v).replace(/\\s/g,''));return isNaN(v)?0:v;}}
+      function fmt(v){{if(v>=1000)return v.toLocaleString('ru-RU',{{maximumFractionDigits:0}});if(v>=1)return v.toLocaleString('ru-RU',{{maximumFractionDigits:2}});return v.toFixed(6).replace(/0+$/,'').replace(/\\.$/,'');}}
       fetch('/widget-rates.json').then(function(r){{return r.json();}}).then(function(d){{
         var cur=d.cur,slugs=Object.keys(cur).sort(function(a,b){{return cur[a].n.localeCompare(cur[b].n);}});
         var opts=slugs.map(function(s){{return '<option value="'+s+'">'+cur[s].n+' ('+cur[s].t+')</option>';}}).join('');
         fromS.innerHTML=opts;toS.innerHTML=opts;
         if(cur['bitcoin'])fromS.value='bitcoin';if(cur['sberbank'])toS.value='sberbank';
         function upd(){{
-          var f=fromS.value,t=toS.value;
-          prev.setAttribute('data-from',f);prev.setAttribute('data-to',t);
+          var f=fromS.value,t=toS.value,cf=cur[f],ct=cur[t],r=d.rates[f]&&d.rates[f][t];
+          var rate=r?fmt(num(r)):'—';
+          prev.innerHTML='<div style="'+CARD+'"><div style="'+LBL+'">'+cf.t+' → '+ct.t+'</div>'+
+            '<div style="'+BIG+'">1 '+cf.t+' = '+rate+' '+ct.t+'</div>'+
+            '<a href="{BASE_URL}/valuta/'+f+'/" target="_blank" rel="noopener" style="'+LINK+'">Обменять →</a>'+
+            '<a href="{BASE_URL}/" target="_blank" rel="noopener" style="'+ATTR+'">Курсы: RateScout</a></div>';
           code.textContent='<div class="ratescout-widget" data-from="'+f+'" data-to="'+t+'"></div>\\n<script src="{BASE_URL}/widget.js" async><\\/script>';
-          if(window.RateScoutWidget)window.RateScoutWidget.refresh();
         }}
         fromS.addEventListener('change',upd);toS.addEventListener('change',upd);upd();
       }}).catch(function(){{}});
