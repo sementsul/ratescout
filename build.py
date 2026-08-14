@@ -335,6 +335,20 @@ def jsonld(o):
     return f'<script type="application/ld+json">{json.dumps(o, ensure_ascii=False)}</script>'
 
 
+def howto_ld(name, steps):
+    """HowTo-разметка из списка шагов (теги в тексте вычищаются)."""
+    return jsonld({"@context": "https://schema.org", "@type": "HowTo", "name": name,
+                   "step": [{"@type": "HowToStep", "position": i + 1,
+                             "text": re.sub("<[^>]+>", "", s)} for i, s in enumerate(steps)]})
+
+
+def itemlist_ld(items):
+    """ItemList-разметка: items = [(name, absolute_url), ...]."""
+    return jsonld({"@context": "https://schema.org", "@type": "ItemList",
+                   "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "url": u}
+                                       for i, (n, u) in enumerate(items)]})
+
+
 METRIKA = """<!-- Yandex.Metrika counter -->
 <script type="text/javascript">
    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -795,6 +809,7 @@ def render_currency(slug, info, lang):
     {dir_blocks}
     <h2 class="news">{tr(lang,'how_to')} {name}</h2>
     <ol class="steps">{steps_html}</ol>
+    {howto_ld(tr(lang,'how_to') + ' ' + name, steps)}
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{faq_q1}</summary><p>{faq_a1}</p></details>
     <details><summary>{faq_q2}</summary><p>{faq_a2}</p></details>
@@ -881,6 +896,7 @@ def render_pair(f, t, lang):
     </div>
     <h2 class="news">{h_how}</h2>
     <ol class="steps">{steps_html}</ol>
+    {howto_ld(h_how, steps)}
     <p class="related">{rel} · <a href="{PREF[lang]}/blog/slovar-terminov-obmena/">{tr(lang,'glossary')}</a></p>
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{q1}</summary><p>{a1}</p></details>
@@ -1165,7 +1181,7 @@ def render_category(cat, lang):
     <details><summary>{q1}</summary><p>{a1}</p></details>
   </div>
 </div>
-{faq_ld}{crumbs}
+{faq_ld}{crumbs}{itemlist_ld([(i["name"], BASE_URL + cpage(lang, s)) for s, i in curs])}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
 
@@ -1244,12 +1260,13 @@ def render_bank_hub(to_slug, lang):
     <p class="updnote">{note}</p>
     <h2 class="news">{howh}</h2>
     <ol class="steps">{steps_html}</ol>
+    {howto_ld(howh, steps)}
     <p class="related">{guide} · <a href="{cpage(lang, to_slug)}">{'О ' if lang=='ru' else 'About '}{name}</a></p>
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{q1}</summary><p>{a1}</p></details>
   </div>
 </div>
-{faq_ld}{crumbs}
+{faq_ld}{crumbs}{itemlist_ld([(fi["name"], BASE_URL + cpage(lang, fs)) for _c, fs, fi, _r in rows])}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
 
