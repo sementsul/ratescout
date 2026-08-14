@@ -1284,15 +1284,6 @@ def render_widget_page(lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1}</h1><p>{lead}</p>
 
-    <h2 class="news">{t_rate}</h2>
-    <div style="{demo_style}"><div class="ratescout-widget" data-pair="usdt-rub"></div>
-      <div class="ratescout-widget" data-pair="btc-rub" style="margin-left:10px"></div></div>
-    <pre class="code-embed"><code>{esc(code_rate)}</code></pre>
-
-    <h2 class="news">{t_conv}</h2>
-    <div style="{demo_style}"><div class="ratescout-widget" data-widget="converter"></div></div>
-    <pre class="code-embed"><code>{esc(code_conv)}</code></pre>
-
     <h2 class="news">{t_cfg}</h2>
     <p>{cfg_lead}</p>
     <div class="conv dosblue dosborder" style="max-width:420px">
@@ -1331,6 +1322,10 @@ def render_widget_page(lang):
       }}).catch(function(){{}});
     }})();
     </script>
+
+    <h2 class="news">{t_conv}</h2>
+    <div style="{demo_style}"><div class="ratescout-widget" data-widget="converter"></div></div>
+    <pre class="code-embed"><code>{esc(code_conv)}</code></pre>
 
     <h2 class="news">{h_pairs}</h2>
     <p class="related">{pairs_list}</p>
