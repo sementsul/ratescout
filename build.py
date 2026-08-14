@@ -640,6 +640,22 @@ def popular_block(slug, lang):
     return f'<h2 class="news">{tr(lang,"popular")}</h2><ul class="dlist">{"".join(pair_link_li(p, lang) for p in pops)}</ul>'
 
 
+def related_currencies(slug, info, lang, n=8):
+    """Похожие валюты: та же категория; для крипты — приоритет той же сети. Внутренняя перелинковка."""
+    cat = info["category"]
+    same = [(s, i) for s, i in GROUPED.get(cat, []) if s != slug]
+    if not same:
+        return ""
+    net = _net(info["name"])
+    if net:
+        same.sort(key=lambda x: (0 if _net(x[1]["name"]) == net else 1, x[1]["name"]))
+    picked = same[:n]
+    items = "".join(f'<li><a href="{cpage(lang, s)}">{i["name"]} <span>{i["ticker"]}</span></a></li>'
+                    for s, i in picked)
+    h = "Похожие валюты" if lang == "ru" else "Similar currencies"
+    return f'<h2 class="news">{h}</h2><ul class="dlist">{items}</ul>'
+
+
 def rate_table(slug, info, lang, n=12):
     """Живая таблица лучших курсов направлений валюты: курс + число обменников + резерв."""
     rows = []
@@ -813,6 +829,7 @@ def render_currency(slug, info, lang):
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{faq_q1}</summary><p>{faq_a1}</p></details>
     <details><summary>{faq_q2}</summary><p>{faq_a2}</p></details>
+    {related_currencies(slug, info, lang)}
   </div>
   <div id="sidebar">
     {converter_html(lang, slug, outgoing_rates(slug))}
@@ -1384,6 +1401,37 @@ def write_catalog_js(js):
     open(os.path.join(DIST, "assets", "catalog.js"), "w", encoding="utf-8").write(js)
 
 
+def render_404():
+    """Своя 404 (GitHub Pages отдаёт /404.html при отсутствии страницы). Пути абсолютные."""
+    lang = "ru"
+    pop = ["bitcoin", "tether-trc20", "ethereum", "litecoin", "tron"]
+    pop_li = "".join(f'<li><a href="{cpage(lang, s)}">{CUR[s]["name"]} <span>{CUR[s]["ticker"]}</span></a></li>'
+                     for s in pop if s in CUR)
+    body = f"""{header(lang, "/404")}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <h1>404 — страница не найдена</h1>
+    <div class="dosblue dosborder">Похоже, такой страницы нет или она переехала. Ниже — куда пойти дальше.
+      <br><span style="color:#cfe">Page not found — see the links below or go to the
+      <a href="/en/">English version</a>.</span></div>
+    <h2 class="news">Куда пойти</h2>
+    <ul class="dlist">
+      <li><a href="/">Главная — каталог курсов</a></li>
+      <li><a href="/blog/">Блог — гайды по обмену</a></li>
+      <li><a href="/faq/">Частые вопросы</a></li>
+      <li><a href="/kategoriya/kriptovalyuty/">Все криптовалюты</a></li>
+      <li><a href="/na/sberbank/">Обмен крипты на Сбербанк</a></li>
+      <li><a href="/o-servise/">Что такое BestChange</a></li>
+    </ul>
+    <h2 class="news">Популярные валюты</h2>
+    <ul class="dlist">{pop_li}</ul>
+  </div>
+</div>
+{footer(lang)}"""
+    html = head(lang, f"404 — страница не найдена | {S['name']}", "Страница не найдена.", "/404") + body
+    open(os.path.join(DIST, "404.html"), "w", encoding="utf-8").write(html)
+
+
 def static_files():
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -1461,6 +1509,7 @@ def main():
             render_article(a, lang)
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
+    render_404()
     static_files()
     copy_assets()
     write_catalog_js(catjs)
