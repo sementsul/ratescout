@@ -900,21 +900,35 @@ def rate_table(slug, info, lang, n=12):
 
 
 def currency_finder(lang):
-    """Поиск+фильтр по ВСЕМ валютам каталога (над «Лучшие курсы обмена») → на страницу валюты."""
+    """Финдер по ВСЕМ валютам (над «Лучшие курсы обмена»): поиск + фильтр категорий + сортировка (ликвидность/
+    рост/падение) + период (24ч…10л), как на /grafiki/. Данные — markets.json, ссылки на страницы валют."""
     if lang == "ru":
         title, ph, nores = "Найти любую валюту", "Поиск по всем валютам: BTC, USDT, Sberbank…", "Ничего не найдено"
+        sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
+        periods = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
+        plbl = "Изменение за:"
     else:
         title, ph, nores = "Find any currency", "Search all currencies: BTC, USDT, Sberbank…", "Nothing found"
-    filts = [("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS]
-    fbtns = ""
-    for fv, fl in filts:
-        fon = ' class="on"' if fv == "" else ""
-        fbtns += f'<button type="button" data-f="{fv}"{fon}>{fl}</button>'
+        sorts = [("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
+        periods = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("1y", "1y"), ("3y", "3y"), ("5y", "5y"), ("10y", "10y")]
+        plbl = "Change over:"
+
+    def _btns(items, attr, default):
+        out = ""
+        for v, l in items:
+            on = ' class="on"' if v == default else ""
+            out += f'<button type="button" data-{attr}="{v}"{on}>{l}</button>'
+        return out
+    fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS], "f", "")
+    sbtns = _btns(sorts, "s", "liq")
+    pbtns = _btns(periods, "p", "24h")
     return (f'<h2 class="news">{title}</h2>'
             f'<div class="rtsearchbox"><input class="rtsearch cfind-inp" data-prefix="{PREF[lang]}" type="search" '
             f'placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
             f'<div class="rsrange rtcatbar cfind-cat">{fbtns}</div>'
-            f'<ul class="dlist cfind-list"></ul>'
+            f'<div class="rsrange cfind-sort">{sbtns}</div>'
+            f'<div class="perrow"><span class="ctllbl">{plbl}</span><span class="rsrange cfind-per">{pbtns}</span></div>'
+            f'<div class="cfind-list"></div>'
             f'<p class="cfind-none updnote" hidden>{nores}</p>')
 
 
@@ -2052,6 +2066,31 @@ def static_files():
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
     write_llms()
     write_widget()
+    write_markets()
+
+
+def write_markets():
+    """markets.json — цена/ликвидность/% за периоды по всем валютам (для финдера на страницах валют)."""
+    m = {}
+    for slug, info in CUR.items():
+        if slug == "tether-trc20":
+            continue
+        price, liq = _usdt_price(slug)
+        h = HISTORY.get(slug, [])
+        ch = {}
+        if len(h) >= 2:
+            for pk, dys in CHART_PERIODS:
+                v = _pct_over(h, dys)
+                if v is not None:
+                    ch[pk] = round(v, 4)
+        d = {"n": info["name"], "t": info["ticker"], "cat": info["category"], "liq": liq}
+        if price is not None:
+            d["p"] = fmt_rate(price)
+        if ch:
+            d["ch"] = ch
+        m[slug] = d
+    open(os.path.join(DIST, "markets.json"), "w", encoding="utf-8").write(
+        json.dumps({"cur": m}, ensure_ascii=False, separators=(",", ":")))
 
 
 def write_llms():

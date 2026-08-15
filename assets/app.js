@@ -335,32 +335,52 @@
   });
 })();
 
-// ---- поиск + фильтр категорий по ВСЕМ валютам каталога (страница валюты) → на страницу валюты ----
+// ---- финдер по ВСЕМ валютам (страница валюты): поиск+категория+сортировка(ликв/рост/падение)+период ----
 (function () {
-  var inp = document.querySelector(".cfind-inp"), list = document.querySelector(".cfind-list"),
-    cbar = document.querySelector(".cfind-cat"), none = document.querySelector(".cfind-none");
+  var inp = document.querySelector(".cfind-inp"), list = document.querySelector(".cfind-list"), none = document.querySelector(".cfind-none");
   if (!inp || !list) return;
-  var C = window.__CATALOG__; if (!C || !C.cur) return;
+  var cbar = document.querySelector(".cfind-cat"), sbar = document.querySelector(".cfind-sort"), pbar = document.querySelector(".cfind-per");
   var PRE = inp.getAttribute("data-prefix") || "";
-  var all = Object.keys(C.cur).map(function (s) {
-    var i = C.cur[s];
-    return { s: s, n: i.n, t: i.t, c: i.c, key: (i.n + " " + i.t + " " + s).toLowerCase() };
-  });
-  var query = "", cat = "";
+  var ALL = [], query = "", cat = "", sort = "liq", period = "24h";
   function esc(x) { return (x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function ch(x) { if (!x.ch) return null; var v = x.ch[period]; return v === undefined ? null : v; }
   function render() {
-    if (!query && !cat) { list.innerHTML = ""; if (none) none.hidden = true; return; }
-    var res = all.filter(function (x) { return (!query || x.key.indexOf(query) >= 0) && (!cat || x.c === cat); });
-    list.innerHTML = res.slice(0, 90).map(function (x) {
-      return '<li><a href="' + PRE + '/valuta/' + x.s + '/">' + esc(x.n) + ' <span>' + esc(x.t) + '</span></a></li>';
-    }).join("");
+    if (!ALL.length) return;
+    var res = ALL.filter(function (x) { return (!query || x.key.indexOf(query) >= 0) && (!cat || x.cat === cat); });
+    res.sort(function (a, b) {
+      if (sort === "liq") return (b.liq || 0) - (a.liq || 0);
+      var ca = ch(a), cb = ch(b);
+      if (ca === null && cb === null) return (b.liq || 0) - (a.liq || 0);
+      if (ca === null) return 1; if (cb === null) return -1;
+      return sort === "up" ? cb - ca : ca - cb;
+    });
+    res = res.slice(0, (query || cat) ? 150 : 40);
+    list.innerHTML = '<div class="rtbl-wrap"><table class="rtbl marktbl"><tbody>' + res.map(function (x) {
+      var c = ch(x), cc = c === null ? '<span class="nd">—</span>' : '<b class="' + (c >= 0 ? "up" : "down") + '">' + (c >= 0 ? "+" : "") + c.toFixed(1) + '%</b>';
+      var p = x.p ? '<b>' + esc(x.p) + '</b>' : '<span class="nd">—</span>';
+      return '<tr><td class="d"><a href="' + PRE + '/valuta/' + x.s + '/">' + esc(x.n) + ' <span>' + esc(x.t) + '</span></a></td>' +
+        '<td class="num">' + p + '</td><td class="num">' + cc + '</td></tr>';
+    }).join("") + '</tbody></table></div>';
     if (none) none.hidden = res.length > 0;
   }
-  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); render(); });
-  if (cbar) Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (b) {
-    b.addEventListener("click", function () {
-      Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
-      b.classList.add("on"); cat = b.getAttribute("data-f"); render();
+  function wire(bar, set) {
+    if (!bar) return;
+    Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
+      b.addEventListener("click", function () {
+        Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+        b.classList.add("on"); set(b); render();
+      });
     });
-  });
+  }
+  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); render(); });
+  wire(cbar, function (b) { cat = b.getAttribute("data-f"); });
+  wire(sbar, function (b) { sort = b.getAttribute("data-s"); });
+  wire(pbar, function (b) { period = b.getAttribute("data-p"); });
+  fetch("/markets.json").then(function (r) { return r.json(); }).then(function (d) {
+    ALL = Object.keys(d.cur).map(function (s) {
+      var i = d.cur[s];
+      return { s: s, n: i.n, t: i.t, cat: i.cat, liq: i.liq || 0, p: i.p, ch: i.ch, key: (i.n + " " + i.t + " " + s).toLowerCase() };
+    });
+    render();
+  }).catch(function () {});
 })();
