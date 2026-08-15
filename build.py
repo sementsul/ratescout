@@ -9,7 +9,7 @@ import json
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape as xml_escape
 
@@ -199,6 +199,34 @@ def svg_chart(points):
             f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3" fill="#ffff55"/></svg>')
 
 
+# периоды для фильтра роста/падения на /grafiki/ (ключ, дней)
+CHART_PERIODS = [("24h", 1), ("7d", 7), ("30d", 30), ("1y", 365), ("3y", 1095), ("5y", 1825), ("10y", 3650)]
+
+
+def _hist_time(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d %H:00")
+    except ValueError:
+        return datetime.strptime(s, "%Y-%m-%d")
+
+
+def _pct_over(pts, days):
+    """% изменения цены за последние `days` (база — первая точка в окне; если данных меньше — от старта)."""
+    if len(pts) < 2:
+        return None
+    cutoff = _hist_time(pts[-1][0]) - timedelta(days=days)
+    base = None
+    for k, v in pts:
+        if _hist_time(k) >= cutoff:
+            base = v
+            break
+    if base is None:
+        base = pts[0][1]
+    if not base:
+        return None
+    return (pts[-1][1] - base) / base * 100
+
+
 def mini_spark(points):
     """Лёгкий спарклайн (мини-SVG без осей) для обзорной страницы графиков."""
     vals = [p[1] for p in points]
@@ -245,11 +273,12 @@ def render_charts_overview(lang):
         if len(h) >= 2:
             vals = [p[1] for p in h]
             chg = (vals[-1] - vals[0]) / vals[0] * 100 if vals[0] else 0
-            rows.append((2, liq, slug, info, vals[-1], chg, h[-90:]))
+            per = {pk: _pct_over(h, dys) for pk, dys in CHART_PERIODS}
+            rows.append((2, liq, slug, info, vals[-1], chg, h[-90:], per))
         elif price is not None:
-            rows.append((1, liq, slug, info, price, None, None))
+            rows.append((1, liq, slug, info, price, None, None, {}))
         else:
-            rows.append((0, 0, slug, info, None, None, None))
+            rows.append((0, 0, slug, info, None, None, None, {}))
     if not rows:
         return
     rows.sort(key=lambda x: (x[0], x[1]), reverse=True)
@@ -260,14 +289,20 @@ def render_charts_overview(lang):
         h1, lead = "Графики курсов", f"Динамика цен в USDT по {len(rows)} валютам. Обновляется ежечасно. Нажмите на валюту — полный интерактивный график."
         th = ("Валюта", "Цена (USDT)", "Изм.", "График")
         sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
+        plbl = "Изменение за:"
+        periods = [("all", "Всё"), ("24h", "24ч"), ("7d", "7д"), ("30d", "30д"),
+                   ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
     else:
         title = f"Cryptocurrency rate charts — price trends | {S['name']}"
         desc = "Crypto rate charts (price in USDT): change and mini-charts for all coins. Hourly updates."
         h1, lead = "Rate charts", f"Price trends in USDT across {len(rows)} currencies. Hourly updates. Click a currency for the full interactive chart."
         th = ("Currency", "Price (USDT)", "Chg.", "Chart")
         sorts = [("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
+        plbl = "Change over:"
+        periods = [("all", "All"), ("24h", "24h"), ("7d", "7d"), ("30d", "30d"),
+                   ("1y", "1y"), ("3y", "3y"), ("5y", "5y"), ("10y", "10y")]
     trs = ""
-    for _b, _liq, slug, info, price, chg, spark in rows:
+    for _b, _liq, slug, info, price, chg, spark, per in rows:
         price_c = f'<b>{fmt_rate(price)}</b>' if price is not None else '<span class="nd">—</span>'
         if chg is None:
             chg_c = '<span class="nd">—</span>'
@@ -278,8 +313,9 @@ def render_charts_overview(lang):
         spk_c = mini_spark(spark) if spark else '<span class="nd">—</span>'
         chg_a = "" if chg is None else f"{chg:.4f}"
         cat_k = CAT_SLUG.get(info["category"], "prochee")
-        trs += (f'<tr data-liq="{_liq}" data-chg="{chg_a}" data-cat="{cat_k}"><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
-                f'<td class="num">{price_c}</td><td class="num">{chg_c}</td><td class="spk">{spk_c}</td></tr>')
+        pattrs = "".join(f' data-c{pk}="{("" if per.get(pk) is None else f"{per[pk]:.4f}")}"' for pk, _ in CHART_PERIODS)
+        trs += (f'<tr data-liq="{_liq}" data-chg="{chg_a}" data-cat="{cat_k}"{pattrs}><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
+                f'<td class="num">{price_c}</td><td class="num chg-cell">{chg_c}</td><td class="spk">{spk_c}</td></tr>')
     sbtns = ""
     for sv, sl in sorts:
         son = ' class="on"' if sv == "liq" else ""
@@ -289,6 +325,10 @@ def render_charts_overview(lang):
     for fv, fl in filts:
         fon = ' class="on"' if fv == "" else ""
         fbtns += f'<button type="button" data-f="{fv}"{fon}>{fl}</button>'
+    pbtns = ""
+    for pv, pl in periods:
+        pon = ' class="on"' if pv == "all" else ""
+        pbtns += f'<button type="button" data-p="{pv}"{pon}>{pl}</button>'
     ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
                  "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
     body = f"""{header(lang, path)}
@@ -299,6 +339,7 @@ def render_charts_overview(lang):
     <p class="updnote">{updated_str(lang)}</p>
     <div class="rsrange catbar">{fbtns}</div>
     <div class="rsrange sortbar">{sbtns}</div>
+    <div class="perrow"><span class="ctllbl">{plbl}</span><span class="rsrange perbar">{pbtns}</span></div>
     <div class="rtbl-wrap"><table class="rtbl marktbl"><thead><tr>
       <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>
   </div>

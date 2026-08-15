@@ -272,30 +272,50 @@
   draw();
 })();
 
-// ---- сортировка обзора графиков (/grafiki/): ликвидность / рост / падение ----
+// ---- сортировка + период обзора графиков (/grafiki/): рост/падение за 24ч..10л ----
 (function () {
-  var tbl = document.querySelector(".marktbl"), bar = document.querySelector(".sortbar");
-  if (!tbl || !bar) return;
+  var tbl = document.querySelector(".marktbl"), sbar = document.querySelector(".sortbar"), pbar = document.querySelector(".perbar");
+  if (!tbl || !sbar) return;
   var tbody = tbl.querySelector("tbody");
   var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
-  function num(r, a) { var v = r.getAttribute(a); return v === null || v === "" ? null : parseFloat(v); }
-  function apply(key) {
+  var sortKey = "liq", period = "all";
+  function liq(r) { var v = r.getAttribute("data-liq"); return v ? parseFloat(v) : 0; }
+  function chg(r) {
+    var v = r.getAttribute(period === "all" ? "data-chg" : "data-c" + period);
+    return v === null || v === "" ? null : parseFloat(v);
+  }
+  function updateCol() {                       // колонка «Изм.» показывает изменение за выбранный период
+    rows.forEach(function (r) {
+      var cell = r.querySelector(".chg-cell"); if (!cell) return;
+      var v = chg(r);
+      if (v === null) { cell.innerHTML = '<span class="nd">—</span>'; return; }
+      cell.innerHTML = '<b class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + v.toFixed(1) + '%</b>';
+    });
+  }
+  function apply() {
     var arr = rows.slice();
     arr.sort(function (a, b) {
-      if (key === "liq") { return (num(b, "data-liq") || 0) - (num(a, "data-liq") || 0); }
-      var ca = num(a, "data-chg"), cb = num(b, "data-chg");
+      if (sortKey === "liq") return liq(b) - liq(a);
+      var ca = chg(a), cb = chg(b);
       if (ca === null && cb === null) return 0;
-      if (ca === null) return 1;             // без изменения — в конец
+      if (ca === null) return 1;               // без изменения — в конец
       if (cb === null) return -1;
-      return key === "up" ? cb - ca : ca - cb;
+      return sortKey === "up" ? cb - ca : ca - cb;
     });
     arr.forEach(function (r) { tbody.appendChild(r); });
   }
-  Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
+  Array.prototype.forEach.call(sbar.querySelectorAll("button"), function (b) {
     b.addEventListener("click", function () {
-      Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
-      b.classList.add("on");
-      apply(b.getAttribute("data-s"));
+      Array.prototype.forEach.call(sbar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on"); sortKey = b.getAttribute("data-s"); apply();
+    });
+  });
+  if (pbar) Array.prototype.forEach.call(pbar.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(pbar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on"); period = b.getAttribute("data-p");
+      updateCol();
+      if (sortKey !== "liq") apply();          // пересортировать под новый период
     });
   });
 })();
