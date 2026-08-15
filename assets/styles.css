@@ -118,6 +118,25 @@ option{color:#a8a8a8}
 .rtbl tbody tr:hover{background:#161616}
 .updnote{color:#777;font-size:.8rem;margin:4px 0 14px}
 .chart{width:100%;height:120px;background:#0d0d0d;border:1px solid #333;display:block;margin:0 0 6px}
+
+/* интерактивный график динамики */
+.rschart-wrap{position:relative;margin:0 0 6px}
+.rsrange{display:flex;gap:6px;margin:0 0 6px}
+.rsrange button{border:2px double #333;outline:2px solid #111;background:#000;color:#55ffff;
+  font:inherit;font-size:.82rem;padding:3px 10px;cursor:pointer}
+.rsrange button:hover{background:#00aaaa;color:#111}
+.rsrange button.on{background:#0000aa;color:#fff;border-color:#55ffff}
+.rschart{width:100%}
+.rssvg{display:block;width:100%;height:220px;background:#0d0d0d;border:1px solid #333}
+.rsgrid{stroke:#2a2a2a;stroke-width:1}
+.rsylab{fill:#8a8a8a;font:10px "Lucida Console",monospace;text-anchor:end}
+.rsxlab{fill:#8a8a8a;font:10px "Lucida Console",monospace;text-anchor:middle}
+.rsguide{stroke:#ffff55;stroke-width:1;stroke-dasharray:3 3}
+.rsdot{fill:#ffff55}
+.rstip{position:absolute;pointer-events:none;z-index:20;background:#0000aa;border:2px solid #55ffff;
+  color:#fff;padding:3px 8px;font-size:12px;white-space:nowrap;line-height:1.3}
+.rstip b{color:#55ff55}
+.rstip span{display:block;color:#cfe;font-size:10px}
 .up{color:#55ff55}
 .down{color:#f55}
 

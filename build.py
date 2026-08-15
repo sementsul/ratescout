@@ -209,21 +209,37 @@ def currency_chart(slug, info, lang):
         return (f'<h2 class="news">{info["ticker"]} price trend (USDT)</h2>'
                 f'<p class="updnote">📈 Collecting data — the chart will appear once history builds up '
                 f'(points so far: {len(pts)}). Updated daily.</p>') if pts else ""
-    view = pts[-90:]
-    vals = [p[1] for p in view]
+    data = pts[-480:]                       # ~20 дней почасовых точек — для интерактива
+    vals = [p[1] for p in data]
     first, last = vals[0], vals[-1]
     chg = (last - first) / first * 100 if first else 0
     sign = "+" if chg >= 0 else ""
     cls = "up" if chg >= 0 else "down"
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     if lang == "ru":
         title = f"Динамика цены {info['ticker']} (USDT)"
-        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · за период {view[0][0]}…{view[-1][0]}: "
-                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, обновление ежечасно.')
+        ranges = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("all", "Всё")]
+        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · за период: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, обновление ежечасно. '
+                "Наведите на график — покажет цену и время.")
     else:
         title = f"{info['ticker']} price trend (USDT)"
-        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · over {view[0][0]}…{view[-1][0]}: "
-                f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, hourly.')
-    return f'<h2 class="news">{title}</h2>{svg_chart(view)}<p class="updnote">{note}</p>'
+        ranges = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("all", "All")]
+        note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · change: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, hourly. '
+                "Hover the chart to see price and time.")
+    btns = ""
+    for r, lbl in ranges:
+        on = ' class="on"' if r == "all" else ""
+        btns += f'<button type="button" data-r="{r}"{on}>{lbl}</button>'
+    return (f'<h2 class="news">{title}</h2>'
+            f'<div class="rschart-wrap" data-ticker="{info["ticker"]}" data-unit="USDT">'
+            f'<div class="rsrange">{btns}</div>'
+            f'<div class="rschart"><noscript>{svg_chart(pts[-90:])}</noscript></div>'
+            f'<div class="rstip" hidden></div>'
+            f'<script type="application/json" class="rschart-data">{data_json}</script>'
+            f'</div>'
+            f'<p class="updnote">{note}</p>')
 
 
 def rate_of(frm, to):

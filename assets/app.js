@@ -165,3 +165,94 @@
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function () {});
 })();
+
+// ---- интерактивный график динамики цены (страницы валют) ----
+(function () {
+  var wrap = document.querySelector(".rschart-wrap");
+  if (!wrap) return;
+  var host = wrap.querySelector(".rschart"), tip = wrap.querySelector(".rstip");
+  var unit = wrap.getAttribute("data-unit") || "USDT";
+  var raw;
+  try { raw = JSON.parse(wrap.querySelector(".rschart-data").textContent); } catch (e) { return; }
+  if (!raw || raw.length < 2) return;
+  function tms(s) { var p = s.split(/[- :]/); return Date.UTC(+p[0], +p[1] - 1, +p[2], +p[3] || 0, +p[4] || 0); }
+  var ALL = raw.map(function (d) { return { t: tms(d[0]), v: d[1] }; });
+  function fmt(v) {
+    if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+    if (v >= 1) return v.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+    if (v >= 0.01) return (+v.toFixed(4)).toString();
+    return (+v.toFixed(8)).toString();
+  }
+  function p2(n) { return (n < 10 ? "0" : "") + n; }
+  function dd(ms) { var d = new Date(ms); return { D: d.getUTCDate(), M: d.getUTCMonth() + 1, h: d.getUTCHours() }; }
+  function axisTime(ms, span) { var o = dd(ms); return span <= 2 * 864e5 ? p2(o.h) + ":00" : p2(o.D) + "." + p2(o.M); }
+  function fullTime(ms) { var o = dd(ms); return p2(o.D) + "." + p2(o.M) + " " + p2(o.h) + ":00 UTC"; }
+
+  var H = 220, padL = 58, padR = 12, padT = 10, padB = 26, plotH = H - padT - padB;
+  var pts = [], range = "all";
+  function filtered() {
+    if (range === "all") return ALL;
+    var span = range === "24h" ? 864e5 : range === "7d" ? 7 * 864e5 : 30 * 864e5;
+    var t1 = ALL[ALL.length - 1].t;
+    var f = ALL.filter(function (d) { return d.t >= t1 - span; });
+    return f.length >= 2 ? f : ALL;
+  }
+  function draw() {
+    var W = Math.max(320, Math.round(host.clientWidth || 640)), plotW = W - padL - padR;
+    var d = filtered(), vs = d.map(function (x) { return x.v; });
+    var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), span = (mx - mn) || (mx || 1);
+    var t0 = d[0].t, t1 = d[d.length - 1].t, tspan = (t1 - t0) || 1;
+    function X(t) { return padL + (t - t0) / tspan * plotW; }
+    function Y(v) { return padT + (1 - (v - mn) / span) * plotH; }
+    pts = d.map(function (x) { return { px: X(x.t), py: Y(x.v), v: x.v, t: x.t }; });
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="rssvg" width="100%" height="' + H + '">', i;
+    for (i = 0; i <= 4; i++) {
+      var yv = mn + span * i / 4, yy = Y(yv);
+      s += '<line x1="' + padL + '" y1="' + yy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yy.toFixed(1) + '" class="rsgrid"/>';
+      s += '<text x="' + (padL - 6) + '" y="' + (yy + 3).toFixed(1) + '" class="rsylab">' + fmt(yv) + '</text>';
+    }
+    for (i = 0; i <= 4; i++) {
+      var tt = t0 + tspan * i / 4, xx = X(tt);
+      s += '<text x="' + xx.toFixed(1) + '" y="' + (H - 8) + '" class="rsxlab">' + axisTime(tt, tspan) + '</text>';
+    }
+    s += '<polyline fill="none" stroke="#55ff55" stroke-width="2" points="' +
+      pts.map(function (p) { return p.px.toFixed(1) + "," + p.py.toFixed(1); }).join(" ") + '"/>';
+    s += '<line class="rsguide" y1="' + padT + '" y2="' + (padT + plotH) + '" style="display:none"/>';
+    s += '<circle class="rsdot" r="3.5" style="display:none"/></svg>';
+    host.innerHTML = s;
+  }
+  function move(e) {
+    if (!pts.length) return;
+    var r = host.getBoundingClientRect(), W = Math.max(320, Math.round(host.clientWidth || 640));
+    var sx = (e.clientX - r.left) / r.width * W, best = pts[0], bd = 1e9, k;
+    for (k = 0; k < pts.length; k++) { var q = Math.abs(pts[k].px - sx); if (q < bd) { bd = q; best = pts[k]; } }
+    var svg = host.querySelector("svg"); if (!svg) return;
+    var g = svg.querySelector(".rsguide"), dot = svg.querySelector(".rsdot");
+    g.setAttribute("x1", best.px); g.setAttribute("x2", best.px); g.style.display = "";
+    dot.setAttribute("cx", best.px); dot.setAttribute("cy", best.py); dot.style.display = "";
+    tip.innerHTML = "<b>" + fmt(best.v) + " " + unit + "</b><span>" + fullTime(best.t) + "</span>";
+    tip.hidden = false;
+    var leftPx = host.offsetLeft + best.px / W * r.width;
+    tip.style.left = Math.max(0, leftPx - tip.offsetWidth / 2) + "px";
+    tip.style.top = Math.max(0, host.offsetTop + best.py / H * r.height - tip.offsetHeight - 8) + "px";
+  }
+  function leave() {
+    tip.hidden = true;
+    var svg = host.querySelector("svg"); if (!svg) return;
+    var g = svg.querySelector(".rsguide"), dot = svg.querySelector(".rsdot");
+    if (g) g.style.display = "none"; if (dot) dot.style.display = "none";
+  }
+  host.addEventListener("mousemove", move);
+  host.addEventListener("mouseleave", leave);
+  host.addEventListener("touchmove", function (e) { if (e.touches[0]) { move(e.touches[0]); } }, { passive: true });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".rsrange button"), function (b) {
+    b.addEventListener("click", function () {
+      range = b.getAttribute("data-r");
+      Array.prototype.forEach.call(wrap.querySelectorAll(".rsrange button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on"); draw();
+    });
+  });
+  var rt;
+  window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(draw, 150); });
+  draw();
+})();
