@@ -971,7 +971,6 @@ def rate_table(slug, info, lang, n=12):
     pbtns = _btns(periods, "p", "24h")
     trs = ""
     for i, (cnt, ts, ti, r) in enumerate(allrows):
-        hid = " rthidden" if i >= n else ""
         ds = f'{ti["name"]} {ti["ticker"]} {ts}'.lower().replace('"', "&quot;")
         cat_k = CAT_SLUG.get(ti["category"], "prochee")
         chg = CHG_BY.get(ts, {})
@@ -983,7 +982,7 @@ def rate_table(slug, info, lang, n=12):
         c24 = chg.get("24h")
         chg_c = ('<span class="nd">—</span>' if c24 is None
                  else f'<b class="{"up" if c24 >= 0 else "down"}">{"+" if c24 >= 0 else ""}{c24:.1f}%</b>')
-        trs += (f'<tr class="rtrow{hid}" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
+        trs += (f'<tr class="rtrow" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
                 f'<td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
                 f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
                 f'<td class="num">{rate_c}</td><td class="num">{cnt_c}</td><td class="num">{res_c}</td>'

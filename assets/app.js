@@ -342,7 +342,7 @@
   var cbar = document.querySelector(".rtcatbar"), sbar = document.querySelector(".rtsortbar"), pbar = document.querySelector(".rtperbar");
   var nores = document.querySelector(".rtnores");
   var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
-  var query = "", cat = "", sort = "liq", period = "24h", LIMIT = 12;
+  var query = "", cat = "", sort = "liq", period = "24h";
   function liqOf(r) { var v = r.getAttribute("data-liq"); return v ? parseFloat(v) : 0; }
   function chgOf(r) { var v = r.getAttribute("data-c" + period); return v === null || v === "" ? null : parseFloat(v); }
   function updateCol() {
@@ -363,9 +363,8 @@
       if (ca === null) return 1; if (cb === null) return -1;
       return sort === "up" ? cb - ca : ca - cb;
     });
-    var limit = (query || cat || sort !== "liq") ? 300 : LIMIT;
     rows.forEach(function (r) { r.style.display = "none"; });
-    filt.forEach(function (r, i) { tbody.appendChild(r); if (i < limit) r.style.display = ""; });
+    filt.forEach(function (r) { tbody.appendChild(r); r.style.display = ""; });
     if (nores) nores.hidden = filt.length > 0;
     updateCol();
   }
