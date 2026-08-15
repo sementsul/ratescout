@@ -973,7 +973,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
-                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Блог на Teletype</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
+                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Блог на Teletype</a> · <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span>")
@@ -982,7 +982,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
-                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Blog on Teletype</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
+                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Blog on Teletype</a> · <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -2203,7 +2203,8 @@ def compliance_pages(lang):
 <p>{S.get('owner_status','')} <b>{S.get('owner','')}</b>, ИНН {S.get('owner_inn','')}. Владелец не является
    обменным пунктом и не проводит операции. Контакт: {S.get('owner_email','')}.</p>
 <h2>Официальные ресурсы</h2>
-<p>Официальный блог сервиса: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>.</p>""",
+<p>Официальные блоги сервиса: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>
+   и <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.</p>""",
                     "Раскрытие")
         render_page(lang, "politika", "Политика конфиденциальности",
                     f"Политика обработки данных и cookie на сайте {S['domain']} (152-ФЗ).",
@@ -2255,7 +2256,8 @@ def compliance_pages(lang):
 <p><b>{S.get('owner','')}</b> (self-employed, RU tax ID {S.get('owner_inn','')}). The owner is not an exchange
    office and does not process transactions. Contact: {S.get('owner_email','')}.</p>
 <h2>Official resources</h2>
-<p>Official service blog: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>.</p>""",
+<p>Official service blogs: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>
+   and <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.</p>""",
                     "Disclosure")
         render_page(lang, "politika", "Privacy policy",
                     f"Data and cookie processing policy on {S['domain']}.",
