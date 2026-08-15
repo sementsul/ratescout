@@ -99,6 +99,9 @@ option{color:#a8a8a8}
   border:3px double #000;outline:3px solid #00aaaa;text-align:center;margin-top:8px}
 .cta:hover{background:#000;color:#ffff55}
 .conv .cta{width:100%}
+.getcta{margin:10px 0 14px}
+.cta-get{background:#55aa55;color:#062;border-color:#000;outline-color:#55aa55;font-size:1.05rem;padding:11px 20px}
+.cta-get:hover{background:#000;color:#7f7}
 .cest{margin:2px 0 6px;color:#cfe;font-size:.95rem;min-height:1.1em}
 .cest b{color:#55ff55}
 .sblock{margin:0 0 18px}

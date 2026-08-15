@@ -494,7 +494,7 @@ TR = {
         "glossary": "Словарь терминов", "usdt_nets": "Сети USDT", "fees": "Комиссии сетей", "aml_link": "AML-проверка",
         "open_bc": "Открыть направление в BestChange →",
         "blog_search_ph": "Поиск по статьям…", "blog_noresults": "Ничего не найдено. Попробуйте другой запрос.",
-        "amount": "Сумма", "approx": "≈ получите",
+        "amount": "Сумма", "approx": "≈ получите", "get_cta": "Получить",
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
@@ -510,7 +510,7 @@ TR = {
         "glossary": "Glossary", "usdt_nets": "USDT networks", "fees": "Network fees", "aml_link": "AML check",
         "open_bc": "Open direction on BestChange →",
         "blog_search_ph": "Search articles…", "blog_noresults": "Nothing found. Try a different query.",
-        "amount": "Amount", "approx": "≈ you get",
+        "amount": "Amount", "approx": "≈ you get", "get_cta": "Get",
     },
 }
 
@@ -1013,6 +1013,9 @@ def render_currency(slug, info, lang):
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
                       "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
+    get_src = "bitcoin" if slug == "tether-trc20" else "tether-trc20"
+    get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug)}" target="_blank" '
+               f'rel="nofollow noopener sponsored">{tr(lang,"get_cta")} {name} →</a>')
     hub_cta = ""
     if slug in BANK_HUB_SET:
         hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
@@ -1024,6 +1027,7 @@ def render_currency(slug, info, lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {name} <span class="tk">{ticker}</span></nav>
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
+    <p class="getcta">{get_btn}</p>
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
