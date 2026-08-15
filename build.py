@@ -950,14 +950,14 @@ def rate_table(slug, info, lang, n=12):
         h = ("Меняем на", "Лучший курс", "Обменников", "Резерв", "Изм.")
         note = "Курс/резерв — по направлению из мониторинга BestChange; «Изм.» — динамика цены валюты за период. Обновление ежечасно. " + updated_str(lang)
         ph, nores, plbl = "Поиск по валютам: BTC, USDT, Sberbank…", "Ничего не найдено", "Изм. за:"
-        sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
+        sorts = [("cat", "По категориям"), ("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
         periods = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
     else:
         title = f"Exchange {info['ticker']} — rates for all currencies"
         h = ("Exchange to", "Best rate", "Exchangers", "Reserve", "Chg.")
         note = "Rate/reserve — per direction from BestChange; “Chg.” — currency price change over the period. Hourly updates. " + updated_str(lang)
         ph, nores, plbl = "Search currencies: BTC, USDT, Sberbank…", "Nothing found", "Chg. over:"
-        sorts = [("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
+        sorts = [("cat", "By category"), ("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
         periods = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("1y", "1y"), ("3y", "3y"), ("5y", "5y"), ("10y", "10y")]
 
     def _btns(items, attr, default):
@@ -967,10 +967,9 @@ def rate_table(slug, info, lang, n=12):
             out += f'<button type="button" data-{attr}="{v}"{on}>{l}</button>'
         return out
     fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS], "f", "")
-    sbtns = _btns(sorts, "s", "liq")
+    sbtns = _btns(sorts, "s", "cat")
     pbtns = _btns(periods, "p", "24h")
-    trs = ""
-    for i, (cnt, ts, ti, r) in enumerate(allrows):
+    def _row(cnt, ts, ti, r):
         ds = f'{ti["name"]} {ti["ticker"]} {ts}'.lower().replace('"', "&quot;")
         cat_k = CAT_SLUG.get(ti["category"], "prochee")
         chg = CHG_BY.get(ts, {})
@@ -982,11 +981,26 @@ def rate_table(slug, info, lang, n=12):
         c24 = chg.get("24h")
         chg_c = ('<span class="nd">—</span>' if c24 is None
                  else f'<b class="{"up" if c24 >= 0 else "down"}">{"+" if c24 >= 0 else ""}{c24:.1f}%</b>')
-        trs += (f'<tr class="rtrow" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
+        return (f'<tr class="rtrow" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
                 f'<td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
                 f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
                 f'<td class="num">{rate_c}</td><td class="num">{cnt_c}</td><td class="num">{res_c}</td>'
                 f'<td class="num rtchg">{chg_c}</td></tr>')
+    # группировка по категориям валют: строка-заголовок + валюты категории
+    by_cat = {}
+    for cnt, ts, ti, r in allrows:
+        by_cat.setdefault(ti["category"], []).append((cnt, ts, ti, r))
+    trs = ""
+    for c in CATS:
+        grp = by_cat.get(c)
+        if not grp:
+            continue
+        grp.sort(key=lambda x: (0 if x[3] else 1, -(x[0] or 0), x[2]["name"].lower()))
+        cat_k = CAT_SLUG.get(c, "prochee")
+        trs += (f'<tr class="rtgroup" data-cat="{cat_k}"><td colspan="5">{cat_name(c, lang)} '
+                f'<span class="cnt">{len(grp)}</span></td></tr>')
+        for cnt, ts, ti, r in grp:
+            trs += _row(cnt, ts, ti, r)
     return (f'<h2 class="news">{title}</h2>'
             f'<div class="rtsearchbox"><input class="rtsearch" data-prefix="{PREF[lang]}" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
             f'<div class="rsrange rtcatbar">{fbtns}</div>'

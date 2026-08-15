@@ -341,31 +341,44 @@
   var tbody = tbl.querySelector("tbody"), inp = document.querySelector(".rtsearch");
   var cbar = document.querySelector(".rtcatbar"), sbar = document.querySelector(".rtsortbar"), pbar = document.querySelector(".rtperbar");
   var nores = document.querySelector(".rtnores");
-  var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
-  var query = "", cat = "", sort = "liq", period = "24h";
+  var ORIGINAL = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+  var headers = ORIGINAL.filter(function (r) { return r.classList.contains("rtgroup"); });
+  var crows = ORIGINAL.filter(function (r) { return r.classList.contains("rtrow"); });
+  var query = "", cat = "", sort = "cat", period = "24h";
   function liqOf(r) { var v = r.getAttribute("data-liq"); return v ? parseFloat(v) : 0; }
   function chgOf(r) { var v = r.getAttribute("data-c" + period); return v === null || v === "" ? null : parseFloat(v); }
   function updateCol() {
-    rows.forEach(function (r) {
+    crows.forEach(function (r) {
       var cell = r.querySelector(".rtchg"); if (!cell) return;
       var v = chgOf(r);
       cell.innerHTML = v === null ? '<span class="nd">—</span>' : '<b class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + v.toFixed(1) + '%</b>';
     });
   }
+  function catMatch(r) { return !cat || r.getAttribute("data-cat") === cat; }
   function apply() {
-    var filt = rows.filter(function (r) {
-      return (!query || (r.getAttribute("data-search") || "").indexOf(query) >= 0) && (!cat || r.getAttribute("data-cat") === cat);
-    });
-    filt.sort(function (a, b) {
-      if (sort === "liq") return liqOf(b) - liqOf(a);
-      var ca = chgOf(a), cb = chgOf(b);
-      if (ca === null && cb === null) return liqOf(b) - liqOf(a);
-      if (ca === null) return 1; if (cb === null) return -1;
-      return sort === "up" ? cb - ca : ca - cb;
-    });
-    rows.forEach(function (r) { r.style.display = "none"; });
-    filt.forEach(function (r) { tbody.appendChild(r); r.style.display = ""; });
-    if (nores) nores.hidden = filt.length > 0;
+    if (sort === "cat" && !query) {                         // сгруппированный вид с заголовками
+      ORIGINAL.forEach(function (el) { tbody.appendChild(el); });
+      headers.forEach(function (h) { h.style.display = catMatch(h) ? "" : "none"; });
+      crows.forEach(function (r) { r.style.display = catMatch(r) ? "" : "none"; });
+      if (nores) nores.hidden = true;
+    } else {                                                // плоский список: поиск/сортировка
+      headers.forEach(function (h) { h.style.display = "none"; });
+      var filt = crows.filter(function (r) {
+        return (!query || (r.getAttribute("data-search") || "").indexOf(query) >= 0) && catMatch(r);
+      });
+      filt.sort(function (a, b) {
+        if (sort === "up" || sort === "down") {
+          var ca = chgOf(a), cb = chgOf(b);
+          if (ca === null && cb === null) return liqOf(b) - liqOf(a);
+          if (ca === null) return 1; if (cb === null) return -1;
+          return sort === "up" ? cb - ca : ca - cb;
+        }
+        return liqOf(b) - liqOf(a);
+      });
+      crows.forEach(function (r) { r.style.display = "none"; });
+      filt.forEach(function (r) { tbody.appendChild(r); r.style.display = ""; });
+      if (nores) nores.hidden = filt.length > 0;
+    }
     updateCol();
   }
   function wire(bar, set) {

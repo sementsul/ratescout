@@ -132,6 +132,8 @@ option{color:#a8a8a8}
 .spark{display:block;width:120px;height:34px}
 .marktbl td.spk{padding:2px 9px;width:130px}
 .marktbl .nd{color:#555}
+.rtgroup td{background:#063; color:#7f7; font-weight:700; padding:6px 9px; border-top:2px solid #0a0; text-align:left}
+.rtgroup .cnt{color:#ffff55; float:right; font-weight:400}
 .perrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .perrow .ctllbl{color:#8a8a8a;font-size:.82rem}
 .perrow .rsrange{margin:0}
