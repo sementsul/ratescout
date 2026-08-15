@@ -946,14 +946,14 @@ def rate_table(slug, info, lang, n=12):
     unrated.sort(key=lambda x: x[1]["name"].lower())
     allrows = [(cnt, ts, ti, r) for cnt, ts, ti, r in rated] + [(0, ts, ti, None) for ts, ti in unrated]
     if lang == "ru":
-        title = f"Лучшие курсы обмена {info['ticker']}"
+        title = f"Обмен {info['ticker']} — курсы по всем валютам"
         h = ("Меняем на", "Лучший курс", "Обменников", "Резерв", "Изм.")
         note = "Курс/резерв — по направлению из мониторинга BestChange; «Изм.» — динамика цены валюты за период. Обновление ежечасно. " + updated_str(lang)
         ph, nores, plbl = "Поиск по валютам: BTC, USDT, Sberbank…", "Ничего не найдено", "Изм. за:"
         sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
         periods = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
     else:
-        title = f"Best {info['ticker']} exchange rates"
+        title = f"Exchange {info['ticker']} — rates for all currencies"
         h = ("Exchange to", "Best rate", "Exchangers", "Reserve", "Chg.")
         note = "Rate/reserve — per direction from BestChange; “Chg.” — currency price change over the period. Hourly updates. " + updated_str(lang)
         ph, nores, plbl = "Search currencies: BTC, USDT, Sberbank…", "Nothing found", "Chg. over:"
@@ -1111,18 +1111,6 @@ def render_buy(slug, info, lang):
 def render_currency(slug, info, lang):
     name, ticker = info["name"], info["ticker"]
     path = f"/valuta/{slug}/"
-    dir_blocks = ""
-    for c in CATS:
-        rows = ""
-        for ts, ti in GROUPED.get(c, []):
-            if ts == slug:
-                continue
-            r = rate_of(slug, ts)
-            rr = f' <b class="rt">{fmt_rate(r["rate"])}</b>' if r else ''
-            rows += (f'<li><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
-                     f'→ {ti["name"]} <span>{ti["ticker"]}</span>{rr}</a></li>')
-        if rows:
-            dir_blocks += f'<h2 class="news">{name} → {cat_name(c, lang)}</h2><ul class="dlist">{rows}</ul>'
     if lang == "ru":
         title = f"Обмен {name} ({ticker}) — курсы и все направления | {S['name']}"
         desc = (f"Обмен {name} ({ticker}): справочная сводка курсов в обменниках из мониторинга BestChange. "
@@ -1185,8 +1173,6 @@ def render_currency(slug, info, lang):
     {currency_chart(slug, info, lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
-    <h2 class="news">{tr(lang,'directions')} {ticker}</h2>
-    {dir_blocks}
     <h2 class="news">{tr(lang,'how_to')} {name}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(tr(lang,'how_to') + ' ' + name, steps)}
