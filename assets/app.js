@@ -335,52 +335,52 @@
   });
 })();
 
-// ---- финдер по ВСЕМ валютам (страница валюты): поиск+категория+сортировка(ликв/рост/падение)+период ----
+// ---- таблица «Лучшие курсы обмена» (страница валюты): поиск по валютам-целям + категория + сортировка + период ----
 (function () {
-  var inp = document.querySelector(".cfind-inp"), list = document.querySelector(".cfind-list"), none = document.querySelector(".cfind-none");
-  if (!inp || !list) return;
-  var cbar = document.querySelector(".cfind-cat"), sbar = document.querySelector(".cfind-sort"), pbar = document.querySelector(".cfind-per");
-  var PRE = inp.getAttribute("data-prefix") || "";
-  var ALL = [], query = "", cat = "", sort = "liq", period = "24h";
-  function esc(x) { return (x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
-  function ch(x) { if (!x.ch) return null; var v = x.ch[period]; return v === undefined ? null : v; }
-  function render() {
-    if (!ALL.length) return;
-    var res = ALL.filter(function (x) { return (!query || x.key.indexOf(query) >= 0) && (!cat || x.cat === cat); });
-    res.sort(function (a, b) {
-      if (sort === "liq") return (b.liq || 0) - (a.liq || 0);
-      var ca = ch(a), cb = ch(b);
-      if (ca === null && cb === null) return (b.liq || 0) - (a.liq || 0);
+  var tbl = document.querySelector(".ratetbl"); if (!tbl) return;
+  var tbody = tbl.querySelector("tbody"), inp = document.querySelector(".rtsearch");
+  var cbar = document.querySelector(".rtcatbar"), sbar = document.querySelector(".rtsortbar"), pbar = document.querySelector(".rtperbar");
+  var nores = document.querySelector(".rtnores");
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+  var query = "", cat = "", sort = "liq", period = "24h", LIMIT = 12;
+  function liqOf(r) { var v = r.getAttribute("data-liq"); return v ? parseFloat(v) : 0; }
+  function chgOf(r) { var v = r.getAttribute("data-c" + period); return v === null || v === "" ? null : parseFloat(v); }
+  function updateCol() {
+    rows.forEach(function (r) {
+      var cell = r.querySelector(".rtchg"); if (!cell) return;
+      var v = chgOf(r);
+      cell.innerHTML = v === null ? '<span class="nd">—</span>' : '<b class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + v.toFixed(1) + '%</b>';
+    });
+  }
+  function apply() {
+    var filt = rows.filter(function (r) {
+      return (!query || (r.getAttribute("data-search") || "").indexOf(query) >= 0) && (!cat || r.getAttribute("data-cat") === cat);
+    });
+    filt.sort(function (a, b) {
+      if (sort === "liq") return liqOf(b) - liqOf(a);
+      var ca = chgOf(a), cb = chgOf(b);
+      if (ca === null && cb === null) return liqOf(b) - liqOf(a);
       if (ca === null) return 1; if (cb === null) return -1;
       return sort === "up" ? cb - ca : ca - cb;
     });
-    res = res.slice(0, (query || cat) ? 150 : 40);
-    list.innerHTML = '<div class="rtbl-wrap"><table class="rtbl marktbl"><tbody>' + res.map(function (x) {
-      var c = ch(x), cc = c === null ? '<span class="nd">—</span>' : '<b class="' + (c >= 0 ? "up" : "down") + '">' + (c >= 0 ? "+" : "") + c.toFixed(1) + '%</b>';
-      var p = x.p ? '<b>' + esc(x.p) + '</b>' : '<span class="nd">—</span>';
-      return '<tr><td class="d"><a href="' + PRE + '/valuta/' + x.s + '/">' + esc(x.n) + ' <span>' + esc(x.t) + '</span></a></td>' +
-        '<td class="num">' + p + '</td><td class="num">' + cc + '</td></tr>';
-    }).join("") + '</tbody></table></div>';
-    if (none) none.hidden = res.length > 0;
+    var limit = (query || cat || sort !== "liq") ? 300 : LIMIT;
+    rows.forEach(function (r) { r.style.display = "none"; });
+    filt.forEach(function (r, i) { tbody.appendChild(r); if (i < limit) r.style.display = ""; });
+    if (nores) nores.hidden = filt.length > 0;
+    updateCol();
   }
   function wire(bar, set) {
     if (!bar) return;
     Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
       b.addEventListener("click", function () {
         Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
-        b.classList.add("on"); set(b); render();
+        b.classList.add("on"); set(b); apply();
       });
     });
   }
-  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); render(); });
+  if (inp) inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); apply(); });
   wire(cbar, function (b) { cat = b.getAttribute("data-f"); });
   wire(sbar, function (b) { sort = b.getAttribute("data-s"); });
   wire(pbar, function (b) { period = b.getAttribute("data-p"); });
-  fetch("/markets.json").then(function (r) { return r.json(); }).then(function (d) {
-    ALL = Object.keys(d.cur).map(function (s) {
-      var i = d.cur[s];
-      return { s: s, n: i.n, t: i.t, cat: i.cat, liq: i.liq || 0, p: i.p, ch: i.ch, key: (i.n + " " + i.t + " " + s).toLowerCase() };
-    });
-    render();
-  }).catch(function () {});
+  updateCol();
 })();

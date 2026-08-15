@@ -178,6 +178,9 @@ if os.path.exists(_hp):
     except (ValueError, OSError):
         HISTORY = {}
 
+# % изменения по валютам за периоды — предрасчёт (для сортировки таблиц), заполняется в main()
+CHG_BY = {}
+
 
 def svg_chart(points):
     """Inline-SVG линия динамики (без JS/внешних либ). points=[[date,rate],...]."""
@@ -261,6 +264,68 @@ def _usdt_price(slug):
             pass
     return None, 0
 
+
+
+def render_home(lang):
+    total = len(CUR)
+    cat_html = ""
+    for c in CATS:
+        items = "".join(f'<li><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></li>'
+                        for slug, info in GROUPED.get(c, []))
+        cat_html += (f'<h2 class="news"><a href="{cat_page(lang, c)}">{cat_name(c, lang)}</a> '
+                     f'<span class="cnt">{len(GROUPED.get(c, []))}</span></h2><ul class="dlist">{items}</ul>')
+    ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
+                 "url": BASE_URL + PREF[lang] + "/", "inLanguage": LOCALE[lang], "description": S["tagline"]})
+    org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
+                  "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png",
+                  "email": S.get("owner_email", ""),
+                  "contactPoint": {"@type": "ContactPoint", "contactType":
+                                   ("customer support" if lang == "en" else "поддержка"),
+                                   "email": S.get("owner_email", "")}})
+    if lang == "ru":
+        title = f"{S['name']} — справочник курсов обмена: {total} валют"
+        desc = (f"Справочник курсов обмена криптовалют и денег по {total} валютам на основе мониторинга обменных "
+                "пунктов BestChange. Все направления, AML-проверка криптоадресов.")
+        intro = (f"Справочник курсов обмена криптовалют и валют. Данные собраны из мониторинга обменных пунктов "
+                 f"<b>BestChange</b> по <b>{total}</b> валютам и приведены для ознакомления. "
+                 f'<a href="/o-servise/">Что такое BestChange →</a>')
+    else:
+        title = f"{S['name']} — currency exchange rates directory: {total} currencies"
+        desc = (f"Directory of crypto and money exchange rates across {total} currencies, based on BestChange "
+                "exchange monitoring. All directions, crypto address AML check.")
+        intro = (f"A directory of crypto and currency exchange rates. Data is collected from the <b>BestChange</b> "
+                 f"exchange monitor across <b>{total}</b> currencies and provided for reference. "
+                 f'<a href="/en/o-servise/">What is BestChange →</a>')
+    pop = (f'<h2 class="news">{tr(lang,"popular")}</h2><ul class="dlist">'
+           + "".join(pair_link_li(p, lang) for p in TOP[:16]) + "</ul>") if TOP else ""
+    body = f"""{header(lang, "/")}
+<div id="main">
+  <div id="content">
+    <pre class="ascii">  ____       _        ____                  _
+ |  _ \\ __ _| |_ ___ / ___|  ___ ___  _   _| |_
+ | |_) / _` | __/ _ \\\\___ \\ / __/ _ \\| | | | __|
+ |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
+ |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
+    <div class="dosblue dosborder">{intro}</div>
+    {pop}
+    <h2 class="news">{tr(lang,'catalog')} <span class="cnt">{total}</span></h2>
+    {cat_html}
+  </div>
+  <div id="sidebar">
+    {converter_html(lang)}
+    {search_box(lang)}
+    <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
+      <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
+      <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
+      <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
+      <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
+    </ul></div>
+  </div>
+  <div class="clearboth"></div>
+</div>
+{org}
+{footer(lang)}"""
+    write(lang, "/", head(lang, title, desc, "/", ld) + body)
 
 def render_charts_overview(lang):
     """Обзор рынка по ВСЕМ валютам: спарклайн+цена+изм где есть история; иначе цена/прочерк. SEO-хаб."""
@@ -864,54 +929,36 @@ def related_currencies(slug, info, lang, n=8):
 
 
 def rate_table(slug, info, lang, n=12):
-    """Живая таблица лучших курсов направлений валюты: курс + число обменников + резерв."""
-    rows = []
+    """Таблица направлений обмена валюты (реферальные ссылки в BestChange) с поиском по валютам-целям,
+    фильтром категорий, сортировкой (ликвидность/рост/падение) и периодом. Топ-12 по умолчанию, поиск/фильтр — по всем."""
+    rated, unrated = [], []
     for ts, ti in CUR.items():
         if ts == slug:
             continue
         r = rate_of(slug, ts)
-        if not r:
-            continue
-        rows.append((r.get("count", 0), ts, ti, r))
-    if not rows:
+        if r:
+            rated.append((r.get("count", 0), ts, ti, r))
+        else:
+            unrated.append((ts, ti))
+    if not rated and not unrated:
         return ""
-    rows.sort(key=lambda x: x[0], reverse=True)
-    rows = rows[:n]
+    rated.sort(key=lambda x: x[0], reverse=True)
+    unrated.sort(key=lambda x: x[1]["name"].lower())
+    allrows = [(cnt, ts, ti, r) for cnt, ts, ti, r in rated] + [(0, ts, ti, None) for ts, ti in unrated]
     if lang == "ru":
         title = f"Лучшие курсы обмена {info['ticker']}"
-        h = ("Направление", "Лучший курс", "Обменников", "Резерв, всего")
-        note = "Лучший курс среди обменников; резерв — суммарный по направлению. Мониторинг BestChange, обновление ежечасно. " + updated_str(lang)
-    else:
-        title = f"Best {info['ticker']} exchange rates"
-        h = ("Direction", "Best rate", "Exchangers", "Total reserve")
-        note = "Best rate among exchangers; reserve is the total for the direction. BestChange monitor, hourly updates. " + updated_str(lang)
-    trs = ""
-    for cnt, ts, ti, r in rows:
-        trs += (f'<tr><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
-                f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
-                f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td>'
-                f'<td class="num">{cnt}</td>'
-                f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
-    return (f'<h2 class="news">{title}</h2>'
-            f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
-            f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th></tr></thead>'
-            f'<tbody>{trs}</tbody></table></div>'
-            f'<p class="updnote">{note}</p>')
-
-
-def currency_finder(lang):
-    """Финдер по ВСЕМ валютам (над «Лучшие курсы обмена»): поиск + фильтр категорий + сортировка (ликвидность/
-    рост/падение) + период (24ч…10л), как на /grafiki/. Данные — markets.json, ссылки на страницы валют."""
-    if lang == "ru":
-        title, ph, nores = "Найти любую валюту", "Поиск по всем валютам: BTC, USDT, Sberbank…", "Ничего не найдено"
+        h = ("Меняем на", "Лучший курс", "Обменников", "Резерв", "Изм.")
+        note = "Курс/резерв — по направлению из мониторинга BestChange; «Изм.» — динамика цены валюты за период. Обновление ежечасно. " + updated_str(lang)
+        ph, nores, plbl = "Поиск по валютам: BTC, USDT, Sberbank…", "Ничего не найдено", "Изм. за:"
         sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
         periods = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
-        plbl = "Изменение за:"
     else:
-        title, ph, nores = "Find any currency", "Search all currencies: BTC, USDT, Sberbank…", "Nothing found"
+        title = f"Best {info['ticker']} exchange rates"
+        h = ("Exchange to", "Best rate", "Exchangers", "Reserve", "Chg.")
+        note = "Rate/reserve — per direction from BestChange; “Chg.” — currency price change over the period. Hourly updates. " + updated_str(lang)
+        ph, nores, plbl = "Search currencies: BTC, USDT, Sberbank…", "Nothing found", "Chg. over:"
         sorts = [("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
         periods = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("1y", "1y"), ("3y", "3y"), ("5y", "5y"), ("10y", "10y")]
-        plbl = "Change over:"
 
     def _btns(items, attr, default):
         out = ""
@@ -922,77 +969,36 @@ def currency_finder(lang):
     fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS], "f", "")
     sbtns = _btns(sorts, "s", "liq")
     pbtns = _btns(periods, "p", "24h")
+    trs = ""
+    for i, (cnt, ts, ti, r) in enumerate(allrows):
+        hid = " rthidden" if i >= n else ""
+        ds = f'{ti["name"]} {ti["ticker"]} {ts}'.lower().replace('"', "&quot;")
+        cat_k = CAT_SLUG.get(ti["category"], "prochee")
+        chg = CHG_BY.get(ts, {})
+        pattrs = "".join(f' data-c{pk}="{("" if chg.get(pk) is None else f"{chg[pk]:.4f}")}"' for pk, _ in CHART_PERIODS)
+        if r:
+            rate_c, cnt_c, res_c = f'<b>{fmt_rate(r["rate"])}</b>', str(cnt), fmt_rate(r.get("reserve", 0))
+        else:
+            rate_c = cnt_c = res_c = '<span class="nd">—</span>'
+        c24 = chg.get("24h")
+        chg_c = ('<span class="nd">—</span>' if c24 is None
+                 else f'<b class="{"up" if c24 >= 0 else "down"}">{"+" if c24 >= 0 else ""}{c24:.1f}%</b>')
+        trs += (f'<tr class="rtrow{hid}" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
+                f'<td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
+                f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
+                f'<td class="num">{rate_c}</td><td class="num">{cnt_c}</td><td class="num">{res_c}</td>'
+                f'<td class="num rtchg">{chg_c}</td></tr>')
     return (f'<h2 class="news">{title}</h2>'
-            f'<div class="rtsearchbox"><input class="rtsearch cfind-inp" data-prefix="{PREF[lang]}" type="search" '
-            f'placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
-            f'<div class="rsrange rtcatbar cfind-cat">{fbtns}</div>'
-            f'<div class="rsrange cfind-sort">{sbtns}</div>'
-            f'<div class="perrow"><span class="ctllbl">{plbl}</span><span class="rsrange cfind-per">{pbtns}</span></div>'
-            f'<div class="cfind-list"></div>'
-            f'<p class="cfind-none updnote" hidden>{nores}</p>')
+            f'<div class="rtsearchbox"><input class="rtsearch" data-prefix="{PREF[lang]}" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
+            f'<div class="rsrange rtcatbar">{fbtns}</div>'
+            f'<div class="rsrange rtsortbar">{sbtns}</div>'
+            f'<div class="perrow"><span class="ctllbl">{plbl}</span><span class="rsrange rtperbar">{pbtns}</span></div>'
+            f'<div class="rtbl-wrap"><table class="rtbl ratetbl"><thead><tr>'
+            f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th><th>{h[4]}</th></tr></thead>'
+            f'<tbody>{trs}</tbody></table></div>'
+            f'<p class="rtnores updnote" hidden>{nores}</p>'
+            f'<p class="updnote">{note}</p>')
 
-
-# ---------------- страницы ----------------
-def render_home(lang):
-    total = len(CUR)
-    cat_html = ""
-    for c in CATS:
-        items = "".join(f'<li><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></li>'
-                        for slug, info in GROUPED.get(c, []))
-        cat_html += (f'<h2 class="news"><a href="{cat_page(lang, c)}">{cat_name(c, lang)}</a> '
-                     f'<span class="cnt">{len(GROUPED.get(c, []))}</span></h2><ul class="dlist">{items}</ul>')
-    ld = jsonld({"@context": "https://schema.org", "@type": "WebSite", "name": S["name"],
-                 "url": BASE_URL + PREF[lang] + "/", "inLanguage": LOCALE[lang], "description": S["tagline"]})
-    org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
-                  "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png",
-                  "email": S.get("owner_email", ""),
-                  "contactPoint": {"@type": "ContactPoint", "contactType":
-                                   ("customer support" if lang == "en" else "поддержка"),
-                                   "email": S.get("owner_email", "")}})
-    if lang == "ru":
-        title = f"{S['name']} — справочник курсов обмена: {total} валют"
-        desc = (f"Справочник курсов обмена криптовалют и денег по {total} валютам на основе мониторинга обменных "
-                "пунктов BestChange. Все направления, AML-проверка криптоадресов.")
-        intro = (f"Справочник курсов обмена криптовалют и валют. Данные собраны из мониторинга обменных пунктов "
-                 f"<b>BestChange</b> по <b>{total}</b> валютам и приведены для ознакомления. "
-                 f'<a href="/o-servise/">Что такое BestChange →</a>')
-    else:
-        title = f"{S['name']} — currency exchange rates directory: {total} currencies"
-        desc = (f"Directory of crypto and money exchange rates across {total} currencies, based on BestChange "
-                "exchange monitoring. All directions, crypto address AML check.")
-        intro = (f"A directory of crypto and currency exchange rates. Data is collected from the <b>BestChange</b> "
-                 f"exchange monitor across <b>{total}</b> currencies and provided for reference. "
-                 f'<a href="/en/o-servise/">What is BestChange →</a>')
-    pop = (f'<h2 class="news">{tr(lang,"popular")}</h2><ul class="dlist">'
-           + "".join(pair_link_li(p, lang) for p in TOP[:16]) + "</ul>") if TOP else ""
-    body = f"""{header(lang, "/")}
-<div id="main">
-  <div id="content">
-    <pre class="ascii">  ____       _        ____                  _
- |  _ \\ __ _| |_ ___ / ___|  ___ ___  _   _| |_
- | |_) / _` | __/ _ \\\\___ \\ / __/ _ \\| | | | __|
- |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
- |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
-    <div class="dosblue dosborder">{intro}</div>
-    {pop}
-    <h2 class="news">{tr(lang,'catalog')} <span class="cnt">{total}</span></h2>
-    {cat_html}
-  </div>
-  <div id="sidebar">
-    {converter_html(lang)}
-    {search_box(lang)}
-    <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
-      <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
-      <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
-      <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
-      <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
-    </ul></div>
-  </div>
-  <div class="clearboth"></div>
-</div>
-{org}
-{footer(lang)}"""
-    write(lang, "/", head(lang, title, desc, "/", ld) + body)
 
 
 def render_buy(slug, info, lang):
@@ -1177,7 +1183,6 @@ def render_currency(slug, info, lang):
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
-    {currency_finder(lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
     <h2 class="news">{tr(lang,'directions')} {ticker}</h2>
@@ -2066,31 +2071,8 @@ def static_files():
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
     write_llms()
     write_widget()
-    write_markets()
 
 
-def write_markets():
-    """markets.json — цена/ликвидность/% за периоды по всем валютам (для финдера на страницах валют)."""
-    m = {}
-    for slug, info in CUR.items():
-        if slug == "tether-trc20":
-            continue
-        price, liq = _usdt_price(slug)
-        h = HISTORY.get(slug, [])
-        ch = {}
-        if len(h) >= 2:
-            for pk, dys in CHART_PERIODS:
-                v = _pct_over(h, dys)
-                if v is not None:
-                    ch[pk] = round(v, 4)
-        d = {"n": info["name"], "t": info["ticker"], "cat": info["category"], "liq": liq}
-        if price is not None:
-            d["p"] = fmt_rate(price)
-        if ch:
-            d["ch"] = ch
-        m[slug] = d
-    open(os.path.join(DIST, "markets.json"), "w", encoding="utf-8").write(
-        json.dumps({"cur": m}, ensure_ascii=False, separators=(",", ":")))
 
 
 def write_llms():
@@ -2172,6 +2154,10 @@ def main():
     VER["css"] = _h(open(os.path.join(ROOT, "assets", "styles.css"), encoding="utf-8").read())
     VER["js"] = _h(open(os.path.join(ROOT, "assets", "app.js"), encoding="utf-8").read())
     VER["cat"] = _h(catjs)
+    for _s in CUR:
+        _hh = HISTORY.get(_s, [])
+        if len(_hh) >= 2:
+            CHG_BY[_s] = {pk: _pct_over(_hh, dys) for pk, dys in CHART_PERIODS}
     for lang in LANGS:
         render_home(lang)
         for slug, info in CUR.items():
