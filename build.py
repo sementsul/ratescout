@@ -932,14 +932,20 @@ def related_currencies(slug, info, lang, n=8):
     return f'<h2 class="news">{h}</h2><ul class="dlist">{items}</ul>'
 
 
-def rate_table(slug, info, lang, n=12):
-    """Таблица направлений обмена валюты (реферальные ссылки в BestChange) с поиском по валютам-целям,
-    фильтром категорий, сортировкой (ликвидность/рост/падение) и периодом. Топ-12 по умолчанию, поиск/фильтр — по всем."""
+def rate_table(slug, info, lang, incoming=False, n=12):
+    """Таблица направлений обмена (реферальные ссылки BestChange): поиск по валютам, фильтр категорий,
+    сортировка (категории/ликвидность/рост/падение), период, заголовки по категориям.
+    incoming=False — направления slug→X (страница валюты); True — X→slug (страница покупки)."""
+    def _rate(o):
+        return rate_of(o, slug) if incoming else rate_of(slug, o)
+
+    def _link(o):
+        return bc_link(o, slug) if incoming else bc_link(slug, o)
     rated, unrated = [], []
     for ts, ti in CUR.items():
         if ts == slug:
             continue
-        r = rate_of(slug, ts)
+        r = _rate(ts)
         if r:
             rated.append((r.get("count", 0), ts, ti, r))
         else:
@@ -950,15 +956,17 @@ def rate_table(slug, info, lang, n=12):
     unrated.sort(key=lambda x: x[1]["name"].lower())
     allrows = [(cnt, ts, ti, r) for cnt, ts, ti, r in rated] + [(0, ts, ti, None) for ts, ti in unrated]
     if lang == "ru":
-        title = f"Обмен {info['ticker']} — курсы по всем валютам"
-        h = ("Меняем на", "Лучший курс", "Обменников", "Резерв", "Изм.")
+        title = (f"Получить {info['ticker']} — курсы по всем валютам" if incoming
+                 else f"Обмен {info['ticker']} — курсы по всем валютам")
+        h = (("Отдаёте" if incoming else "Меняем на"), "Лучший курс", "Обменников", "Резерв", "Изм.")
         note = "Курс/резерв — по направлению из мониторинга BestChange; «Изм.» — динамика цены валюты за период. Обновление ежечасно. " + updated_str(lang)
         ph, nores, plbl = "Поиск по валютам: BTC, USDT, Sberbank…", "Ничего не найдено", "Изм. за:"
         sorts = [("cat", "По категориям"), ("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
         periods = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"), ("3y", "3г"), ("5y", "5л"), ("10y", "10л")]
     else:
-        title = f"Exchange {info['ticker']} — rates for all currencies"
-        h = ("Exchange to", "Best rate", "Exchangers", "Reserve", "Chg.")
+        title = (f"Get {info['ticker']} — rates for all currencies" if incoming
+                 else f"Exchange {info['ticker']} — rates for all currencies")
+        h = (("You send" if incoming else "Exchange to"), "Best rate", "Exchangers", "Reserve", "Chg.")
         note = "Rate/reserve — per direction from BestChange; “Chg.” — currency price change over the period. Hourly updates. " + updated_str(lang)
         ph, nores, plbl = "Search currencies: BTC, USDT, Sberbank…", "Nothing found", "Chg. over:"
         sorts = [("cat", "By category"), ("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
@@ -986,8 +994,8 @@ def rate_table(slug, info, lang, n=12):
         chg_c = ('<span class="nd">—</span>' if c24 is None
                  else f'<b class="{"up" if c24 >= 0 else "down"}">{"+" if c24 >= 0 else ""}{c24:.1f}%</b>')
         return (f'<tr class="rtrow" data-search="{ds}" data-cat="{cat_k}" data-liq="{cnt}"{pattrs}>'
-                f'<td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
-                f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
+                f'<td class="d"><a href="{_link(ts)}" target="_blank" rel="nofollow noopener sponsored">'
+                f'{ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
                 f'<td class="num">{rate_c}</td><td class="num">{cnt_c}</td><td class="num">{res_c}</td>'
                 f'<td class="num rtchg">{chg_c}</td></tr>')
     # группировка по категориям валют: строка-заголовок + валюты категории
@@ -1022,38 +1030,7 @@ def render_buy(slug, info, lang):
     """Страница покупки: все направления «источник → эта валюта» (как получить X) + CTA. SEO/конверсия."""
     name, ticker = info["name"], info["ticker"]
     path = f"/kupit/{slug}/"
-    # входящие направления (источник → slug), по популярности
-    incoming = []
-    for ss, si in CUR.items():
-        if ss == slug:
-            continue
-        r = rate_of(ss, slug)
-        if r:
-            incoming.append((r.get("count", 0), ss, si, r))
-    incoming.sort(key=lambda x: x[0], reverse=True)
     get_src = "bitcoin" if slug == "tether-trc20" else "tether-trc20"
-    # таблица топ-способов
-    trows = ""
-    for cnt, ss, si, r in incoming[:15]:
-        trows += (f'<tr><td class="d"><a href="{bc_link(ss, slug)}" target="_blank" rel="nofollow noopener sponsored">'
-                  f'{si["ticker"]} <span class="op">{"→ " + ticker}</span></a></td>'
-                  f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td><td class="num">{cnt}</td>'
-                  f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
-    # полный список источников по категориям
-    dir_blocks = ""
-    for c in CATS:
-        li = ""
-        for ss, si in GROUPED.get(c, []):
-            if ss == slug:
-                continue
-            r = rate_of(ss, slug)
-            if not r:
-                continue
-            rr = f' <b class="rt">{fmt_rate(r["rate"])}</b>'
-            li += (f'<li><a href="{bc_link(ss, slug)}" target="_blank" rel="nofollow noopener sponsored">'
-                   f'{si["name"]} <span>{si["ticker"]}</span> → {ticker}{rr}</a></li>')
-        if li:
-            dir_blocks += f'<h2 class="news">{cat_name(c, lang)} → {ticker}</h2><ul class="dlist">{li}</ul>'
     if lang == "ru":
         title = f"Купить {name} ({ticker}) — где и как получить, курсы | {S['name']}"
         desc = (f"Как купить {name} ({ticker}): все направления обмена на {ticker} с курсами из мониторинга "
@@ -1090,9 +1067,6 @@ def render_buy(slug, info, lang):
         note = "Best rate among exchangers; reserve is the total. " + updated_str(lang)
     get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug)}" target="_blank" '
                f'rel="nofollow noopener sponsored">{tr(lang,"get_cta")} {name} →</a>')
-    table_html = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
-                  f'<th>{tt[0]}</th><th>{tt[1]}</th><th>{tt[2]}</th><th>{tt[3]}</th></tr></thead>'
-                  f'<tbody>{trows}</tbody></table></div><p class="updnote">{note}</p>') if trows else ""
     faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
         {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}},
         {"@type": "Question", "name": q2, "acceptedAnswer": {"@type": "Answer", "text": re.sub("<[^>]+>", "", a2)}}]})
@@ -1109,12 +1083,11 @@ def render_buy(slug, info, lang):
     <h1>{h1} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
     <p class="getcta">{get_btn}</p>
-    {table_html}
+    {rate_table(slug, info, lang, incoming=True)}
     <h2 class="news">{howh}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(howh, steps)}
     <p class="related">{back}</p>
-    {dir_blocks}
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{q1}</summary><p>{a1}</p></details>
     <details><summary>{q2}</summary><p>{a2}</p></details>
