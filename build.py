@@ -2201,7 +2201,9 @@ def compliance_pages(lang):
 <li><b>США:</b> affiliate-раскрытие по FTC; сервис недоступен под санкциями (OFAC).</li></ul>
 <h2>Сведения о владельце сайта</h2>
 <p>{S.get('owner_status','')} <b>{S.get('owner','')}</b>, ИНН {S.get('owner_inn','')}. Владелец не является
-   обменным пунктом и не проводит операции. Контакт: {S.get('owner_email','')}.</p>""",
+   обменным пунктом и не проводит операции. Контакт: {S.get('owner_email','')}.</p>
+<h2>Официальные ресурсы</h2>
+<p>Официальный блог сервиса: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>.</p>""",
                     "Раскрытие")
         render_page(lang, "politika", "Политика конфиденциальности",
                     f"Политика обработки данных и cookie на сайте {S['domain']} (152-ФЗ).",
@@ -2251,7 +2253,9 @@ def compliance_pages(lang):
 <li><b>RU:</b> informational resource; no active promotion.</li></ul>
 <h2>Site owner</h2>
 <p><b>{S.get('owner','')}</b> (self-employed, RU tax ID {S.get('owner_inn','')}). The owner is not an exchange
-   office and does not process transactions. Contact: {S.get('owner_email','')}.</p>""",
+   office and does not process transactions. Contact: {S.get('owner_email','')}.</p>
+<h2>Official resources</h2>
+<p>Official service blog: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>.</p>""",
                     "Disclosure")
         render_page(lang, "politika", "Privacy policy",
                     f"Data and cookie processing policy on {S['domain']}.",
