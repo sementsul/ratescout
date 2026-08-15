@@ -428,6 +428,7 @@ def render_relative(lang):
         h1, lead = "Относительные курсы валют", "Выберите базовую валюту — увидите, сколько за 1 её единицу дают в других валютах (кросс-курс через USDT). Поиск и фильтр по всем валютам."
         blbl, ph, nores = "Базовая валюта:", "Поиск валюты: BTC, USDT, Sberbank…", "Ничего не найдено"
         th = ("Валюта", "Курс")
+        rate_tpl = "Курс (1 {b} = …)"
         sorts = [("rate-desc", "Курс ↓"), ("rate-asc", "Курс ↑"), ("name", "А–Я")]
     else:
         title = f"Relative currency rates — 1 currency to others | {S['name']}"
@@ -435,6 +436,7 @@ def render_relative(lang):
         h1, lead = "Relative currency rates", "Pick a base currency — see how much 1 unit is worth in other currencies (cross rate via USDT). Search and filter across all currencies."
         blbl, ph, nores = "Base currency:", "Search currency: BTC, USDT, Sberbank…", "Nothing found"
         th = ("Currency", "Rate")
+        rate_tpl = "Rate (1 {b} = …)"
         sorts = [("rate-desc", "Rate ↓"), ("rate-asc", "Rate ↑"), ("name", "A–Z")]
 
     def _btns(items, attr, default):
@@ -456,7 +458,7 @@ def render_relative(lang):
     <div class="rtsearchbox"><input class="relsearch" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>
     <div class="rsrange relcat">{fbtns}</div>
     <div class="rsrange relsort">{sbtns}</div>
-    <div class="rtbl-wrap"><table class="rtbl relmtbl"><thead><tr><th>{th[0]}</th><th class="rthd">{th[1]}</th></tr></thead>
+    <div class="rtbl-wrap"><table class="rtbl relmtbl"><thead><tr><th>{th[0]}</th><th class="rthd" data-tpl="{rate_tpl}">{th[1]}</th></tr></thead>
       <tbody class="relbody"></tbody></table></div>
     <p class="relnone updnote" hidden>{nores}</p>
     <p class="updnote">{updated_str(lang)}</p>

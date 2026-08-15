@@ -416,7 +416,7 @@
   function render() {
     if (!ALL.length) return;
     var b = cur[base.value]; if (!b) return;
-    if (rthd) rthd.textContent = (sort === "name" ? "Курс" : "Курс") + " (1 " + b.t + " = …)";
+    if (rthd) rthd.textContent = (rthd.getAttribute("data-tpl") || "{b}").replace("{b}", b.t);
     var res = ALL.filter(function (x) {
       return x.s !== base.value && (!query || x.key.indexOf(query) >= 0) && (!cat || x.c === cat);
     }).map(function (x) { return { x: x, r: b.p / x.p }; });
