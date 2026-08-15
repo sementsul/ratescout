@@ -865,55 +865,57 @@ def related_currencies(slug, info, lang, n=8):
 
 def rate_table(slug, info, lang, n=12):
     """Живая таблица лучших курсов направлений валюты: курс + число обменников + резерв."""
-    rated, unrated = [], []
+    rows = []
     for ts, ti in CUR.items():
         if ts == slug:
             continue
         r = rate_of(slug, ts)
-        if r:
-            rated.append((r.get("count", 0), ts, ti, r))
-        else:
-            unrated.append((ts, ti))
-    if not rated and not unrated:
+        if not r:
+            continue
+        rows.append((r.get("count", 0), ts, ti, r))
+    if not rows:
         return ""
-    rated.sort(key=lambda x: x[0], reverse=True)
-    unrated.sort(key=lambda x: x[1]["name"].lower())
-    allrows = [(cnt, ts, ti, r) for cnt, ts, ti, r in rated] + [(None, ts, ti, None) for ts, ti in unrated]
+    rows.sort(key=lambda x: x[0], reverse=True)
+    rows = rows[:n]
     if lang == "ru":
         title = f"Лучшие курсы обмена {info['ticker']}"
         h = ("Направление", "Лучший курс", "Обменников", "Резерв, всего")
         note = "Лучший курс среди обменников; резерв — суммарный по направлению. Мониторинг BestChange, обновление ежечасно. " + updated_str(lang)
-        ph, nores = "Поиск по всем валютам: BTC, USDT, Sberbank…", "Ничего не найдено"
     else:
         title = f"Best {info['ticker']} exchange rates"
         h = ("Direction", "Best rate", "Exchangers", "Total reserve")
         note = "Best rate among exchangers; reserve is the total for the direction. BestChange monitor, hourly updates. " + updated_str(lang)
-        ph, nores = "Search all currencies: BTC, USDT, Sberbank…", "Nothing found"
     trs = ""
-    for i, (cnt, ts, ti, r) in enumerate(allrows):
-        hid = " rthidden" if i >= n else ""
-        ds = f'{ti["name"]} {ti["ticker"]} {ts}'.lower().replace('"', "&quot;")
-        cat_k = CAT_SLUG.get(ti["category"], "prochee")
-        if r:
-            rate_c, cnt_c, res_c = f'<b>{fmt_rate(r["rate"])}</b>', str(cnt), fmt_rate(r.get("reserve", 0))
-        else:
-            rate_c = cnt_c = res_c = '<span class="nd">—</span>'
-        trs += (f'<tr class="rtrow{hid}" data-search="{ds}" data-cat="{cat_k}"><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
+    for cnt, ts, ti, r in rows:
+        trs += (f'<tr><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
                 f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
-                f'<td class="num">{rate_c}</td><td class="num">{cnt_c}</td><td class="num">{res_c}</td></tr>')
-    filts = [("", "Все" if lang == "ru" else "All")] + [(CAT_SLUG[c], cat_name(c, lang)) for c in CATS]
+                f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td>'
+                f'<td class="num">{cnt}</td>'
+                f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
+    return (f'<h2 class="news">{title}</h2>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+            f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th></tr></thead>'
+            f'<tbody>{trs}</tbody></table></div>'
+            f'<p class="updnote">{note}</p>')
+
+
+def currency_finder(lang):
+    """Поиск+фильтр по ВСЕМ валютам каталога (над «Лучшие курсы обмена») → на страницу валюты."""
+    if lang == "ru":
+        title, ph, nores = "Найти любую валюту", "Поиск по всем валютам: BTC, USDT, Sberbank…", "Ничего не найдено"
+    else:
+        title, ph, nores = "Find any currency", "Search all currencies: BTC, USDT, Sberbank…", "Nothing found"
+    filts = [("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS]
     fbtns = ""
     for fv, fl in filts:
         fon = ' class="on"' if fv == "" else ""
         fbtns += f'<button type="button" data-f="{fv}"{fon}>{fl}</button>'
-    return (f'<div class="rtsearchbox"><input class="rtsearch" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
-            f'<div class="rsrange rtcatbar">{fbtns}</div>'
-            f'<h2 class="news">{title}</h2>'
-            f'<div class="rtbl-wrap"><table class="rtbl ratetbl"><thead><tr>'
-            f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th></tr></thead>'
-            f'<tbody>{trs}</tbody></table></div>'
-            f'<p class="rtnores updnote" hidden>{nores}</p>'
-            f'<p class="updnote">{note}</p>')
+    return (f'<h2 class="news">{title}</h2>'
+            f'<div class="rtsearchbox"><input class="rtsearch cfind-inp" data-prefix="{PREF[lang]}" type="search" '
+            f'placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
+            f'<div class="rsrange rtcatbar cfind-cat">{fbtns}</div>'
+            f'<ul class="dlist cfind-list"></ul>'
+            f'<p class="cfind-none updnote" hidden>{nores}</p>')
 
 
 # ---------------- страницы ----------------
@@ -1161,6 +1163,7 @@ def render_currency(slug, info, lang):
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
+    {currency_finder(lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
     <h2 class="news">{tr(lang,'directions')} {ticker}</h2>

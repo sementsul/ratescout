@@ -335,29 +335,32 @@
   });
 })();
 
-// ---- поиск (по всем валютам) + фильтр категорий в таблице «Лучшие курсы обмена» ----
+// ---- поиск + фильтр категорий по ВСЕМ валютам каталога (страница валюты) → на страницу валюты ----
 (function () {
-  var inp = document.querySelector(".rtsearch"), tbl = document.querySelector(".ratetbl"), cbar = document.querySelector(".rtcatbar");
-  if (!inp || !tbl) return;
-  var rows = Array.prototype.slice.call(tbl.querySelectorAll("tbody tr"));
-  var nores = document.querySelector(".rtnores");
+  var inp = document.querySelector(".cfind-inp"), list = document.querySelector(".cfind-list"),
+    cbar = document.querySelector(".cfind-cat"), none = document.querySelector(".cfind-none");
+  if (!inp || !list) return;
+  var C = window.__CATALOG__; if (!C || !C.cur) return;
+  var PRE = inp.getAttribute("data-prefix") || "";
+  var all = Object.keys(C.cur).map(function (s) {
+    var i = C.cur[s];
+    return { s: s, n: i.n, t: i.t, c: i.c, key: (i.n + " " + i.t + " " + s).toLowerCase() };
+  });
   var query = "", cat = "";
-  function apply() {
-    var shown = 0;
-    rows.forEach(function (r) {
-      if (!query && !cat) { r.style.display = r.classList.contains("rthidden") ? "none" : ""; shown++; return; }
-      var okq = !query || (r.getAttribute("data-search") || "").indexOf(query) >= 0;
-      var okc = !cat || r.getAttribute("data-cat") === cat;
-      var vis = okq && okc;
-      r.style.display = vis ? "" : "none"; if (vis) shown++;
-    });
-    if (nores) nores.hidden = (!query && !cat) || shown > 0;
+  function esc(x) { return (x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function render() {
+    if (!query && !cat) { list.innerHTML = ""; if (none) none.hidden = true; return; }
+    var res = all.filter(function (x) { return (!query || x.key.indexOf(query) >= 0) && (!cat || x.c === cat); });
+    list.innerHTML = res.slice(0, 90).map(function (x) {
+      return '<li><a href="' + PRE + '/valuta/' + x.s + '/">' + esc(x.n) + ' <span>' + esc(x.t) + '</span></a></li>';
+    }).join("");
+    if (none) none.hidden = res.length > 0;
   }
-  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); apply(); });
+  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); render(); });
   if (cbar) Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (b) {
     b.addEventListener("click", function () {
       Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
-      b.classList.add("on"); cat = b.getAttribute("data-f"); apply();
+      b.classList.add("on"); cat = b.getAttribute("data-f"); render();
     });
   });
 })();
