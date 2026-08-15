@@ -2090,11 +2090,19 @@ def static_files():
         "icons": [{"src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
     }, ensure_ascii=False, indent=2))
     open(os.path.join(DIST, "sw.js"), "w", encoding="utf-8").write(
-        "const C='ratescout-v1';\nself.addEventListener('install',e=>self.skipWaiting());\n"
-        "self.addEventListener('activate',e=>self.clients.claim());\n"
-        "self.addEventListener('fetch',e=>e.respondWith(fetch(e.request)"
-        ".then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(e.request,c));return r})"
-        ".catch(()=>caches.match(e.request))));")
+        "const C='ratescout-v2';\n"
+        "self.addEventListener('install',e=>self.skipWaiting());\n"
+        # при активации новой версии — стереть старые кеши (иначе отдаются устаревшие страницы)
+        "self.addEventListener('activate',e=>e.waitUntil("
+        "caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k))))"
+        ".then(()=>self.clients.claim())));\n"
+        "self.addEventListener('fetch',e=>{const q=e.request;"
+        # HTML-страницы (навигация) — ТОЛЬКО свежая сеть, кеш лишь как офлайн-запас; не храним устаревший HTML
+        "if(q.mode==='navigate'||(q.headers.get('accept')||'').includes('text/html')){"
+        "e.respondWith(fetch(q).catch(()=>caches.match(q)));return;}"
+        # статика (css/js/данные, версионируются через ?v=hash) — сеть с обновлением кеша, офлайн-фолбэк
+        "e.respondWith(fetch(q).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(q,c));return r})"
+        ".catch(()=>caches.match(q)));});")
     open(os.path.join(DIST, ".nojekyll"), "w").write("")
     # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
