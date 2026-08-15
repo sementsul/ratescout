@@ -247,6 +247,7 @@ def currency_chart(slug, info, lang):
             f'<div class="rschart-wrap" data-ticker="{info["ticker"]}" data-unit="USDT">'
             f'<div class="rsrange">{btns}</div>'
             f'<div class="rschart"><noscript>{svg_chart(pts[-90:])}</noscript></div>'
+            f'<div class="rsperiod"></div>'
             f'<div class="rstip" hidden></div>'
             f'<script type="application/json" class="rschart-data">{data_json}</script>'
             f'</div>'

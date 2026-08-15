@@ -191,14 +191,15 @@
     if (span <= 180 * 864e5) return p2(o.D) + "." + p2(o.M);    // дни
     return p2(o.M) + "." + o.Y;                                 // месяцы
   }
+  function fmtDate(ms) { var o = dd(ms); return p2(o.D) + "." + p2(o.M) + "." + o.Y; }
   function fullTime(pt) {
     var o = dd(pt.t);
-    return pt.hourly ? p2(o.D) + "." + p2(o.M) + " " + p2(o.h) + ":00 UTC"   // почасовая точка
-                     : p2(o.D) + "." + p2(o.M) + "." + o.Y;                  // дневная точка
+    return pt.hourly ? p2(o.D) + "." + p2(o.M) + "." + o.Y + " " + p2(o.h) + ":00 UTC"  // почасовая точка (с годом)
+                     : p2(o.D) + "." + p2(o.M) + "." + o.Y;                             // дневная точка
   }
 
   var H = 220, padL = 58, padR = 12, padT = 10, padB = 26, plotH = H - padT - padB;
-  var pts = [], range = "all";
+  var pts = [], range = "all", per = wrap.querySelector(".rsperiod");
   var RMAP = { "24h": 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5, "1y": 365 * 864e5,
     "3y": 3 * 365 * 864e5, "5y": 5 * 365 * 864e5, "10y": 10 * 365 * 864e5 };
   function filtered() {
@@ -218,6 +219,7 @@
     function X(t) { return padL + (t - t0) / tspan * plotW; }
     function Y(v) { return padT + (1 - (v - mn) / span) * plotH; }
     pts = d.map(function (x) { return { px: X(x.t), py: Y(x.v), v: x.v, t: x.t, hourly: x.hourly }; });
+    if (per) per.textContent = "Период: " + fmtDate(t0) + (t0 === t1 ? "" : " — " + fmtDate(t1)) + " (UTC)";
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="rssvg" width="100%" height="' + H + '">', i;
     for (i = 0; i <= 4; i++) {
       var yv = mn + span * i / 4, yy = Y(yv);
