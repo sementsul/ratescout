@@ -966,7 +966,7 @@ def rate_table(slug, info, lang, n=12):
             on = ' class="on"' if v == default else ""
             out += f'<button type="button" data-{attr}="{v}"{on}>{l}</button>'
         return out
-    fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(c, cat_name(c, lang)) for c in CATS], "f", "")
+    fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(CAT_SLUG[c], cat_name(c, lang)) for c in CATS], "f", "")
     sbtns = _btns(sorts, "s", "cat")
     pbtns = _btns(periods, "p", "24h")
     def _row(cnt, ts, ti, r):
