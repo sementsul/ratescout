@@ -393,7 +393,7 @@ def currency_chart(slug, info, lang):
     for r, lbl in ranges:
         on = ' class="on"' if r == "all" else ""
         btns += f'<button type="button" data-r="{r}"{on}>{lbl}</button>'
-    return (f'<h2 class="news">{title}</h2>'
+    return (f'<h2 class="news" id="chart">{title}</h2>'
             f'<div class="rschart-wrap" data-ticker="{info["ticker"]}" data-unit="USDT">'
             f'<div class="rsrange">{btns}</div>'
             f'<div class="rschart"><noscript>{svg_chart(pts[-90:])}</noscript></div>'
@@ -1121,6 +1121,16 @@ def render_currency(slug, info, lang):
                       "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     get_btn = f'<a class="cta cta-get" href="{PREF[lang]}/kupit/{slug}/">{tr(lang,"get_cta")} {name} →</a>'
+    _h = HISTORY.get(slug, [])
+    getspark = ""
+    if len(_h) >= 2:
+        _v = [p[1] for p in _h]
+        _chg = (_v[-1] - _v[0]) / _v[0] * 100 if _v[0] else 0
+        _cls = "up" if _chg >= 0 else "down"
+        _sign = "+" if _chg >= 0 else ""
+        _lbl = "Полный график ниже" if lang == "ru" else "Full chart below"
+        getspark = (f'<a class="getspark" href="#chart" title="{_lbl}">{mini_spark(_h[-90:])}'
+                    f'<span class="chgpill {_cls}">{_sign}{_chg:.1f}%</span></a>')
     hub_cta = ""
     if slug in BANK_HUB_SET:
         hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
@@ -1132,7 +1142,7 @@ def render_currency(slug, info, lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {name} <span class="tk">{ticker}</span></nav>
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
-    <p class="getcta">{get_btn}</p>
+    <div class="getcta">{get_btn}{getspark}</div>
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}

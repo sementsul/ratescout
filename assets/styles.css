@@ -99,7 +99,11 @@ option{color:#a8a8a8}
   border:3px double #000;outline:3px solid #00aaaa;text-align:center;margin-top:8px}
 .cta:hover{background:#000;color:#ffff55}
 .conv .cta{width:100%}
-.getcta{margin:10px 0 14px}
+.getcta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:10px 0 14px}
+.getspark{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#0d0d0d;border:1px solid #333;padding:3px 8px}
+.getspark:hover{background:#111;border-color:#55ffff}
+.getspark .spark{width:150px;height:34px}
+.getspark .chgpill{font-size:.9rem;font-weight:700}
 .cta-get{background:#55aa55;color:#062;border-color:#000;outline-color:#55aa55;font-size:1.05rem;padding:11px 20px}
 .cta-get:hover{background:#000;color:#7f7}
 .cest{margin:2px 0 6px;color:#cfe;font-size:.95rem;min-height:1.1em}
