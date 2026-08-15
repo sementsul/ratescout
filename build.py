@@ -876,28 +876,31 @@ def rate_table(slug, info, lang, n=12):
     if not rows:
         return ""
     rows.sort(key=lambda x: x[0], reverse=True)
-    rows = rows[:n]
     if lang == "ru":
         title = f"Лучшие курсы обмена {info['ticker']}"
         h = ("Направление", "Лучший курс", "Обменников", "Резерв, всего")
         note = "Лучший курс среди обменников; резерв — суммарный по направлению. Мониторинг BestChange, обновление ежечасно. " + updated_str(lang)
-        openw = "Открыть"
+        ph, nores = "Найти валюту в курсах…", "Ничего не найдено"
     else:
         title = f"Best {info['ticker']} exchange rates"
         h = ("Direction", "Best rate", "Exchangers", "Total reserve")
         note = "Best rate among exchangers; reserve is the total for the direction. BestChange monitor, hourly updates. " + updated_str(lang)
-        openw = "Open"
+        ph, nores = "Find a currency in rates…", "Nothing found"
     trs = ""
-    for cnt, ts, ti, r in rows:
-        trs += (f'<tr><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
+    for i, (cnt, ts, ti, r) in enumerate(rows):
+        hid = " rthidden" if i >= n else ""
+        ds = f'{ti["name"]} {ti["ticker"]} {ts}'.lower().replace('"', "&quot;")
+        trs += (f'<tr class="rtrow{hid}" data-search="{ds}"><td class="d"><a href="{bc_link(slug, ts)}" target="_blank" rel="nofollow noopener sponsored">'
                 f'→ {ti["name"]} <span class="op">{ti["ticker"]}</span></a></td>'
                 f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td>'
                 f'<td class="num">{cnt}</td>'
                 f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
     return (f'<h2 class="news">{title}</h2>'
-            f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+            f'<div class="rtsearchbox"><input class="rtsearch" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
+            f'<div class="rtbl-wrap"><table class="rtbl ratetbl"><thead><tr>'
             f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th></tr></thead>'
             f'<tbody>{trs}</tbody></table></div>'
+            f'<p class="rtnores updnote" hidden>{nores}</p>'
             f'<p class="updnote">{note}</p>')
 
 

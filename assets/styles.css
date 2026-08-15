@@ -124,6 +124,10 @@ option{color:#a8a8a8}
 .rtbl td.d .op{color:#ffff55;font-size:.8rem}
 .rtbl tbody tr:hover{background:#161616}
 .updnote{color:#777;font-size:.8rem;margin:4px 0 14px}
+.ratetbl tbody tr.rthidden{display:none}
+.rtsearchbox{margin:0 0 8px;max-width:420px}
+.rtsearch{width:100%;padding:7px 10px;border:1px solid #55ffff;background:#000;color:#a8a8a8;font:inherit}
+.rtsearch::placeholder{color:#5a7}
 .spark{display:block;width:120px;height:34px}
 .marktbl td.spk{padding:2px 9px;width:130px}
 .marktbl .nd{color:#555}

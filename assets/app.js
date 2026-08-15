@@ -334,3 +334,20 @@
     });
   });
 })();
+
+// ---- поиск по валютам в таблице «Лучшие курсы обмена» (страница валюты) ----
+(function () {
+  var inp = document.querySelector(".rtsearch"), tbl = document.querySelector(".ratetbl");
+  if (!inp || !tbl) return;
+  var rows = Array.prototype.slice.call(tbl.querySelectorAll("tbody tr"));
+  var nores = document.querySelector(".rtnores");
+  inp.addEventListener("input", function () {
+    var v = inp.value.trim().toLowerCase(), shown = 0;
+    rows.forEach(function (r) {
+      if (!v) { r.style.display = r.classList.contains("rthidden") ? "none" : ""; return; }
+      var hit = (r.getAttribute("data-search") || "").indexOf(v) >= 0;
+      r.style.display = hit ? "" : "none"; if (hit) shown++;
+    });
+    if (nores) nores.hidden = !v || shown > 0;
+  });
+})();
