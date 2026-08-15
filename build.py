@@ -213,21 +213,46 @@ def mini_spark(points):
             f'<polyline fill="none" stroke="{color}" stroke-width="1.5" points="{poly}"/></svg>')
 
 
+def _usdt_price(slug):
+    """Текущая цена валюты в USDT: прямой курс, иначе обратный (USDT→slug) с инверсией."""
+    r = rate_of(slug, "tether-trc20")
+    if r:
+        try:
+            v = float(r["rate"])
+            if v > 0:
+                return v, r.get("count", 0)
+        except (ValueError, TypeError):
+            pass
+    rr = rate_of("tether-trc20", slug)
+    if rr:
+        try:
+            v = float(rr["rate"])
+            if v > 0:
+                return 1.0 / v, rr.get("count", 0)
+        except (ValueError, TypeError, ZeroDivisionError):
+            pass
+    return None, 0
+
+
 def render_charts_overview(lang):
-    """Обзор рынка: сетка спарклайнов по всем валютам с историей (SEO-хаб + свежесть)."""
+    """Обзор рынка по ВСЕМ валютам: спарклайн+цена+изм где есть история; иначе цена/прочерк. SEO-хаб."""
     rows = []
     for slug, info in CUR.items():
-        h = HISTORY.get(slug, [])
-        if len(h) < 2:
+        if slug == "tether-trc20":
             continue
-        vals = [p[1] for p in h]
-        chg = (vals[-1] - vals[0]) / vals[0] * 100 if vals[0] else 0
-        r = rate_of(slug, "tether-trc20")
-        liq = r.get("count", 0) if r else 0
-        rows.append((liq, slug, info, vals[-1], chg, h[-90:]))
+        h = HISTORY.get(slug, [])
+        price, liq = _usdt_price(slug)
+        if len(h) >= 2:
+            vals = [p[1] for p in h]
+            chg = (vals[-1] - vals[0]) / vals[0] * 100 if vals[0] else 0
+            rows.append((2, liq, slug, info, vals[-1], chg, h[-90:]))
+        elif price is not None:
+            rows.append((1, liq, slug, info, price, None, None))
+        else:
+            rows.append((0, 0, slug, info, None, None, None))
     if not rows:
         return
-    rows.sort(key=lambda x: x[0], reverse=True)
+    rows.sort(key=lambda x: (x[0], x[1]), reverse=True)
     path = "/grafiki/"
     if lang == "ru":
         title = f"Графики курсов криптовалют — динамика цен | {S['name']}"
@@ -240,13 +265,17 @@ def render_charts_overview(lang):
         h1, lead = "Rate charts", f"Price trends in USDT across {len(rows)} currencies. Hourly updates. Click a currency for the full interactive chart."
         th = ("Currency", "Price (USDT)", "Chg.", "Chart")
     trs = ""
-    for liq, slug, info, last, chg, spark in rows:
-        cls = "up" if chg >= 0 else "down"
-        sign = "+" if chg >= 0 else ""
+    for _b, _liq, slug, info, price, chg, spark in rows:
+        price_c = f'<b>{fmt_rate(price)}</b>' if price is not None else '<span class="nd">—</span>'
+        if chg is None:
+            chg_c = '<span class="nd">—</span>'
+        else:
+            cls = "up" if chg >= 0 else "down"
+            sign = "+" if chg >= 0 else ""
+            chg_c = f'<b class="{cls}">{sign}{chg:.1f}%</b>'
+        spk_c = mini_spark(spark) if spark else '<span class="nd">—</span>'
         trs += (f'<tr><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
-                f'<td class="num"><b>{fmt_rate(last)}</b></td>'
-                f'<td class="num"><b class="{cls}">{sign}{chg:.1f}%</b></td>'
-                f'<td class="spk">{mini_spark(spark)}</td></tr>')
+                f'<td class="num">{price_c}</td><td class="num">{chg_c}</td><td class="spk">{spk_c}</td></tr>')
     ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
                  "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
     body = f"""{header(lang, path)}
