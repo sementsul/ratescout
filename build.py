@@ -1431,6 +1431,66 @@ def render_currency(slug, info, lang):
     write(lang, path, head(lang, title, desc, path) + body)
 
 
+STABLE_T = {"USDT", "USDC", "DAI", "BUSD", "TUSD", "USDP", "FDUSD"}
+
+
+def pair_unique(fi, ti, r, lang):
+    """Уникальный на пару контент: категорийный абзац (по типам обеих валют) + таблица сумм + 3-й data-FAQ.
+    Разводит 183 страницы пар, чтобы они не были near-duplicate (было ~86% совпадения)."""
+    fN, fT, tN, tT = fi["name"], fi["ticker"], ti["name"], ti["ticker"]
+    fc, tc = fi["category"] == "Криптовалюты", ti["category"] == "Криптовалюты"
+    tstable = tT in STABLE_T
+    fcat, tcat = cat_name(fi["category"], lang), cat_name(ti["category"], lang)
+    if lang == "ru":
+        if fc and tc:
+            ctx = (f"Направление <b>{fN} → {tN}</b> — конвертация одной криптовалюты в другую (своп) без вывода в "
+                   f"фиат. Обменники собирают курс {fT}/{tT} через пары к USDT и держат резерв в {tT}. Такой обмен "
+                   f"выбирают, чтобы перейти из {fT} в {tT} — например зафиксировать прибыль "
+                   f"{'в стейблкоине' if tstable else 'в '+tT} или сменить сеть.")
+        elif fc and not tc:
+            ctx = (f"Направление <b>{fN} → {tN}</b> — вывод криптовалюты {fT} в «{tcat}» ({tN}). Вы отдаёте {fT} с "
+                   f"кошелька, обменник переводит эквивалент в {tT}. Курс и резерв {tT} у пунктов отличаются — "
+                   f"мониторинг BestChange показывает лучшие. Перед крупной суммой проверьте адрес и лимиты.")
+        elif not fc and tc:
+            ctx = (f"Направление <b>{fN} → {tN}</b> — покупка криптовалюты {tT} за «{fcat}» ({fN}). Вы платите в {fT}, "
+                   f"получаете {tT} на свой кошелёк. Сравните курс и комиссию сети получения {tT} перед обменом.")
+        else:
+            ctx = (f"Направление <b>{fN} → {tN}</b> — перевод между платёжными системами: «{fcat}» → «{tcat}». "
+                   f"Обменники помогают, когда прямой перевод {fN} → {tN} недоступен или невыгоден.")
+        h_ctx, amt_h, amt_cols = "Об этом направлении", "Сколько получите на текущем курсе", ("Отдаёте", "Получаете")
+        q3 = f"Сколько обменников меняют {fN} на {tN}?"
+        a3 = (f"Сейчас {r['count']} обменников по направлению {fT} → {tT}, суммарный резерв "
+              f"{fmt_rate(r['reserve'])} {tT}." if r else "")
+    else:
+        if fc and tc:
+            ctx = (f"The <b>{fN} → {tN}</b> direction is converting one cryptocurrency into another (a swap) without "
+                   f"cashing out to fiat. Exchangers build the {fT}/{tT} rate via USDT pairs and hold a {tT} reserve. "
+                   f"People pick it to move from {fT} to {tT} — e.g. to lock profit "
+                   f"{'in a stablecoin' if tstable else 'in '+tT} or switch networks.")
+        elif fc and not tc:
+            ctx = (f"The <b>{fN} → {tN}</b> direction cashes out {fT} crypto into “{tcat}” ({tN}). You send {fT} from "
+                   f"your wallet, the exchanger pays out the equivalent in {tT}. Rate and {tT} reserve vary by office — "
+                   f"the BestChange monitor shows the best. Check the address and limits before a large amount.")
+        elif not fc and tc:
+            ctx = (f"The <b>{fN} → {tN}</b> direction buys {tT} crypto with “{fcat}” ({fN}). You pay in {fT} and "
+                   f"receive {tT} to your wallet. Compare the rate and the receiving {tT} network fee before exchanging.")
+        else:
+            ctx = (f"The <b>{fN} → {tN}</b> direction transfers between payment systems: “{fcat}” → “{tcat}”. "
+                   f"Exchangers help when a direct {fN} → {tN} transfer is unavailable or unfavorable.")
+        h_ctx, amt_h, amt_cols = "About this direction", "How much you get at the current rate", ("You send", "You get")
+        q3 = f"How many exchangers swap {fN} to {tN}?"
+        a3 = (f"There are {r['count']} exchangers for {fT} → {tT} now, total reserve "
+              f"{fmt_rate(r['reserve'])} {tT}." if r else "")
+    amt_table = ""
+    if r:
+        rate = float(r["rate"])
+        rws = "".join(f"<tr><td>{a} {fT}</td><td>{fmt_rate(a * rate)} {tT}</td></tr>" for a in (1, 10, 100, 1000))
+        amt_table = (f'<p class="updnote">{amt_h}:</p><div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+                     f'<th>{amt_cols[0]}</th><th>{amt_cols[1]}</th></tr></thead><tbody>{rws}</tbody></table></div>')
+    html = f'<h2 class="news">{h_ctx}</h2><p>{ctx}</p>{amt_table}'
+    return html, q3, a3
+
+
 def render_pair(f, t, lang):
     fi, ti = CUR.get(f), CUR.get(t)
     if not fi or not ti:
@@ -1476,9 +1536,14 @@ def render_pair(f, t, lang):
         q1 = f"What is the {fN} to {tN} rate?"
         a1 = (f"Best value — <b>{fmt_rate(r['rate'])} {tT}</b> per 1 {fT} across {r['count']} exchangers. For reference, it changes." if r else "The rate is confirmed in the BestChange monitor.")
         q2, a2 = "Is it safe?", "The exchange runs in offices from BestChange monitoring with ratings and reserves. For crypto an address AML check is recommended."
-    faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+    ctx_html, q3, a3 = pair_unique(fi, ti, r, lang)
+    faq_items = [
         {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": re.sub("<[^>]+>", "", a1)}},
-        {"@type": "Question", "name": q2, "acceptedAnswer": {"@type": "Answer", "text": a2}}]})
+        {"@type": "Question", "name": q2, "acceptedAnswer": {"@type": "Answer", "text": a2}}]
+    if a3:
+        faq_items.append({"@type": "Question", "name": q3,
+                          "acceptedAnswer": {"@type": "Answer", "text": a3}})
+    faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq_items})
     crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
         {"@type": "ListItem", "position": 2, "name": f"{fT} → {tT}", "item": BASE_URL + PREF[lang] + path}]})
@@ -1498,6 +1563,7 @@ def render_pair(f, t, lang):
       {rate_line}
       <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
     </div>
+    {ctx_html}
     <h2 class="news">{h_how}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(h_how, steps)}
@@ -1508,6 +1574,7 @@ def render_pair(f, t, lang):
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{q1}</summary><p>{a1}</p></details>
     <details><summary>{q2}</summary><p>{a2}</p></details>
+    {f'<details><summary>{q3}</summary><p>{a3}</p></details>' if a3 else ''}
   </div>
 </div>
 {faq}{crumbs}{ers}
