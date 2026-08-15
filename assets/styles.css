@@ -128,6 +128,7 @@ option{color:#a8a8a8}
 .rtsearchbox{margin:0 0 8px;max-width:420px}
 .rtsearch{width:100%;padding:7px 10px;border:1px solid #55ffff;background:#000;color:#a8a8a8;font:inherit}
 .rtsearch::placeholder{color:#5a7}
+.rtcatbar{margin:0 0 10px;flex-wrap:wrap}
 .spark{display:block;width:120px;height:34px}
 .marktbl td.spk{padding:2px 9px;width:130px}
 .marktbl .nd{color:#555}

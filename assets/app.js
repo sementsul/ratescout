@@ -335,19 +335,29 @@
   });
 })();
 
-// ---- поиск по валютам в таблице «Лучшие курсы обмена» (страница валюты) ----
+// ---- поиск (по всем валютам) + фильтр категорий в таблице «Лучшие курсы обмена» ----
 (function () {
-  var inp = document.querySelector(".rtsearch"), tbl = document.querySelector(".ratetbl");
+  var inp = document.querySelector(".rtsearch"), tbl = document.querySelector(".ratetbl"), cbar = document.querySelector(".rtcatbar");
   if (!inp || !tbl) return;
   var rows = Array.prototype.slice.call(tbl.querySelectorAll("tbody tr"));
   var nores = document.querySelector(".rtnores");
-  inp.addEventListener("input", function () {
-    var v = inp.value.trim().toLowerCase(), shown = 0;
+  var query = "", cat = "";
+  function apply() {
+    var shown = 0;
     rows.forEach(function (r) {
-      if (!v) { r.style.display = r.classList.contains("rthidden") ? "none" : ""; return; }
-      var hit = (r.getAttribute("data-search") || "").indexOf(v) >= 0;
-      r.style.display = hit ? "" : "none"; if (hit) shown++;
+      if (!query && !cat) { r.style.display = r.classList.contains("rthidden") ? "none" : ""; shown++; return; }
+      var okq = !query || (r.getAttribute("data-search") || "").indexOf(query) >= 0;
+      var okc = !cat || r.getAttribute("data-cat") === cat;
+      var vis = okq && okc;
+      r.style.display = vis ? "" : "none"; if (vis) shown++;
     });
-    if (nores) nores.hidden = !v || shown > 0;
+    if (nores) nores.hidden = (!query && !cat) || shown > 0;
+  }
+  inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); apply(); });
+  if (cbar) Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(cbar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on"); cat = b.getAttribute("data-f"); apply();
+    });
   });
 })();
