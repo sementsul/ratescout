@@ -964,6 +964,113 @@ def render_home(lang):
     write(lang, "/", head(lang, title, desc, "/", ld) + body)
 
 
+def render_buy(slug, info, lang):
+    """Страница покупки: все направления «источник → эта валюта» (как получить X) + CTA. SEO/конверсия."""
+    name, ticker = info["name"], info["ticker"]
+    path = f"/kupit/{slug}/"
+    # входящие направления (источник → slug), по популярности
+    incoming = []
+    for ss, si in CUR.items():
+        if ss == slug:
+            continue
+        r = rate_of(ss, slug)
+        if r:
+            incoming.append((r.get("count", 0), ss, si, r))
+    incoming.sort(key=lambda x: x[0], reverse=True)
+    get_src = "bitcoin" if slug == "tether-trc20" else "tether-trc20"
+    # таблица топ-способов
+    trows = ""
+    for cnt, ss, si, r in incoming[:15]:
+        trows += (f'<tr><td class="d"><a href="{bc_link(ss, slug)}" target="_blank" rel="nofollow noopener sponsored">'
+                  f'{si["ticker"]} <span class="op">{"→ " + ticker}</span></a></td>'
+                  f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td><td class="num">{cnt}</td>'
+                  f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
+    # полный список источников по категориям
+    dir_blocks = ""
+    for c in CATS:
+        li = ""
+        for ss, si in GROUPED.get(c, []):
+            if ss == slug:
+                continue
+            r = rate_of(ss, slug)
+            if not r:
+                continue
+            rr = f' <b class="rt">{fmt_rate(r["rate"])}</b>'
+            li += (f'<li><a href="{bc_link(ss, slug)}" target="_blank" rel="nofollow noopener sponsored">'
+                   f'{si["name"]} <span>{si["ticker"]}</span> → {ticker}{rr}</a></li>')
+        if li:
+            dir_blocks += f'<h2 class="news">{cat_name(c, lang)} → {ticker}</h2><ul class="dlist">{li}</ul>'
+    if lang == "ru":
+        title = f"Купить {name} ({ticker}) — где и как получить, курсы | {S['name']}"
+        desc = (f"Как купить {name} ({ticker}): все направления обмена на {ticker} с курсами из мониторинга "
+                f"BestChange. Получить {ticker} за USDT, рубли, другую крипту.")
+        h1 = f"Купить {name}"
+        intro = (f"Справочник направлений, где можно <b>получить {name} ({ticker})</b>: обмен из других валют "
+                 f"с курсами из мониторинга <b>BestChange</b>. Выберите, чем платите, ниже.")
+        tt = ("Отдаёте", "Курс", "Обменников", "Резерв, всего")
+        howh = f"Как купить {name}"
+        steps = [f"Выберите, что отдаёте, в таблице или списке ниже.",
+                 "В BestChange сравните курс, резерв и рейтинг обменников.",
+                 f'Проверьте адрес получения {ticker}; для крупной суммы — <a href="{PREF[lang]}/aml/">AML-проверка</a>.',
+                 f"Проведите обмен и получите {ticker} на свой кошелёк/счёт."]
+        q1, a1 = f"Как выгоднее купить {name}?", f"Сравните направления по курсу и резерву в мониторинге BestChange и учтите комиссию сети. Часто выгодно покупать {ticker} за USDT."
+        q2, a2 = f"Где получить {name} за рубли?", f"Выберите направление с рублёвым источником (карта/СБП/наличные) → {ticker} в списке ниже."
+        back = f'<a href="{cpage(lang, slug)}">Обмен {name} (продать/все направления) →</a>'
+        note = "Лучший курс среди обменников; резерв — суммарный. " + updated_str(lang)
+    else:
+        title = f"Buy {name} ({ticker}) — where and how to get it, rates | {S['name']}"
+        desc = (f"How to buy {name} ({ticker}): all exchange directions to {ticker} with rates from BestChange "
+                f"monitoring. Get {ticker} for USDT, rubles or other crypto.")
+        h1 = f"Buy {name}"
+        intro = (f"A directory of directions where you can <b>get {name} ({ticker})</b>: exchange from other "
+                 f"currencies with rates from the <b>BestChange</b> monitor. Choose what you pay with below.")
+        tt = ("You send", "Rate", "Exchangers", "Total reserve")
+        howh = f"How to buy {name}"
+        steps = [f"Choose what you send in the table or list below.",
+                 "On BestChange compare rate, reserve and exchanger rating.",
+                 f'Check the receiving {ticker} address; for a large amount — an <a href="{PREF[lang]}/aml/">AML check</a>.',
+                 f"Complete the exchange and receive {ticker} to your wallet/account."]
+        q1, a1 = f"How to buy {name} cheaper?", f"Compare directions by rate and reserve in the BestChange monitor and factor in the network fee. Buying {ticker} for USDT is often favorable."
+        q2, a2 = f"Where to get {name} for rubles?", f"Pick a direction with a ruble source (card/SBP/cash) → {ticker} in the list below."
+        back = f'<a href="{cpage(lang, slug)}">Exchange {name} (sell / all directions) →</a>'
+        note = "Best rate among exchangers; reserve is the total. " + updated_str(lang)
+    get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug)}" target="_blank" '
+               f'rel="nofollow noopener sponsored">{tr(lang,"get_cta")} {name} →</a>')
+    table_html = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+                  f'<th>{tt[0]}</th><th>{tt[1]}</th><th>{tt[2]}</th><th>{tt[3]}</th></tr></thead>'
+                  f'<tbody>{trows}</tbody></table></div><p class="updnote">{note}</p>') if trows else ""
+    faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}},
+        {"@type": "Question", "name": q2, "acceptedAnswer": {"@type": "Answer", "text": re.sub("<[^>]+>", "", a2)}}]})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    steps_html = "".join(f"<li>{s}</li>" for s in steps)
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1} <span class="tk">{ticker}</span></h1>
+    <p>{intro}</p>
+    <p class="getcta">{get_btn}</p>
+    {table_html}
+    <h2 class="news">{howh}</h2>
+    <ol class="steps">{steps_html}</ol>
+    {howto_ld(howh, steps)}
+    <p class="related">{back}</p>
+    {dir_blocks}
+    <h2 class="news">{tr(lang,'faq')}</h2>
+    <details><summary>{q1}</summary><p>{a1}</p></details>
+    <details><summary>{q2}</summary><p>{a2}</p></details>
+  </div>
+</div>
+{faq}{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
 def render_currency(slug, info, lang):
     name, ticker = info["name"], info["ticker"]
     path = f"/valuta/{slug}/"
@@ -1013,9 +1120,7 @@ def render_currency(slug, info, lang):
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
                       "dateModified": modified_iso()})
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
-    get_src = "bitcoin" if slug == "tether-trc20" else "tether-trc20"
-    get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug)}" target="_blank" '
-               f'rel="nofollow noopener sponsored">{tr(lang,"get_cta")} {name} →</a>')
+    get_btn = f'<a class="cta cta-get" href="{PREF[lang]}/kupit/{slug}/">{tr(lang,"get_cta")} {name} →</a>'
     hub_cta = ""
     if slug in BANK_HUB_SET:
         hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
@@ -1879,6 +1984,7 @@ def static_files():
         pr = PREF[lg]
         items.append(u_entry(pr + "/", "hourly", "1.0" if lg == "ru" else "0.9"))
         items += [u_entry(pr + f"/valuta/{s}/", "hourly", "0.6") for s in CUR]
+        items += [u_entry(pr + f"/kupit/{s}/", "hourly", "0.6") for s in CUR]
         items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "hourly", "0.8") for p in PAIR_PAGES]
         if ARTS[lg]:
             items.append(u_entry(pr + "/blog/", "weekly", "0.7"))
@@ -2003,6 +2109,7 @@ def main():
         render_home(lang)
         for slug, info in CUR.items():
             render_currency(slug, info, lang)
+            render_buy(slug, info, lang)
         compliance_pages(lang)
         for _c in CATS:
             render_category(_c, lang)
