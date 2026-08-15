@@ -606,12 +606,12 @@ def history_table(slug, lang):
                     f"<td>{fmt_rate(d['max'])}</td><td>{chg}</td></tr>")
     head_html = "".join(f"<th>{c}</th>" for c in cols)
     n = len(rows)
-    cnt = f" ({n})"
+    pager = '<div class="histpager"></div>' if n > 10 else ""   # клиентская пагинация по 10 строк
     # свёрнутый список (details) — чтобы растущая таблица не удлиняла страницу
-    return (f'<details class="histbox"><summary class="news">{h}<span class="cnt">{cnt}</span></summary>'
+    return (f'<details class="histbox"><summary class="news">{h}<span class="cnt"> ({n})</span></summary>'
             f'<p class="updnote">{lead}</p>'
             f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{head_html}</tr></thead>'
-            f'<tbody>{"".join(reversed(rows))}</tbody></table></div></details>')
+            f'<tbody>{"".join(reversed(rows))}</tbody></table></div>{pager}</details>')
 
 
 def currency_chart(slug, info, lang):

@@ -454,3 +454,28 @@
     render();
   }).catch(function () {});
 })();
+
+// Пагинация таблицы истории в свёрнутом списке: 10 строк на страницу, кнопки 1 2 3…
+(function () {
+  var PER = 10;
+  Array.prototype.forEach.call(document.querySelectorAll(".histbox"), function (box) {
+    var tbody = box.querySelector("tbody"), pager = box.querySelector(".histpager");
+    if (!tbody || !pager) return;
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    if (rows.length <= PER) return;
+    var pages = Math.ceil(rows.length / PER);
+    function show(p) {
+      rows.forEach(function (r, i) { r.style.display = (i >= (p - 1) * PER && i < p * PER) ? "" : "none"; });
+      Array.prototype.forEach.call(pager.children, function (b) {
+        b.classList.toggle("on", +b.getAttribute("data-p") === p);
+      });
+    }
+    for (var p = 1; p <= pages; p++) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = p; b.setAttribute("data-p", p);
+      b.addEventListener("click", function () { show(+this.getAttribute("data-p")); });
+      pager.appendChild(b);
+    }
+    show(1);
+  });
+})();
