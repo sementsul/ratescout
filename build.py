@@ -311,6 +311,7 @@ def render_home(lang):
  |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
     <div class="dosblue dosborder">{intro}</div>
+    {trust_bar(lang)}
     {pop}
     <h2 class="news">{tr(lang,'catalog')} <span class="cnt">{total}</span></h2>
     {cat_html}
@@ -668,6 +669,41 @@ def itemlist_ld(items):
     return jsonld({"@context": "https://schema.org", "@type": "ItemList",
                    "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "url": u}
                                        for i, (n, u) in enumerate(items)]})
+
+
+def _plain_num(v):
+    """Число → десятичная строка без научной нотации (для schema.org price). None если некорректно."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    s = ("%.12f" % v).rstrip("0").rstrip(".") if v < 1 else ("%.8f" % v).rstrip("0").rstrip(".")
+    return s or None
+
+
+def exchange_rate_ld(base_t, price, quote_t):
+    """ExchangeRateSpecification — профильная schema.org для курса (1 base = price quote). '' если нет курса."""
+    p = _plain_num(price)
+    if not p:
+        return ""
+    return jsonld({"@context": "https://schema.org", "@type": "ExchangeRateSpecification",
+                   "currency": base_t,
+                   "currentExchangeRate": {"@type": "UnitPriceSpecification",
+                                           "price": p, "priceCurrency": quote_t}})
+
+
+def trust_bar(lang):
+    """Полоса доверия/свежести: сколько валют и направлений в базе + когда обновлено + ссылка на методику."""
+    nc, nd = len(CUR), len(RATES)
+    if lang == "ru":
+        return (f'<div class="trustbar"><span>Валют в базе: <b>{nc}</b></span>'
+                f'<span>Направлений: <b>{nd}</b></span><span>{updated_str(lang)}</span>'
+                f'<span><a href="{PREF[lang]}/redakciya/">Методика и источник данных →</a></span></div>')
+    return (f'<div class="trustbar"><span>Currencies: <b>{nc}</b></span>'
+            f'<span>Directions: <b>{nd}</b></span><span>{updated_str(lang)}</span>'
+            f'<span><a href="{PREF[lang]}/redakciya/">Methodology &amp; data source →</a></span></div>')
 
 
 METRIKA = """<!-- Yandex.Metrika counter -->
@@ -1126,7 +1162,11 @@ def render_buy(slug, info, lang):
         {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
         {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
     crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
-                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
+                      "dateModified": modified_iso(), "lastReviewed": modified_iso(),
+                      "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
+    _hb = HISTORY.get(slug) or []
+    ers = exchange_rate_ld(ticker, _hb[-1][1], "USDT") if (_hb and slug != "tether-trc20") else ""
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     body = f"""{header(lang, path)}
 <div id="main">
@@ -1134,6 +1174,7 @@ def render_buy(slug, info, lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
+    {trust_bar(lang)}
     <p class="getcta">{get_btn}</p>
     {rate_table(slug, info, lang, incoming=True)}
     <h2 class="news">{howh}</h2>
@@ -1145,7 +1186,7 @@ def render_buy(slug, info, lang):
     <details><summary>{q2}</summary><p>{a2}</p></details>
   </div>
 </div>
-{faq}{crumbs}
+{faq}{crumbs}{ers}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
 
@@ -1185,7 +1226,11 @@ def render_currency(slug, info, lang):
         {"@type": "ListItem", "position": 2, "name": f"{name} ({ticker})", "item": BASE_URL + PREF[lang] + path}]})
     crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
-                      "dateModified": modified_iso()})
+                      "dateModified": modified_iso(), "lastReviewed": modified_iso(),
+                      "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
+    # ExchangeRateSpecification: цена валюты в USDT (последняя точка истории)
+    _hist = HISTORY.get(slug) or []
+    ers = exchange_rate_ld(ticker, _hist[-1][1], "USDT") if (_hist and slug != "tether-trc20") else ""
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     get_btn = f'<a class="cta cta-get" href="{PREF[lang]}/kupit/{slug}/">{tr(lang,"get_cta")} {name} →</a>'
     _h = HISTORY.get(slug, [])
@@ -1209,6 +1254,7 @@ def render_currency(slug, info, lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {name} <span class="tk">{ticker}</span></nav>
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
     <p>{intro}</p>
+    {trust_bar(lang)}
     <div class="getcta">{get_btn}{getspark}</div>
     {hub_cta}
     {about_currency(slug, info, lang)}
@@ -1235,7 +1281,7 @@ def render_currency(slug, info, lang):
   </div>
   <div class="clearboth"></div>
 </div>
-{faq}{crumbs}
+{faq}{crumbs}{ers}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
 
@@ -1293,13 +1339,16 @@ def render_pair(f, t, lang):
         {"@type": "ListItem", "position": 2, "name": f"{fT} → {tT}", "item": BASE_URL + PREF[lang] + path}]})
     crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
-                      "dateModified": modified_iso()})
+                      "dateModified": modified_iso(), "lastReviewed": modified_iso(),
+                      "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
+    ers = exchange_rate_ld(fT, r["rate"], tT) if r else ""
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     body = f"""{header(lang, path)}
 <div id="main">
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {fT} → {tT}</nav>
     <h1>{h1}</h1>
+    {trust_bar(lang)}
     <div class="rate-box">
       {rate_line}
       <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
@@ -1316,7 +1365,7 @@ def render_pair(f, t, lang):
     <details><summary>{q2}</summary><p>{a2}</p></details>
   </div>
 </div>
-{faq}{crumbs}
+{faq}{crumbs}{ers}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
 
