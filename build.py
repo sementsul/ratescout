@@ -64,10 +64,14 @@ def _h(s):
 CAT_EN = {"Криптовалюты": "Cryptocurrencies", "Digital currencies": "Digital currencies",
           "Bank accounts and cards": "Bank accounts and cards", "Online banking": "Online banking",
           "Money transfers": "Money transfers", "Cash": "Cash", "Прочее": "Other"}
+# перевод категорий для RU (исходные имена в дампе — на английском, кроме «Криптовалюты»)
+CAT_RU = {"Криптовалюты": "Криптовалюты", "Digital currencies": "Электронные деньги",
+          "Bank accounts and cards": "Банковские карты", "Online banking": "Онлайн-банкинг",
+          "Money transfers": "Денежные переводы", "Cash": "Наличные", "Прочее": "Прочее"}
 
 
 def cat_name(c, lang):
-    return CAT_EN.get(c, c) if lang == "en" else c
+    return CAT_EN.get(c, c) if lang == "en" else CAT_RU.get(c, c)
 
 
 # слаги категорийных хабов (/kategoriya/<slug>/)
