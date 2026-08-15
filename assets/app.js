@@ -176,7 +176,7 @@
   try { raw = JSON.parse(wrap.querySelector(".rschart-data").textContent); } catch (e) { return; }
   if (!raw || raw.length < 2) return;
   function tms(s) { var p = s.split(/[- :]/); return Date.UTC(+p[0], +p[1] - 1, +p[2], +p[3] || 0, +p[4] || 0); }
-  var ALL = raw.map(function (d) { return { t: tms(d[0]), v: d[1] }; });
+  var ALL = raw.map(function (d) { return { t: tms(d[0]), v: d[1], hourly: d[0].indexOf(":") >= 0 }; });
   function fmt(v) {
     if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
     if (v >= 1) return v.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
@@ -185,13 +185,17 @@
   }
   function p2(n) { return (n < 10 ? "0" : "") + n; }
   function dd(ms) { var d = new Date(ms); return { D: d.getUTCDate(), M: d.getUTCMonth() + 1, Y: d.getUTCFullYear(), h: d.getUTCHours() }; }
-  function axisTime(ms, span) {
+  function axisTime(ms, span, hourly) {
     var o = dd(ms);
-    if (span <= 2 * 864e5) return p2(o.h) + ":00";
-    if (span <= 180 * 864e5) return p2(o.D) + "." + p2(o.M);
-    return p2(o.M) + "." + o.Y;
+    if (hourly && span <= 2 * 864e5) return p2(o.h) + ":00";   // часы — только если точки почасовые
+    if (span <= 180 * 864e5) return p2(o.D) + "." + p2(o.M);    // дни
+    return p2(o.M) + "." + o.Y;                                 // месяцы
   }
-  function fullTime(ms) { var o = dd(ms); return p2(o.D) + "." + p2(o.M) + " " + p2(o.h) + ":00 UTC"; }
+  function fullTime(pt) {
+    var o = dd(pt.t);
+    return pt.hourly ? p2(o.D) + "." + p2(o.M) + " " + p2(o.h) + ":00 UTC"   // почасовая точка
+                     : p2(o.D) + "." + p2(o.M) + "." + o.Y;                  // дневная точка
+  }
 
   var H = 220, padL = 58, padR = 12, padT = 10, padB = 26, plotH = H - padT - padB;
   var pts = [], range = "all";
@@ -208,9 +212,12 @@
     var d = filtered(), vs = d.map(function (x) { return x.v; });
     var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs), span = (mx - mn) || (mx || 1);
     var t0 = d[0].t, t1 = d[d.length - 1].t, tspan = (t1 - t0) || 1;
+    // почасовой вид, только если в выборке есть внутридневные точки (иначе показываем дни)
+    var hourly = false, j;
+    for (j = 1; j < d.length; j++) { if (d[j].t - d[j - 1].t < 20 * 3600e3) { hourly = true; break; } }
     function X(t) { return padL + (t - t0) / tspan * plotW; }
     function Y(v) { return padT + (1 - (v - mn) / span) * plotH; }
-    pts = d.map(function (x) { return { px: X(x.t), py: Y(x.v), v: x.v, t: x.t }; });
+    pts = d.map(function (x) { return { px: X(x.t), py: Y(x.v), v: x.v, t: x.t, hourly: x.hourly }; });
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="rssvg" width="100%" height="' + H + '">', i;
     for (i = 0; i <= 4; i++) {
       var yv = mn + span * i / 4, yy = Y(yv);
@@ -219,7 +226,7 @@
     }
     for (i = 0; i <= 4; i++) {
       var tt = t0 + tspan * i / 4, xx = X(tt);
-      s += '<text x="' + xx.toFixed(1) + '" y="' + (H - 8) + '" class="rsxlab">' + axisTime(tt, tspan) + '</text>';
+      s += '<text x="' + xx.toFixed(1) + '" y="' + (H - 8) + '" class="rsxlab">' + axisTime(tt, tspan, hourly) + '</text>';
     }
     s += '<polyline fill="none" stroke="#55ff55" stroke-width="2" points="' +
       pts.map(function (p) { return p.px.toFixed(1) + "," + p.py.toFixed(1); }).join(" ") + '"/>';
@@ -236,7 +243,7 @@
     var g = svg.querySelector(".rsguide"), dot = svg.querySelector(".rsdot");
     g.setAttribute("x1", best.px); g.setAttribute("x2", best.px); g.style.display = "";
     dot.setAttribute("cx", best.px); dot.setAttribute("cy", best.py); dot.style.display = "";
-    tip.innerHTML = "<b>" + fmt(best.v) + " " + unit + "</b><span>" + fullTime(best.t) + "</span>";
+    tip.innerHTML = "<b>" + fmt(best.v) + " " + unit + "</b><span>" + fullTime(best) + "</span>";
     tip.hidden = false;
     var leftPx = host.offsetLeft + best.px / W * r.width;
     tip.style.left = Math.max(0, leftPx - tip.offsetWidth / 2) + "px";
