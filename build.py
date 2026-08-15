@@ -230,6 +230,15 @@ def currency_chart(slug, info, lang):
         note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · change: "
                 f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, hourly. '
                 "Hover the chart to see price and time.")
+    # кнопка диапазона появляется, только когда истории хватает на этот период
+    def _pt(s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d %H:00")
+        except ValueError:
+            return datetime.strptime(s, "%Y-%m-%d")
+    span_days = (_pt(data[-1][0]) - _pt(data[0][0])).total_seconds() / 86400
+    DURD = {"24h": 1, "7d": 7, "30d": 30, "1y": 365, "3y": 3 * 365, "5y": 5 * 365, "10y": 10 * 365, "all": 0}
+    ranges = [(r, lbl) for r, lbl in ranges if r == "all" or span_days >= DURD[r]]
     btns = ""
     for r, lbl in ranges:
         on = ' class="on"' if r == "all" else ""
