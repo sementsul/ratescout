@@ -605,9 +605,13 @@ def history_table(slug, lang):
         rows.append(f"<tr><td>{m}</td><td>{fmt_rate(d['close'])}</td><td>{fmt_rate(d['min'])}</td>"
                     f"<td>{fmt_rate(d['max'])}</td><td>{chg}</td></tr>")
     head_html = "".join(f"<th>{c}</th>" for c in cols)
-    return (f'<h2 class="news">{h}</h2><p class="updnote">{lead}</p>'
+    n = len(rows)
+    cnt = f" ({n})"
+    # свёрнутый список (details) — чтобы растущая таблица не удлиняла страницу
+    return (f'<details class="histbox"><summary class="news">{h}<span class="cnt">{cnt}</span></summary>'
+            f'<p class="updnote">{lead}</p>'
             f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{head_html}</tr></thead>'
-            f'<tbody>{"".join(reversed(rows))}</tbody></table></div>')
+            f'<tbody>{"".join(reversed(rows))}</tbody></table></div></details>')
 
 
 def currency_chart(slug, info, lang):

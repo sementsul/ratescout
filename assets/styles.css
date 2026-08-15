@@ -172,6 +172,8 @@ option{color:#a8a8a8}
 .steps li:before{content:"\25A0 ";color:#f55}
 details{border:3px double #55ffff;outline:3px solid #0000aa;background:#0000aa;color:#55ffff;padding:9px 12px;margin:8px 0}
 summary{cursor:pointer;color:#ffff55}
+.histbox>summary{font-weight:700}
+.histbox .cnt{color:#7fffd4}
 .rate-box{border:6px double #55ffff;outline:5px solid #0000aa;background:#0000aa;color:#55ffff;padding:16px;text-align:center;margin:14px 0}
 .rate-box .big{font-size:1.8rem;font-weight:800;color:#55ff55}
 .rate-box .big span{font-size:.85rem;color:#cfe}
