@@ -271,3 +271,31 @@
   window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(draw, 150); });
   draw();
 })();
+
+// ---- сортировка обзора графиков (/grafiki/): ликвидность / рост / падение ----
+(function () {
+  var tbl = document.querySelector(".marktbl"), bar = document.querySelector(".sortbar");
+  if (!tbl || !bar) return;
+  var tbody = tbl.querySelector("tbody");
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+  function num(r, a) { var v = r.getAttribute(a); return v === null || v === "" ? null : parseFloat(v); }
+  function apply(key) {
+    var arr = rows.slice();
+    arr.sort(function (a, b) {
+      if (key === "liq") { return (num(b, "data-liq") || 0) - (num(a, "data-liq") || 0); }
+      var ca = num(a, "data-chg"), cb = num(b, "data-chg");
+      if (ca === null && cb === null) return 0;
+      if (ca === null) return 1;             // без изменения — в конец
+      if (cb === null) return -1;
+      return key === "up" ? cb - ca : ca - cb;
+    });
+    arr.forEach(function (r) { tbody.appendChild(r); });
+  }
+  Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      apply(b.getAttribute("data-s"));
+    });
+  });
+})();

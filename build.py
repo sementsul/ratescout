@@ -259,11 +259,13 @@ def render_charts_overview(lang):
         desc = "Графики динамики курсов криптовалют (цена в USDT): изменение, мини-графики по всем монетам. Обновление ежечасно."
         h1, lead = "Графики курсов", f"Динамика цен в USDT по {len(rows)} валютам. Обновляется ежечасно. Нажмите на валюту — полный интерактивный график."
         th = ("Валюта", "Цена (USDT)", "Изм.", "График")
+        sorts = [("liq", "По ликвидности"), ("up", "Рост ↑"), ("down", "Падение ↓")]
     else:
         title = f"Cryptocurrency rate charts — price trends | {S['name']}"
         desc = "Crypto rate charts (price in USDT): change and mini-charts for all coins. Hourly updates."
         h1, lead = "Rate charts", f"Price trends in USDT across {len(rows)} currencies. Hourly updates. Click a currency for the full interactive chart."
         th = ("Currency", "Price (USDT)", "Chg.", "Chart")
+        sorts = [("liq", "By liquidity"), ("up", "Gainers ↑"), ("down", "Losers ↓")]
     trs = ""
     for _b, _liq, slug, info, price, chg, spark in rows:
         price_c = f'<b>{fmt_rate(price)}</b>' if price is not None else '<span class="nd">—</span>'
@@ -274,8 +276,13 @@ def render_charts_overview(lang):
             sign = "+" if chg >= 0 else ""
             chg_c = f'<b class="{cls}">{sign}{chg:.1f}%</b>'
         spk_c = mini_spark(spark) if spark else '<span class="nd">—</span>'
-        trs += (f'<tr><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
+        chg_a = "" if chg is None else f"{chg:.4f}"
+        trs += (f'<tr data-liq="{_liq}" data-chg="{chg_a}"><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
                 f'<td class="num">{price_c}</td><td class="num">{chg_c}</td><td class="spk">{spk_c}</td></tr>')
+    sbtns = ""
+    for sv, sl in sorts:
+        son = ' class="on"' if sv == "liq" else ""
+        sbtns += f'<button type="button" data-s="{sv}"{son}>{sl}</button>'
     ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
                  "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
     body = f"""{header(lang, path)}
@@ -284,6 +291,7 @@ def render_charts_overview(lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1} <span class="cnt">{len(rows)}</span></h1><p>{lead}</p>
     <p class="updnote">{updated_str(lang)}</p>
+    <div class="rsrange sortbar">{sbtns}</div>
     <div class="rtbl-wrap"><table class="rtbl marktbl"><thead><tr>
       <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>
   </div>
