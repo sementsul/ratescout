@@ -286,6 +286,26 @@ def render_home(lang):
                   "contactPoint": {"@type": "ContactPoint", "contactType":
                                    ("customer support" if lang == "en" else "поддержка"),
                                    "email": S.get("owner_email", "")}})
+    # Dataset — заявка в Google Dataset Search: наш открытый датасет курсов (обновляется ежечасно)
+    ds_name = (f"Курсы обмена {total} валют — {S['name']}" if lang == "ru"
+               else f"Exchange rates for {total} currencies — {S['name']}")
+    ds_desc = (f"Открытый датасет курсов обмена криптовалют и валют по {total} валютам и их направлениям, "
+               "собранный из мониторинга обменных пунктов BestChange. Обновляется ежечасно; цены валют — в USDT."
+               if lang == "ru" else
+               f"Open dataset of crypto and money exchange rates across {total} currencies and their directions, "
+               "collected from the BestChange exchange monitor. Updated hourly; currency prices are in USDT.")
+    dataset = jsonld({"@context": "https://schema.org", "@type": "Dataset", "name": ds_name,
+                      "description": ds_desc, "url": BASE_URL + PREF[lang] + "/",
+                      "inLanguage": LOCALE[lang], "isAccessibleForFree": True,
+                      "license": "https://creativecommons.org/licenses/by/4.0/",
+                      "creator": {"@type": "Organization", "name": S["name"], "url": BASE_URL},
+                      "keywords": ["exchange rates", "cryptocurrency", "BestChange", "USDT", "курсы обмена"],
+                      "dateModified": modified_iso(),
+                      "distribution": [
+                          {"@type": "DataDownload", "encodingFormat": "application/json",
+                           "contentUrl": BASE_URL + "/prices.json"},
+                          {"@type": "DataDownload", "encodingFormat": "application/json",
+                           "contentUrl": BASE_URL + "/widget-data.json"}]})
     if lang == "ru":
         title = f"{S['name']} — справочник курсов обмена: {total} валют"
         desc = (f"Справочник курсов обмена криптовалют и денег по {total} валютам на основе мониторинга обменных "
@@ -328,9 +348,80 @@ def render_home(lang):
   </div>
   <div class="clearboth"></div>
 </div>
-{org}
+{org}{dataset}
 {footer(lang)}"""
     write(lang, "/", head(lang, title, desc, "/", ld) + body)
+
+def render_directions(lang):
+    """ТОП направлений обмена — data-driven листикл: ранжирование по числу обменников и резерву (факт из дампа)."""
+    path = "/napravleniya/"
+    cand = []
+    for p in PAIR_PAGES:
+        r = rate_of(p["from"], p["to"])
+        if r and r.get("count"):
+            cand.append((p["from"], p["to"], r))
+    cand.sort(key=lambda x: (x[2].get("count", 0), x[2].get("reserve", 0) or 0), reverse=True)
+    if lang == "ru":
+        title = f"Самые популярные направления обмена — ТОП по обменникам | {S['name']}"
+        desc = ("ТОП направлений обмена криптовалют и валют: ранжирование по числу обменников и резерву. "
+                "Курсы из мониторинга BestChange, обновление ежечасно.")
+        h1 = "Самые популярные направления обмена"
+        lead = ("Направления обмена, ранжированные по числу обменников и суммарному резерву (данные мониторинга "
+                "BestChange). Курс — лучший среди обменников, справочно.")
+        cols = ("#", "Направление", "Курс", "Обменников", "Резерв")
+        th_crub, th_ucard = "Криптовалюта → рубли", "Стейблкоины → карты/СБП"
+        empty = "Направления появятся после загрузки данных."
+    else:
+        title = f"Most popular exchange directions — top by exchangers | {S['name']}"
+        desc = ("Top exchange directions for crypto and money: ranked by number of exchangers and reserve. "
+                "Rates from BestChange monitoring, hourly updates.")
+        h1 = "Most popular exchange directions"
+        lead = ("Exchange directions ranked by the number of exchangers and total reserve (BestChange monitoring "
+                "data). Rate is the best among exchangers, for reference.")
+        cols = ("#", "Direction", "Rate", "Exchangers", "Reserve")
+        th_crub, th_ucard = "Crypto → rubles", "Stablecoins → cards/SBP"
+        empty = "Directions will appear after data loads."
+    rows = []
+    for i, (f, t, r) in enumerate(cand[:50], 1):
+        fT, tT = CUR[f]["ticker"], CUR[t]["ticker"]
+        rows.append(f'<tr><td>{i}</td><td><a href="{pair_url(lang, f, t)}">{CUR[f]["name"]} '
+                    f'<span class="tk">{fT}</span> → {CUR[t]["name"]} <span class="tk">{tT}</span></a></td>'
+                    f'<td>{fmt_rate(r["rate"])} {tT}</td><td>{r.get("count", 0)}</td>'
+                    f'<td>{fmt_rate(r.get("reserve", 0))} {tT}</td></tr>')
+    head_html = "".join(f"<th>{c}</th>" for c in cols)
+    table = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{head_html}</tr></thead>'
+             f'<tbody>{"".join(rows)}</tbody></table></div>') if rows else f"<p>{empty}</p>"
+
+    def _theme(h, pairs):
+        if not pairs:
+            return ""
+        lis = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in pairs)
+        return f'<h2 class="news">{h}</h2><ul class="dlist">{lis}</ul>'
+    crypto_rub = [c for c in cand if CUR[c[0]]["category"] == "Криптовалюты" and c[1] in HI_TO][:8]
+    usdt_cards = [c for c in cand if c[0].startswith("tether")
+                  and c[1] in ("visa-mastercard-rub", "sberbank", "tinkoff", "sbp", "mir")][:8]
+    themes = _theme(th_crub, crypto_rub) + _theme(th_ucard, usdt_cards)
+    il = itemlist_ld([(f'{CUR[f]["ticker"]} → {CUR[t]["ticker"]}', BASE_URL + pair_url(lang, f, t))
+                      for f, t, _ in cand[:20]])
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    {table}
+    {themes}
+  </div>
+</div>
+{il}{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
 
 def render_charts_overview(lang):
     """Обзор рынка по ВСЕМ валютам: спарклайн+цена+изм где есть история; иначе цена/прочерк. SEO-хаб."""
@@ -470,6 +561,55 @@ def render_relative(lang):
     write(lang, path, head(lang, title, desc, path, ld) + body)
 
 
+def history_table(slug, lang):
+    """Текстовая (индексируемая) таблица динамики курса из истории: закрытие/мин/макс/изм. к пред. периоду.
+    Гранулярность адаптивная: пока истории < ~2 мес — по дням, дальше — по месяцам."""
+    pts = HISTORY.get(slug, [])
+    if len(pts) < 6:
+        return ""
+    def _d(s):
+        return datetime.strptime(s[:10], "%Y-%m-%d")
+    span = (_d(pts[-1][0]) - _d(pts[0][0])).days
+    by_month = span >= 60
+    keylen, keep = (7, 24) if by_month else (10, 60)   # YYYY-MM×24 или YYYY-MM-DD×60
+    buckets, order = {}, []
+    for k, v in pts:                      # точки по возрастанию даты
+        key = k[:keylen]
+        if key not in buckets:
+            buckets[key] = {"min": v, "max": v, "close": v}
+            order.append(key)
+        d = buckets[key]
+        d["close"] = v
+        d["min"] = min(d["min"], v)
+        d["max"] = max(d["max"], v)
+    if len(order) < 2:
+        return ""
+    tk = CUR[slug]["ticker"]
+    per_ru, per_en = ("месяцам", "Месяц") if by_month else ("дням", "Дата")
+    if lang == "ru":
+        h, cols = f"Курс {tk} по {per_ru} (USDT)", (per_en, "Закрытие", "Минимум", "Максимум", "Изм.")
+        lead = f"Динамика цены {tk} в USDT по данным мониторинга BestChange (справочно)."
+    else:
+        h = f"{tk} {'monthly' if by_month else 'daily'} rate (USDT)"
+        cols = ("Month" if by_month else "Date", "Close", "Low", "High", "Chg.")
+        lead = f"{tk} price dynamics in USDT per BestChange monitoring data (for reference)."
+    rows, prev = [], None
+    for m in order[-keep:]:
+        d = buckets[m]
+        chg = "—"
+        if prev:
+            pc = (d["close"] - prev) / prev * 100
+            cl = "up" if pc >= 0 else "down"
+            chg = f'<b class="{cl}">{"+" if pc >= 0 else ""}{pc:.1f}%</b>'
+        prev = d["close"]
+        rows.append(f"<tr><td>{m}</td><td>{fmt_rate(d['close'])}</td><td>{fmt_rate(d['min'])}</td>"
+                    f"<td>{fmt_rate(d['max'])}</td><td>{chg}</td></tr>")
+    head_html = "".join(f"<th>{c}</th>" for c in cols)
+    return (f'<h2 class="news">{h}</h2><p class="updnote">{lead}</p>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{head_html}</tr></thead>'
+            f'<tbody>{"".join(reversed(rows))}</tbody></table></div>')
+
+
 def currency_chart(slug, info, lang):
     pts = HISTORY.get(slug, [])
     if len(pts) < 2:
@@ -603,7 +743,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -619,7 +759,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -806,6 +946,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
     <li><a href="{PREF[lang]}/kursy/">{tr(lang,'nav_rates')}</a></li>
+    <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
     <li><a href="{PREF[lang]}/slovar/">{tr(lang,'nav_glossary')}</a></li>
     <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
@@ -1259,6 +1400,7 @@ def render_currency(slug, info, lang):
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
+    {history_table(slug, lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
     <h2 class="news">{tr(lang,'how_to')} {name}</h2>
@@ -2121,6 +2263,7 @@ def static_files():
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
+        items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -2275,6 +2418,7 @@ def main():
         render_glossary(lang)
         render_charts_overview(lang)
         render_relative(lang)
+        render_directions(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
