@@ -418,6 +418,55 @@ def render_charts_overview(lang):
     write(lang, path, head(lang, title, desc, path, ld) + body)
 
 
+def render_relative(lang):
+    """Страница относительных (кросс-)курсов: 1 базовая валюта → все остальные, с поиском/фильтром/сортировкой.
+    Кросс-курс считается на клиенте через USDT (prices.json). Фильтры по всем валютам."""
+    path = "/kursy/"
+    if lang == "ru":
+        title = f"Относительные курсы валют — 1 валюта к другим | {S['name']}"
+        desc = "Относительные (кросс-) курсы валют: выберите базовую валюту и увидите её курс ко всем остальным. Фильтр по категориям, поиск."
+        h1, lead = "Относительные курсы валют", "Выберите базовую валюту — увидите, сколько за 1 её единицу дают в других валютах (кросс-курс через USDT). Поиск и фильтр по всем валютам."
+        blbl, ph, nores = "Базовая валюта:", "Поиск валюты: BTC, USDT, Sberbank…", "Ничего не найдено"
+        th = ("Валюта", "Курс")
+        sorts = [("rate-desc", "Курс ↓"), ("rate-asc", "Курс ↑"), ("name", "А–Я")]
+    else:
+        title = f"Relative currency rates — 1 currency to others | {S['name']}"
+        desc = "Relative (cross) currency rates: pick a base currency and see its rate to all others. Category filter, search."
+        h1, lead = "Relative currency rates", "Pick a base currency — see how much 1 unit is worth in other currencies (cross rate via USDT). Search and filter across all currencies."
+        blbl, ph, nores = "Base currency:", "Search currency: BTC, USDT, Sberbank…", "Nothing found"
+        th = ("Currency", "Rate")
+        sorts = [("rate-desc", "Rate ↓"), ("rate-asc", "Rate ↑"), ("name", "A–Z")]
+
+    def _btns(items, attr, default):
+        out = ""
+        for v, l in items:
+            on = ' class="on"' if v == default else ""
+            out += f'<button type="button" data-{attr}="{v}"{on}>{l}</button>'
+        return out
+    fbtns = _btns([("", "Все" if lang == "ru" else "All")] + [(CAT_SLUG[c], cat_name(c, lang)) for c in CATS], "f", "")
+    sbtns = _btns(sorts, "s", "rate-desc")
+    ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
+                 "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    <div class="relbaserow"><label>{blbl} <select class="relbase" data-prefix="{PREF[lang]}"></select></label></div>
+    <div class="rtsearchbox"><input class="relsearch" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>
+    <div class="rsrange relcat">{fbtns}</div>
+    <div class="rsrange relsort">{sbtns}</div>
+    <div class="rtbl-wrap"><table class="rtbl relmtbl"><thead><tr><th>{th[0]}</th><th class="rthd">{th[1]}</th></tr></thead>
+      <tbody class="relbody"></tbody></table></div>
+    <p class="relnone updnote" hidden>{nores}</p>
+    <p class="updnote">{updated_str(lang)}</p>
+  </div>
+</div>
+{ld}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path, ld) + body)
+
+
 def currency_chart(slug, info, lang):
     pts = HISTORY.get(slug, [])
     if len(pts) < 2:
@@ -551,7 +600,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -567,7 +616,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -718,6 +767,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
+    <li><a href="{PREF[lang]}/kursy/">{tr(lang,'nav_rates')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
     <li><a href="{PREF[lang]}/slovar/">{tr(lang,'nav_glossary')}</a></li>
     <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
@@ -2019,6 +2069,7 @@ def static_files():
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -2047,6 +2098,23 @@ def static_files():
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
     write_llms()
     write_widget()
+    write_prices()
+
+
+def write_prices():
+    """prices.json — цена каждой валюты в USDT (для страницы относительных/кросс-курсов)."""
+    m = {}
+    for slug, info in CUR.items():
+        if slug == "tether-trc20":
+            continue
+        p, _ = _usdt_price(slug)
+        if p is not None:
+            m[slug] = {"n": info["name"], "t": info["ticker"], "c": CAT_SLUG.get(info["category"], "prochee"), "p": p}
+    ut = CUR.get("tether-trc20")
+    if ut:
+        m["tether-trc20"] = {"n": ut["name"], "t": ut["ticker"], "c": CAT_SLUG.get(ut["category"], "prochee"), "p": 1.0}
+    open(os.path.join(DIST, "prices.json"), "w", encoding="utf-8").write(
+        json.dumps({"cur": m}, ensure_ascii=False, separators=(",", ":")))
 
 
 
@@ -2147,6 +2215,7 @@ def main():
         render_editorial(lang)
         render_glossary(lang)
         render_charts_overview(lang)
+        render_relative(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)

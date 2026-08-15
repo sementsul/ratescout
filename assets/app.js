@@ -396,3 +396,61 @@
   wire(pbar, function (b) { period = b.getAttribute("data-p"); });
   updateCol();
 })();
+
+// ---- относительные (кросс-)курсы (/kursy/): база → все валюты, поиск + фильтр категорий + сортировка ----
+(function () {
+  var base = document.querySelector(".relbase"), body = document.querySelector(".relbody");
+  if (!base || !body) return;
+  var inp = document.querySelector(".relsearch"), cbar = document.querySelector(".relcat"),
+    sbar = document.querySelector(".relsort"), none = document.querySelector(".relnone"), rthd = document.querySelector(".rthd");
+  var PRE = base.getAttribute("data-prefix") || "";
+  var ALL = [], query = "", cat = "", sort = "rate-desc", cur = {};
+  function esc(x) { return (x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function fmt(v) {
+    if (!isFinite(v)) return "—";
+    if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+    if (v >= 1) return v.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+    if (v >= 0.0001) return (+v.toFixed(6)).toString();
+    return v.toExponential(2);
+  }
+  function render() {
+    if (!ALL.length) return;
+    var b = cur[base.value]; if (!b) return;
+    if (rthd) rthd.textContent = (sort === "name" ? "Курс" : "Курс") + " (1 " + b.t + " = …)";
+    var res = ALL.filter(function (x) {
+      return x.s !== base.value && (!query || x.key.indexOf(query) >= 0) && (!cat || x.c === cat);
+    }).map(function (x) { return { x: x, r: b.p / x.p }; });
+    res.sort(function (a, z) {
+      if (sort === "name") return a.x.n.localeCompare(z.x.n);
+      return sort === "rate-asc" ? a.r - z.r : z.r - a.r;
+    });
+    body.innerHTML = res.map(function (o) {
+      return '<tr><td class="d"><a href="' + PRE + '/valuta/' + o.x.s + '/">' + esc(o.x.n) + ' <span>' + esc(o.x.t) + '</span></a></td>' +
+        '<td class="num"><b>' + fmt(o.r) + '</b> ' + esc(o.x.t) + '</td></tr>';
+    }).join("");
+    if (none) none.hidden = res.length > 0;
+  }
+  function wire(bar, set) {
+    if (!bar) return;
+    Array.prototype.forEach.call(bar.querySelectorAll("button"), function (btn) {
+      btn.addEventListener("click", function () {
+        Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+        btn.classList.add("on"); set(btn); render();
+      });
+    });
+  }
+  if (inp) inp.addEventListener("input", function () { query = inp.value.trim().toLowerCase(); render(); });
+  base.addEventListener("change", render);
+  wire(cbar, function (b) { cat = b.getAttribute("data-f"); });
+  wire(sbar, function (b) { sort = b.getAttribute("data-s"); });
+  fetch("/prices.json").then(function (r) { return r.json(); }).then(function (d) {
+    cur = d.cur;
+    ALL = Object.keys(cur).map(function (s) {
+      var i = cur[s]; return { s: s, n: i.n, t: i.t, c: i.c, p: i.p, key: (i.n + " " + i.t + " " + s).toLowerCase() };
+    });
+    ALL.sort(function (a, b) { return a.n.localeCompare(b.n); });
+    base.innerHTML = ALL.map(function (x) { return '<option value="' + x.s + '">' + esc(x.n) + ' (' + esc(x.t) + ')</option>'; }).join("");
+    base.value = cur["tether-trc20"] ? "tether-trc20" : ALL[0].s;
+    render();
+  }).catch(function () {});
+})();
