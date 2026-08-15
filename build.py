@@ -277,12 +277,18 @@ def render_charts_overview(lang):
             chg_c = f'<b class="{cls}">{sign}{chg:.1f}%</b>'
         spk_c = mini_spark(spark) if spark else '<span class="nd">—</span>'
         chg_a = "" if chg is None else f"{chg:.4f}"
-        trs += (f'<tr data-liq="{_liq}" data-chg="{chg_a}"><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
+        cat_k = CAT_SLUG.get(info["category"], "prochee")
+        trs += (f'<tr data-liq="{_liq}" data-chg="{chg_a}" data-cat="{cat_k}"><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
                 f'<td class="num">{price_c}</td><td class="num">{chg_c}</td><td class="spk">{spk_c}</td></tr>')
     sbtns = ""
     for sv, sl in sorts:
         son = ' class="on"' if sv == "liq" else ""
         sbtns += f'<button type="button" data-s="{sv}"{son}>{sl}</button>'
+    filts = [("", "Все" if lang == "ru" else "All")] + [(CAT_SLUG[c], cat_name(c, lang)) for c in CATS]
+    fbtns = ""
+    for fv, fl in filts:
+        fon = ' class="on"' if fv == "" else ""
+        fbtns += f'<button type="button" data-f="{fv}"{fon}>{fl}</button>'
     ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
                  "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
     body = f"""{header(lang, path)}
@@ -291,6 +297,7 @@ def render_charts_overview(lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
     <h1>{h1} <span class="cnt">{len(rows)}</span></h1><p>{lead}</p>
     <p class="updnote">{updated_str(lang)}</p>
+    <div class="rsrange catbar">{fbtns}</div>
     <div class="rsrange sortbar">{sbtns}</div>
     <div class="rtbl-wrap"><table class="rtbl marktbl"><thead><tr>
       <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>

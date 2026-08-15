@@ -299,3 +299,18 @@
     });
   });
 })();
+
+// ---- фильтр обзора графиков по категории (/grafiki/) ----
+(function () {
+  var bar = document.querySelector(".catbar"), tbl = document.querySelector(".marktbl");
+  if (!bar || !tbl) return;
+  var rows = Array.prototype.slice.call(tbl.querySelectorAll("tbody tr"));
+  Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      var f = b.getAttribute("data-f");
+      rows.forEach(function (r) { r.style.display = (!f || r.getAttribute("data-cat") === f) ? "" : "none"; });
+    });
+  });
+})();
