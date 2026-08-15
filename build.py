@@ -199,6 +199,71 @@ def svg_chart(points):
             f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3" fill="#ffff55"/></svg>')
 
 
+def mini_spark(points):
+    """Лёгкий спарклайн (мини-SVG без осей) для обзорной страницы графиков."""
+    vals = [p[1] for p in points]
+    mn, mx = min(vals), max(vals)
+    span = (mx - mn) or (mx or 1.0)
+    W, H = 120.0, 34.0
+    n = len(points)
+    poly = " ".join(f"{(i / (n - 1) * W if n > 1 else 0):.1f},{(2 + (1 - (v - mn) / span) * (H - 4)):.1f}"
+                    for i, v in enumerate(vals))
+    color = "#55ff55" if vals[-1] >= vals[0] else "#f55"
+    return (f'<svg class="spark" viewBox="0 0 {W:.0f} {H:.0f}" preserveAspectRatio="none" aria-hidden="true">'
+            f'<polyline fill="none" stroke="{color}" stroke-width="1.5" points="{poly}"/></svg>')
+
+
+def render_charts_overview(lang):
+    """Обзор рынка: сетка спарклайнов по всем валютам с историей (SEO-хаб + свежесть)."""
+    rows = []
+    for slug, info in CUR.items():
+        h = HISTORY.get(slug, [])
+        if len(h) < 2:
+            continue
+        vals = [p[1] for p in h]
+        chg = (vals[-1] - vals[0]) / vals[0] * 100 if vals[0] else 0
+        r = rate_of(slug, "tether-trc20")
+        liq = r.get("count", 0) if r else 0
+        rows.append((liq, slug, info, vals[-1], chg, h[-90:]))
+    if not rows:
+        return
+    rows.sort(key=lambda x: x[0], reverse=True)
+    path = "/grafiki/"
+    if lang == "ru":
+        title = f"Графики курсов криптовалют — динамика цен | {S['name']}"
+        desc = "Графики динамики курсов криптовалют (цена в USDT): изменение, мини-графики по всем монетам. Обновление ежечасно."
+        h1, lead = "Графики курсов", f"Динамика цен в USDT по {len(rows)} валютам. Обновляется ежечасно. Нажмите на валюту — полный интерактивный график."
+        th = ("Валюта", "Цена (USDT)", "Изм.", "График")
+    else:
+        title = f"Cryptocurrency rate charts — price trends | {S['name']}"
+        desc = "Crypto rate charts (price in USDT): change and mini-charts for all coins. Hourly updates."
+        h1, lead = "Rate charts", f"Price trends in USDT across {len(rows)} currencies. Hourly updates. Click a currency for the full interactive chart."
+        th = ("Currency", "Price (USDT)", "Chg.", "Chart")
+    trs = ""
+    for liq, slug, info, last, chg, spark in rows:
+        cls = "up" if chg >= 0 else "down"
+        sign = "+" if chg >= 0 else ""
+        trs += (f'<tr><td class="d"><a href="{cpage(lang, slug)}">{info["name"]} <span>{info["ticker"]}</span></a></td>'
+                f'<td class="num"><b>{fmt_rate(last)}</b></td>'
+                f'<td class="num"><b class="{cls}">{sign}{chg:.1f}%</b></td>'
+                f'<td class="spk">{mini_spark(spark)}</td></tr>')
+    ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
+                 "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1} <span class="cnt">{len(rows)}</span></h1><p>{lead}</p>
+    <p class="updnote">{updated_str(lang)}</p>
+    <div class="rtbl-wrap"><table class="rtbl marktbl"><thead><tr>
+      <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>
+  </div>
+</div>
+{ld}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path, ld) + body)
+
+
 def currency_chart(slug, info, lang):
     pts = HISTORY.get(slug, [])
     if len(pts) < 2:
@@ -332,7 +397,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -348,7 +413,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -498,6 +563,7 @@ def header(lang, path):
   <ul id="menu-top">
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
+    <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
     <li><a href="{PREF[lang]}/slovar/">{tr(lang,'nav_glossary')}</a></li>
     <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
@@ -1734,6 +1800,7 @@ def static_files():
         items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
+        items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -1854,6 +1921,7 @@ def main():
             render_bank_hub(_b, lang)
         render_editorial(lang)
         render_glossary(lang)
+        render_charts_overview(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
