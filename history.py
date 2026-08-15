@@ -16,7 +16,30 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 USDT = "tether-trc20"        # опорная валюта (стейблкоин ≈ доллар)
-KEEP = 600                   # хранить последние N точек на серию (почасовые ≈ 25 дней)
+# Двухуровневое хранение: последние RECENT_H часов — почасово (детализация),
+# старше — по одной точке в день (long-term), до KEEP_DAILY дней (~10 лет).
+RECENT_H = 72
+KEEP_DAILY = 3660
+
+
+def _parse(k):
+    try:
+        return datetime.strptime(k, "%Y-%m-%d %H:00").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return datetime.strptime(k, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+
+def _compress(pts, now):
+    """Старше RECENT_H — сжать до одной точки в день (последняя за день); недавние — как есть."""
+    cutoff = now.timestamp() - RECENT_H * 3600
+    old, recent = {}, []
+    for k, v in pts:
+        if _parse(k).timestamp() >= cutoff:
+            recent.append([k, v])
+        else:
+            old[k[:10]] = [k[:10], v]        # последняя за дату побеждает (точки идут по возрастанию)
+    daily = [old[d] for d in sorted(old)][-KEEP_DAILY:]
+    return daily + recent
 
 def _load(path, default):
     if os.path.exists(path):
@@ -32,7 +55,8 @@ def main():
     rates = _load(os.path.join(ROOT, "rates.json"), {}).get("pairs", {})
     hist = _load(os.path.join(ROOT, "history.json"), {"unit": "USDT", "series": {}})
     series = hist.get("series", {})
-    bucket = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:00")  # почасовая корзина (UTC)
+    now = datetime.now(timezone.utc)
+    bucket = now.strftime("%Y-%m-%d %H:00")  # почасовая корзина (UTC)
 
     added = 0
     for slug in cur:
@@ -51,7 +75,7 @@ def main():
         if pts and pts[-1][0] == bucket:     # точка за этот час уже есть — один снимок в час
             continue
         pts.append([bucket, val]); added += 1
-        series[slug] = pts[-KEEP:]
+        series[slug] = _compress(pts, now)   # почасово недавние + по дню старые
 
     if added == 0 and os.path.exists(os.path.join(ROOT, "history.json")):
         print(f"история: за {bucket} уже записано — файл не меняю (нет лишних коммитов)")

@@ -184,17 +184,23 @@
     return (+v.toFixed(8)).toString();
   }
   function p2(n) { return (n < 10 ? "0" : "") + n; }
-  function dd(ms) { var d = new Date(ms); return { D: d.getUTCDate(), M: d.getUTCMonth() + 1, h: d.getUTCHours() }; }
-  function axisTime(ms, span) { var o = dd(ms); return span <= 2 * 864e5 ? p2(o.h) + ":00" : p2(o.D) + "." + p2(o.M); }
+  function dd(ms) { var d = new Date(ms); return { D: d.getUTCDate(), M: d.getUTCMonth() + 1, Y: d.getUTCFullYear(), h: d.getUTCHours() }; }
+  function axisTime(ms, span) {
+    var o = dd(ms);
+    if (span <= 2 * 864e5) return p2(o.h) + ":00";
+    if (span <= 180 * 864e5) return p2(o.D) + "." + p2(o.M);
+    return p2(o.M) + "." + o.Y;
+  }
   function fullTime(ms) { var o = dd(ms); return p2(o.D) + "." + p2(o.M) + " " + p2(o.h) + ":00 UTC"; }
 
   var H = 220, padL = 58, padR = 12, padT = 10, padB = 26, plotH = H - padT - padB;
   var pts = [], range = "all";
+  var RMAP = { "24h": 864e5, "7d": 7 * 864e5, "30d": 30 * 864e5, "1y": 365 * 864e5,
+    "3y": 3 * 365 * 864e5, "5y": 5 * 365 * 864e5, "10y": 10 * 365 * 864e5 };
   function filtered() {
-    if (range === "all") return ALL;
-    var span = range === "24h" ? 864e5 : range === "7d" ? 7 * 864e5 : 30 * 864e5;
+    if (range === "all" || !RMAP[range]) return ALL;
     var t1 = ALL[ALL.length - 1].t;
-    var f = ALL.filter(function (d) { return d.t >= t1 - span; });
+    var f = ALL.filter(function (d) { return d.t >= t1 - RMAP[range]; });
     return f.length >= 2 ? f : ALL;
   }
   function draw() {

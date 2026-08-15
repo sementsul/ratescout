@@ -209,7 +209,7 @@ def currency_chart(slug, info, lang):
         return (f'<h2 class="news">{info["ticker"]} price trend (USDT)</h2>'
                 f'<p class="updnote">📈 Collecting data — the chart will appear once history builds up '
                 f'(points so far: {len(pts)}). Updated daily.</p>') if pts else ""
-    data = pts[-480:]                       # ~20 дней почасовых точек — для интерактива
+    data = pts[-2000:]                      # недавние почасовые + дневные (годы) — для интерактива
     vals = [p[1] for p in data]
     first, last = vals[0], vals[-1]
     chg = (last - first) / first * 100 if first else 0
@@ -218,13 +218,15 @@ def currency_chart(slug, info, lang):
     data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     if lang == "ru":
         title = f"Динамика цены {info['ticker']} (USDT)"
-        ranges = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("all", "Всё")]
+        ranges = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"),
+                  ("3y", "3г"), ("5y", "5л"), ("10y", "10л"), ("all", "Всё")]
         note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · за период: "
                 f'<b class="{cls}">{sign}{chg:.1f}%</b>. Данные BestChange, обновление ежечасно. '
                 "Наведите на график — покажет цену и время.")
     else:
         title = f"{info['ticker']} price trend (USDT)"
-        ranges = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("all", "All")]
+        ranges = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("1y", "1y"),
+                  ("3y", "3y"), ("5y", "5y"), ("10y", "10y"), ("all", "All")]
         note = (f"1 {info['ticker']} = <b>{fmt_rate(last)}</b> USDT · change: "
                 f'<b class="{cls}">{sign}{chg:.1f}%</b>. BestChange data, hourly. '
                 "Hover the chart to see price and time.")
