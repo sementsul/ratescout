@@ -411,7 +411,7 @@
     if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
     if (v >= 1) return v.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
     if (v >= 0.0001) return (+v.toFixed(6)).toString();
-    return v.toExponential(2);
+    return v.toFixed(12).replace(/0+$/, "").replace(/\.$/, "") || "0";  // малые числа — без научной нотации
   }
   function render() {
     if (!ALL.length) return;
