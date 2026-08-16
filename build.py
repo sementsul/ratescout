@@ -982,7 +982,6 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
     <li><a href="{PREF[lang]}/slovar/">{tr(lang,'nav_glossary')}</a></li>
-    <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
     <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
   </ul>
 </div>"""
