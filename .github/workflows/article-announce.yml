@@ -1,0 +1,35 @@
+name: Article announce
+
+# Раз в день: если сегодня вышла новая статья блога — анонсировать её со ссылкой в Telegram, ВК и Mastodon.
+# Дзен получает саму статью через RSS-ленту, отдельный анонс не нужен.
+# Использует те же секреты, что дайджесты (TELEGRAM_*, VK_*, MASTODON_*). Без секретов/статьи — пропуск.
+
+on:
+  schedule:
+    - cron: "30 9 * * *"      # ~12:30 МСК (после дайджестов)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: article-announce
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Announce today's article
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          VK_TOKEN: ${{ secrets.VK_TOKEN }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          MASTODON_URL: ${{ secrets.MASTODON_URL }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+        run: python3 article_announce.py

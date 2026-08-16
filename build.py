@@ -2424,6 +2424,23 @@ def write_daily_digest_en():
     print("daily-en: дайджест готов")
 
 
+def write_article_announce():
+    """article-today.json — статья(и) блога, вышедшая СЕГОДНЯ (release==сегодня), для авто-анонса в соцсети."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    due = [a for a in ARTS["ru"] if (a.get("release") or "")[:10] == today]
+    out = os.path.join(DIST, "article-today.json")
+    if not due:
+        json.dump({"has_data": False}, open(out, "w"))
+        return
+    a = due[0]
+    slug = a["slug"]
+    json.dump({"has_data": True, "title": a["title"], "url": f"{BASE_URL}/blog/{slug}/",
+               "excerpt": a.get("description", ""),
+               "image": f"{BASE_URL}/assets/covers/{slug}.png" if COVERS_OK else f"{BASE_URL}/assets/og-image.png"},
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"анонс статьи: {slug}")
+
+
 def render_dzen_rss():
     """RSS-лента для авто-публикации в Дзене (RU): полный текст в content:encoded, абсолютные ссылки, обложка.
     Дзен требует именно полный HTML статьи, а не анонс; относительные ссылки на внешней платформе не работают."""
@@ -3460,6 +3477,7 @@ def main():
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
     write_daily_digest_en() # dist/daily-en.json для английского Telegram-канала
+    write_article_announce() # article-today.json — анонс вышедшей сегодня статьи
     render_dzen_rss()       # ссылается на обложки — после их генерации
     write_catalog_js(catjs)
     print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
