@@ -673,6 +673,16 @@ make_weekly_image/full_list_text/full_list_html/_digest_buttons параметр
 ботом (TELEGRAM_TOKEN) постит в EN-канал (секрет TELEGRAM_CHANNEL_EN, DAILY_JSON_URL=daily-en.json) — tg_daily.py
 без изменений. Статус: ✅ daily-en.json (EN caption/кнопки/список), RU не сломан (проверено). Нужен секрет + бот-админ.
 
+## UC-80 — Раздел «Статьи» /statyi/ с релизом по расписанию (запас на год)
+Библиотека `library/NN-slug.md` (frontmatter title/description/slug). `load_library` вычисляет дату релиза =
+LIB_BASE(2026-08-16) + idx*9 дней. `render_library` рендерит только ВЫШЕДШИЕ (release<=сегодня): страницы
+`/statyi/<slug>/` (Article+Breadcrumb schema, брендовая обложка через make_cover → covers/statyi-<slug>.png,
+og:image) + индекс `/statyi/`. В навигации «Статьи», в sitemap, обложки в write_covers. Дрип: 1 статья каждые
+9 дней ≈ год из ~40 статей. 🧭 РЕШЕНИЕ: статьи только на сайте (не дублировать в Blogger/Дзен — duplicate content).
+- **Предусловие:** есть файлы в library/. **Шаги:** собрать → /statyi/ и вышедшие статьи в индексе/sitemap.
+- **Ожидаемо:** видны только статьи с release<=сегодня; остальные появятся по датам. Статус: 🚧 инфра готова и
+  собирается (LIBRARY пуст/частичен — статьи дописываются 5 агентами; финал-сборка после их завершения).
+
 ## Открытые пункты
 - Дизайн-тема не выбрана (оцениваем референсы; old-hard.ru как основной — отклонён: ретро вредит доверию/конверсии/SEO).
 - Поиск матчит имена как в дампе BestChange (латиница) — кириллические названия банков не находятся.

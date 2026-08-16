@@ -769,7 +769,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -785,7 +785,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -976,6 +976,7 @@ def header(lang, path):
   <ul id="menu-top">
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
+    <li><a href="/statyi/">{tr(lang,'nav_articles')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
     <li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,'nav_reviews')}</a></li>
     <li><a href="{PREF[lang]}/svodka/">{tr(lang,'nav_svodka')}</a></li>
@@ -1910,6 +1911,11 @@ def write_covers():
         for a in ARTS[lang]:
             make_cover(os.path.join(d, f"{a['slug']}.png"), a["title"])
             n += 1
+    cov = os.path.join(DIST, "assets", "covers")
+    os.makedirs(cov, exist_ok=True)
+    for a in lib_released():                       # обложки статей библиотеки (только вышедшие)
+        make_cover(os.path.join(cov, f"statyi-{a['slug']}.png"), a["title"])
+        n += 1
     print(f"обложки: сгенерировано {n}")
 
 
@@ -2092,6 +2098,106 @@ def render_svodka(lang):
 {crumbs}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
+
+
+LIB_BASE = datetime(2026, 8, 16, tzinfo=timezone.utc)   # первый релиз статьи (дальше каждые 9 дней по idx)
+LIB_STEP = 9                                            # дней между публикациями
+
+
+def load_library():
+    """Библиотека статей library/NN-slug.md; дата релиза = LIB_BASE + idx*9 дней (по индексу из имени файла)."""
+    d = os.path.join(ROOT, "library")
+    arts = []
+    if not os.path.isdir(d):
+        return arts
+    for fn in sorted(f for f in os.listdir(d) if f.endswith(".md")):
+        raw = open(os.path.join(d, fn), encoding="utf-8").read()
+        meta, body = {}, raw
+        if raw.startswith("---"):
+            _, fm, body = raw.split("---", 2)
+            for line in fm.strip().splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    meta[k.strip()] = v.strip()
+        mm = re.match(r"(\d+)", fn)
+        idx = int(mm.group(1)) if mm else len(arts)
+        meta["idx"] = idx
+        meta["release"] = LIB_BASE + timedelta(days=idx * LIB_STEP)
+        meta["html"] = md_render(body.strip())
+        meta.setdefault("slug", os.path.splitext(fn)[0])
+        if meta.get("title"):
+            arts.append(meta)
+    return arts
+
+
+LIBRARY = load_library()
+
+
+def lib_released():
+    now = datetime.now(timezone.utc)
+    return [a for a in LIBRARY if a["release"] <= now]
+
+
+def cover_url_lib(slug):
+    return (f"{BASE_URL}/assets/covers/statyi-{slug}.png" if COVERS_OK
+            else f"{BASE_URL}/assets/og-image.png")
+
+
+def render_library_article(a):
+    slug, path = a["slug"], f"/statyi/{a['slug']}/"
+    title, desc = f"{a['title']} | {S['name']}", a.get("description", "")
+    cover, rel = cover_url_lib(slug), a["release"].strftime("%Y-%m-%d")
+    art_ld = jsonld({"@context": "https://schema.org", "@type": "Article", "headline": a["title"],
+                     "description": desc, "datePublished": rel, "dateModified": modified_iso(),
+                     "inLanguage": "ru", "image": cover,
+                     "author": {"@type": "Organization", "name": S["name"]},
+                     "publisher": {"@type": "Organization", "name": S["name"],
+                                   "logo": {"@type": "ImageObject", "url": f"{BASE_URL}/assets/og-image.png"}},
+                     "mainEntityOfPage": BASE_URL + path})
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Монитор", "item": BASE_URL + "/"},
+        {"@type": "ListItem", "position": 2, "name": "Статьи", "item": BASE_URL + "/statyi/"},
+        {"@type": "ListItem", "position": 3, "name": a["title"], "item": BASE_URL + path}]})
+    body = f"""{header("ru", path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / <a href="/statyi/">Статьи</a> / {a['title']}</nav>
+    <article class="post"><div class="adate">Опубликовано: {rel} · <a href="/redakciya/">Редакция {S['name']}</a></div>{a['html']}</article>
+    <p class="related"><a href="/statyi/">← Все статьи</a> · <a href="/">Курсы обмена</a></p>
+  </div>
+</div>
+{art_ld}{crumbs}
+{footer("ru")}"""
+    write("ru", path, head("ru", title, desc, path, og_image=cover) + body)
+
+
+def render_library():
+    rel = lib_released()
+    if not rel:
+        return
+    for a in rel:
+        render_library_article(a)
+    items = "".join(f'<li><a href="/statyi/{a["slug"]}/">{a["title"]}</a> '
+                    f'<span class="updnote">{a["release"].strftime("%d.%m.%Y")}</span></li>'
+                    for a in sorted(rel, key=lambda x: x["release"], reverse=True))
+    path = "/statyi/"
+    title = f"Статьи об обмене криптовалют | {S['name']}"
+    desc = ("Статьи об обмене криптовалют и валют: гиды по валютам, безопасность, комиссии, вывод в рубли. "
+            "Новые материалы выходят регулярно.")
+    ld = jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": "Статьи",
+                 "url": BASE_URL + path, "inLanguage": "ru", "dateModified": modified_iso()})
+    body = f"""{header("ru", path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="/">Монитор</a> / Статьи</nav>
+    <h1>Статьи об обмене криптовалют <span class="cnt">{len(rel)}</span></h1>
+    <p>Гиды по валютам, безопасность, комиссии и вывод в рубли. Новые материалы выходят регулярно.</p>
+    <ul class="dlist">{items}</ul>
+  </div>
+</div>
+{ld}
+{footer("ru")}"""
+    write("ru", path, head("ru", title, desc, path) + body)
 
 
 def _daily_movers():
@@ -3280,6 +3386,10 @@ def static_files():
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "redakciya")]
+    _rel = lib_released()                              # раздел «Статьи» (RU) — только вышедшие материалы
+    if _rel:
+        items.append(u_entry("/statyi/", "weekly", "0.7"))
+        items += [u_entry(f"/statyi/{a['slug']}/", "monthly", "0.6") for a in _rel]
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "\n".join(items) + "\n</urlset>")
@@ -3446,6 +3556,7 @@ def main():
             render_article(a, lang)
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
+    render_library()
     render_404()
     render_miniapp()
     static_files()
