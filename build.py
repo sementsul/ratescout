@@ -2175,8 +2175,10 @@ def _digest_buttons(primary):
     """Инлайн-кнопки-ссылки под постом в Telegram (URL-кнопки — работают в канале без сервера).
     primary — главная кнопка (обзор/сводка); дальше приложение, графики, все курсы."""
     ptext = "📊 Обзор за сутки" if primary == "/obzor/sutki/" else "🧭 Полная сводка"
+    # прямая ссылка мини-аппа (t.me/<бот>/<short>) — URL-кнопка запускает Mini App нативно прямо из канала
     return [
-        [{"text": ptext, "url": BASE_URL + primary}, {"text": "🚀 Приложение", "url": BASE_URL + "/app/"}],
+        [{"text": ptext, "url": BASE_URL + primary},
+         {"text": "🚀 Приложение", "url": "https://t.me/RateScoutRUBot/ratescout_ru"}],
         [{"text": "📈 Графики", "url": BASE_URL + "/grafiki/"}, {"text": "💱 Все курсы", "url": BASE_URL + "/"}],
     ]
 
