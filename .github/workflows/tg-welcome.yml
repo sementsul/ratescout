@@ -1,0 +1,25 @@
+name: Telegram welcome post
+
+# Разовая отправка приветственного поста в канал (для закрепа). Запускается ТОЛЬКО вручную.
+# Пост не закрепляется автоматически — закрепляет владелец в Telegram.
+# Секреты: TELEGRAM_TOKEN, TELEGRAM_CHANNEL (те же, что у ежедневного дайджеста).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Send welcome post to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+        run: python3 tg_welcome.py
