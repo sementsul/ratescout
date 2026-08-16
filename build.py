@@ -897,6 +897,9 @@ def hreflangs(path):
 
 def head(lang, title, desc, path, extra=""):
     canonical = f"{BASE_URL}{PREF[lang]}{path}"
+    # автообнаружение RSS: RU — полная лента для Дзена/агрегаторов, EN — англоблоговый фид
+    feed_href = f"{BASE_URL}/dzen.xml" if lang == "ru" else f"{BASE_URL}/en/blog/rss.xml"
+    feed_title = f"{S['name']} — блог" if lang == "ru" else f"{S['name']} — Blog"
     return f"""<!doctype html>
 <html lang="{LOCALE[lang]}">
 <head>
@@ -906,6 +909,7 @@ def head(lang, title, desc, path, extra=""):
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <link rel="canonical" href="{canonical}">
+<link rel="alternate" type="application/rss+xml" title="{feed_title}" href="{feed_href}">
 {hreflangs(path)}
 <meta property="og:type" content="website">
 <meta property="og:title" content="{title}">
