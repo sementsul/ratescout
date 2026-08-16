@@ -2281,6 +2281,8 @@ def render_dzen_rss():
     if not arts:
         return
     author = S.get("owner_email", "") or "info@ratescout.ru"
+    tg_promo = ('<p>📢 Ежедневные курсы, обзор рынка и мини-приложение — в нашем Telegram-канале: '
+                '<a href="https://t.me/ratescout_kurs">t.me/ratescout_kurs</a></p>')
     items = ""
     for a in arts:
         og = cover_url(a["slug"], "ru")
@@ -2298,7 +2300,7 @@ def render_dzen_rss():
                   + f"<author>{xml_escape(author)} ({xml_escape(S['name'])})</author>"
                   f"<description>{xml_escape(a.get('description',''))}</description>"
                   f"<enclosure url=\"{og}\" type=\"image/png\"/>"
-                  f"<content:encoded><![CDATA[{html}]]></content:encoded>"
+                  f"<content:encoded><![CDATA[{html}{tg_promo}]]></content:encoded>"
                   "</item>")
     # авто-обзоры за неделю/месяц — попадают в Дзен только при наличии данных; guid по периоду
     # (ISO-неделя / год-месяц) → каждый новый период Дзен публикует как новый пост
@@ -2319,7 +2321,7 @@ def render_dzen_rss():
                   f"<author>{xml_escape(author)} ({xml_escape(S['name'])})</author>"
                   f"<description>{xml_escape(rc['desc'])}</description>"
                   f"<enclosure url=\"{BASE_URL}/assets/og-image.png\" type=\"image/png\"/>"
-                  f"<content:encoded><![CDATA[{rhtml}]]></content:encoded>"
+                  f"<content:encoded><![CDATA[{rhtml}{tg_promo}]]></content:encoded>"
                   "</item>")
     feed = ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" '
