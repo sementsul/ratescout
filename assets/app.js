@@ -479,3 +479,49 @@
     show(1);
   });
 })();
+
+// Полная сводная таблица «Все валюты» на /svodka/: поиск + фильтр по категориям + сортировка
+(function () {
+  var tbl = document.querySelector(".allcurtbl");
+  if (!tbl) return;
+  var tb = tbl.querySelector("tbody");
+  var rows = Array.prototype.slice.call(tb.querySelectorAll("tr"));
+  var inp = document.querySelector(".acsearch");
+  var catbar = document.querySelector(".accat"), sortbar = document.querySelector(".acsort");
+  var none = document.querySelector(".acnone");
+  var q = "", cat = "", sort = "liq";
+  function attr(r, k) { return r.getAttribute("data-" + k) || ""; }
+  function numCmp(k, dir) {                       // NaN (нет данных) — всегда в конец
+    return function (a, b) {
+      var x = parseFloat(attr(a, k)), y = parseFloat(attr(b, k)), xn = isNaN(x), yn = isNaN(y);
+      if (xn && yn) return 0; if (xn) return 1; if (yn) return -1; return dir * (y - x);
+    };
+  }
+  function apply() {
+    var list = rows.filter(function (r) {
+      if (cat && attr(r, "cat") !== cat) return false;
+      if (q && attr(r, "search").indexOf(q) < 0) return false;
+      return true;
+    });
+    if (sort === "name") list.sort(function (a, b) { return attr(a, "name").localeCompare(attr(b, "name")); });
+    else if (sort === "price") list.sort(numCmp("price", 1));
+    else if (sort === "up") list.sort(numCmp("chg", 1));
+    else if (sort === "down") list.sort(numCmp("chg", -1));
+    else list.sort(numCmp("liq", 1));
+    rows.forEach(function (r) { r.style.display = "none"; });
+    list.forEach(function (r) { tb.appendChild(r); r.style.display = ""; });
+    if (none) none.hidden = list.length > 0;
+  }
+  if (inp) inp.addEventListener("input", function () { q = inp.value.trim().toLowerCase(); apply(); });
+  function wire(bar, set) {
+    if (!bar) return;
+    Array.prototype.forEach.call(bar.querySelectorAll("button"), function (b) {
+      b.addEventListener("click", function () {
+        Array.prototype.forEach.call(bar.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+        b.classList.add("on"); set(b); apply();
+      });
+    });
+  }
+  wire(catbar, function (b) { cat = b.getAttribute("data-f"); });
+  wire(sortbar, function (b) { sort = b.getAttribute("data-s"); });
+})();

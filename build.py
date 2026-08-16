@@ -1927,8 +1927,60 @@ def _svodka_rows():
     return rows
 
 
+def all_currencies_table(lang):
+    """Полная сводная таблица по ВСЕМ валютам: цена USDT, изм.24ч, обменников, категория. Поиск/фильтр/сортировка."""
+    items = []
+    for slug, info in CUR.items():
+        price, liq = _usdt_price(slug)
+        if slug == "tether-trc20":
+            price = 1.0
+        chg = CHG_BY.get(slug, {}).get("24h")
+        if chg is not None and abs(chg) > 300:
+            chg = None
+        items.append((slug, info, price, liq or 0, chg))
+    items.sort(key=lambda x: x[3], reverse=True)                 # по умолчанию — ликвидность
+    if lang == "ru":
+        h = "Все валюты"
+        ph = "Поиск: BTC, USDT, Sberbank…"
+        cols = ("Валюта", "Категория", "Цена, USDT", "Изм. 24ч", "Обменников")
+        sorts = [("liq", "Ликвидность"), ("price", "Цена"), ("up", "Рост"), ("down", "Падение"), ("name", "А–Я")]
+        allb, nores = "Все", "Ничего не найдено"
+    else:
+        h = "All currencies"
+        ph = "Search: BTC, USDT, Sberbank…"
+        cols = ("Currency", "Category", "Price, USDT", "24h", "Exchangers")
+        sorts = [("liq", "Liquidity"), ("price", "Price"), ("up", "Gainers"), ("down", "Losers"), ("name", "A–Z")]
+        allb, nores = "All", "Nothing found"
+    catb = "".join(f'<button type="button" data-f="{CAT_SLUG[c]}">{cat_name(c, lang)}</button>' for c in CATS)
+    fbtns = f'<button type="button" data-f="" class="on">{allb}</button>' + catb
+    sbtns = ""
+    for v, l in sorts:
+        on = ' class="on"' if v == "liq" else ""
+        sbtns += f'<button type="button" data-s="{v}"{on}>{l}</button>'
+    rws = ""
+    for slug, info, price, liq, chg in items:
+        cs = CAT_SLUG.get(info["category"], "prochee")
+        pv = f"{price:.10f}".rstrip("0").rstrip(".") if price else ""
+        if chg is None:
+            chg_td, chg_a = "—", ""
+        else:
+            chg_td = f'<b class="{"up" if chg >= 0 else "down"}">{"+" if chg >= 0 else ""}{chg:.1f}%</b>'
+            chg_a = f"{chg:.4f}"
+        rws += (f'<tr class="acrow" data-search="{info["name"].lower()} {info["ticker"].lower()}" data-cat="{cs}" '
+                f'data-name="{info["name"].lower()}" data-price="{pv}" data-chg="{chg_a}" data-liq="{liq}">'
+                f'<td><a href="{cpage(lang, slug)}">{info["name"]} <span class="tk">{info["ticker"]}</span></a></td>'
+                f'<td>{cat_name(info["category"], lang)}</td>'
+                f'<td>{fmt_rate(price) if price else "—"}</td><td>{chg_td}</td><td>{liq}</td></tr>')
+    thead = "".join(f"<th>{c}</th>" for c in cols)
+    return (f'<h2 class="news">{h} <span class="cnt">{len(items)}</span></h2>'
+            f'<div class="rtsearchbox"><input class="acsearch" type="search" placeholder="{ph}" autocomplete="off" aria-label="{ph}"></div>'
+            f'<div class="rsrange accat">{fbtns}</div><div class="rsrange acsort">{sbtns}</div>'
+            f'<div class="rtbl-wrap"><table class="rtbl allcurtbl"><thead><tr>{thead}</tr></thead><tbody>{rws}</tbody></table></div>'
+            f'<p class="acnone updnote" hidden>{nores}</p>')
+
+
 def render_svodka(lang):
-    """Сводка рынка: 4 отчёта — индекс/настроение, рейтинг ликвидности, стейблкоины (привязка к $), волатильность."""
+    """Сводка рынка: 4 отчёта + полная таблица по всем валютам (поиск/фильтр/сортировка)."""
     path = "/svodka/"
     rows = _svodka_rows()
     if lang == "ru":
@@ -2033,6 +2085,7 @@ def render_svodka(lang):
     <h2 class="news">{h_liq}</h2>{_table(t_liq, liq_body)}
     <h2 class="news">{h_stb}</h2>{stb_html}
     <h2 class="news">{h_vol}</h2>{vol_html}
+    {all_currencies_table(lang)}
     <p class="related"><a href="{PREF[lang]}/grafiki/">{allc}</a></p>
   </div>
 </div>
