@@ -977,7 +977,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
-    <li><a href="{PREF[lang]}/obzor/nedelya/">{tr(lang,'nav_reviews')}</a></li>
+    <li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,'nav_reviews')}</a></li>
     <li><a href="{PREF[lang]}/kursy/">{tr(lang,'nav_rates')}</a></li>
     <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
@@ -1736,7 +1736,9 @@ def render_rss(lang):
     open(full, "w", encoding="utf-8").write(rss)
 
 
-REVIEWS = [("nedelya", 7, "неделю", "week"), ("mesyac", 30, "месяц", "month")]
+REVIEWS = [("sutki", 1, "сутки", "day"), ("nedelya", 7, "неделю", "week"), ("mesyac", 30, "месяц", "month")]
+_PK = {1: "24h", 7: "7d", 30: "30d"}
+_SID = {1: "sutki", 7: "nedelya", 30: "mesyac"}
 
 
 def _span_days(pts):
@@ -1754,14 +1756,17 @@ def _pwindow(pts, days):
 def review_content(lang, days, ru_word, en_word):
     """Авто-обзор рынка за период: топ роста/падения из истории (нужна история >= days у валюты).
     Возвращает dict {h1, desc, date, has_data, inner} — используется и страницей, и лентой Дзена."""
-    pk = "7d" if days == 7 else "30d"
+    pk = _PK[days]
     movers = []
     for slug, pts in HISTORY.items():
         if slug not in CUR or _span_days(pts) < days:
             continue
+        if CUR[slug]["category"] != "Криптовалюты":     # это обзор рынка КРИПТОВАЛЮТ — фиат/банки не берём
+            continue
         pct = CHG_BY.get(slug, {}).get(pk)
-        if pct is not None:
-            movers.append((slug, pct))
+        if pct is None or abs(pct) > 300:               # отсев явных выбросов (артефакты тонкой истории)
+            continue
+        movers.append((slug, pct))
     now = datetime.now(timezone.utc).strftime("%d.%m.%Y")
     if lang == "ru":
         h1 = f"Обзор рынка криптовалют за {ru_word}"
@@ -1816,7 +1821,7 @@ def review_content(lang, days, ru_word, en_word):
              f'<p class="related"><a href="{PREF[lang]}/grafiki/">{allc}</a></p>')
     # Дзен-версия: без inline-SVG (Дзен их не поддерживает) и без таблицы с 8 ссылками (Дзен режет исходящие) —
     # текст + проценты списком + ОДНА заметная ссылка на полный обзор с графиками на сайте.
-    sid = "nedelya" if days == 7 else "mesyac"
+    sid = _SID[days]
     site_url = f"{BASE_URL}/obzor/{sid}/"
     _li = lambda items: "".join(
         f'<li>{CUR[s]["name"]} ({CUR[s]["ticker"]}): {"+" if p >= 0 else ""}{p:.1f}%</li>' for s, p in items)
@@ -1942,7 +1947,8 @@ def render_dzen_rss():
         if not rc["has_data"]:
             continue
         url = f"{BASE_URL}/obzor/{sid}/"
-        pid = now_dt.strftime("%G-W%V") if d == 7 else now_dt.strftime("%Y-%m")
+        pid = (now_dt.strftime("%Y-%m-%d") if d == 1
+               else now_dt.strftime("%G-W%V") if d == 7 else now_dt.strftime("%Y-%m"))
         rhtml = rc["dzen"]                    # облегчённая версия под Дзен (без SVG, 1 ссылка на сайт)
         items += ("<item>"
                   f"<title>{xml_escape(rc['h1'])} ({rc['date']})</title>"
@@ -2599,6 +2605,7 @@ def static_files():
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/obzor/sutki/", "hourly", "0.6"))
         items.append(u_entry(pr + "/obzor/nedelya/", "daily", "0.6"))
         items.append(u_entry(pr + "/obzor/mesyac/", "weekly", "0.6"))
         if GLOSSARY:
