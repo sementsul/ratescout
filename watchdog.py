@@ -109,6 +109,10 @@ def alert(problems):
 
 
 def main():
+    if os.environ.get("WATCHDOG_TEST"):
+        print("ТЕСТ-АЛЕРТ (проверка доставки, не поломка):")
+        alert(["Это тестовый алерт сторожа — если ты его видишь, оповещение в Telegram работает."])
+        return 0
     checks = [
         check_page("/", "главная"),
         check_page("/sitemap.xml", "sitemap.xml"),

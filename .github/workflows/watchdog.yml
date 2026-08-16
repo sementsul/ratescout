@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: "45 6 * * *"      # ~09:45 МСК, до дневных дайджестов
   workflow_dispatch:
+    inputs:
+      test:
+        description: "Отправить тестовый алерт в Telegram (проверка доставки)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,4 +37,5 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+          WATCHDOG_TEST: ${{ inputs.test && '1' || '' }}
         run: python3 watchdog.py
