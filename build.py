@@ -2223,7 +2223,7 @@ def _digest_weekly(now_dt, out):
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
-              "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #сводка"]
+              "", "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
@@ -2269,7 +2269,7 @@ def write_daily_digest():
     lines += ["", "📉 Топ падения:"]
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
-              "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #обзор"]
+              "", "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #обзор"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
