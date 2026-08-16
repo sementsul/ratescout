@@ -53,18 +53,27 @@ def main():
     except Exception as e:                      # noqa: BLE001
         print(f"ошибка отправки: {e}")
         return 1
-    # полный список всех валют — отдельным сообщением-документом (в одно сообщение 330 строк не влезают)
-    if d.get("full_list_url"):
-        dp = {"chat_id": CHANNEL, "document": d["full_list_url"],
-              "caption": "📋 Полный список всех валют — цена USDT · изм.24ч · обменников"}
-        try:
-            r2 = urllib.request.Request(api + "sendDocument",
-                                        data=urllib.parse.urlencode(dp).encode(), method="POST")
-            with urllib.request.urlopen(r2, timeout=40) as r:
-                res2 = json.load(r)
-            print("список-файл: " + ("ок" if res2.get("ok") else f"ошибка {res2}"))
-        except Exception as e:                  # noqa: BLE001
-            print(f"список-файл не отправлен: {e}")
+    # полный список всех валют — текстом, разбитым на сообщения (в 4096 символов 330 строк не помещаются)
+    fl = d.get("full_list")
+    if fl:
+        chunks, cur = [], ""
+        for line in fl.split("\n"):
+            if len(cur) + len(line) + 1 > 3900:
+                chunks.append(cur)
+                cur = ""
+            cur += line + "\n"
+        if cur.strip():
+            chunks.append(cur)
+        for i, ch in enumerate(chunks, 1):
+            mp = {"chat_id": CHANNEL, "text": ch, "disable_web_page_preview": "true"}
+            try:
+                rr = urllib.request.Request(api + "sendMessage",
+                                            data=urllib.parse.urlencode(mp).encode(), method="POST")
+                with urllib.request.urlopen(rr, timeout=30) as r:
+                    r2 = json.load(r)
+                print(f"список {i}/{len(chunks)}: " + ("ок" if r2.get("ok") else f"ошибка {r2}"))
+            except Exception as e:              # noqa: BLE001
+                print(f"список {i} не отправлен: {e}")
     return 0
 
 

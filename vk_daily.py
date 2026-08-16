@@ -26,7 +26,9 @@ def vk(method, params):
     p = dict(params)
     p["access_token"] = VK_TOKEN
     p["v"] = V
-    with urllib.request.urlopen(API + method + "?" + urllib.parse.urlencode(p), timeout=40) as r:
+    # POST в теле, а не в URL — иначе длинное сообщение даёт 414 Request-URI Too Large
+    req = urllib.request.Request(API + method, data=urllib.parse.urlencode(p).encode(), method="POST")
+    with urllib.request.urlopen(req, timeout=40) as r:
         res = json.load(r)
     if "error" in res:
         raise RuntimeError(res["error"].get("error_msg", res["error"]))
