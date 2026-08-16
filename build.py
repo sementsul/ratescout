@@ -2205,11 +2205,16 @@ def _digest_weekly(now_dt, out):
         idx_line = f"Настроение: {mood} (средний ход топ-{len(withchg)}: {'+' if avg >= 0 else ''}{avg:.2f}%, ↑{up}/↓{dn})"
     else:
         idx_line = "Настроение: данные накапливаются"
+    allc = [r for r in rows if r[3] is not None]
+    au = sum(1 for r in allc if r[3] > 0)
+    ad = sum(1 for r in allc if r[3] < 0)
+    agg_line = (f"📋 Валют в базе: {len(CUR)}. За сутки по крипте ({len(allc)} монет): выросли {au}, упали {ad}."
+                if allc else f"📋 Валют в базе: {len(CUR)}.")
     img_url = ""
     if COVERS_OK:
         make_weekly_image(os.path.join(DIST, "assets", "daily-week.png"), now, stbl, liq)
         img_url = f"{BASE_URL}/assets/daily-week.png"
-    lines = [f"🧭 Сводка крипторынка · {now}", "", idx_line, ""]
+    lines = [f"🧭 Сводка крипторынка · {now}", "", agg_line, idx_line, ""]
     if stbl:
         lines.append("💵 Стейблкоины (откл. от $1):")
         lines += [f"• {CUR[s]['ticker']} {p:.4f} ({'+' if (p - 1) >= 0 else ''}{(p - 1) * 100:.2f}%)"
@@ -2217,7 +2222,8 @@ def _digest_weekly(now_dt, out):
         lines.append("")
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
-    lines += ["", f"Полная сводка → {BASE_URL}/svodka/", "", "#крипта #курсы #сводка"]
+    lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
+              "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
@@ -2227,7 +2233,7 @@ def _digest_weekly(now_dt, out):
 def _digest_buttons(primary):
     """Инлайн-кнопки-ссылки под постом в Telegram (URL-кнопки — работают в канале без сервера).
     primary — главная кнопка (обзор/сводка); дальше приложение, графики, все курсы."""
-    ptext = "📊 Обзор за сутки" if primary == "/obzor/sutki/" else "🧭 Полная сводка"
+    ptext = "📊 Обзор за сутки" if primary == "/obzor/sutki/" else "📋 Все валюты"
     # прямая ссылка мини-аппа (t.me/<бот>/<short>) — URL-кнопка запускает Mini App нативно прямо из канала
     return [
         [{"text": ptext, "url": BASE_URL + primary},
