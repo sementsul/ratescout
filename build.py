@@ -2223,7 +2223,7 @@ def _digest_weekly(now_dt, out):
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
-              "", "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #сводка"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
@@ -2239,7 +2239,8 @@ def _digest_buttons(primary):
         [{"text": ptext, "url": BASE_URL + primary},
          {"text": "🚀 Приложение", "url": "https://t.me/RateScoutRUBot/ratescout_ru"}],
         [{"text": "📈 Графики", "url": BASE_URL + "/grafiki/"}, {"text": "💱 Все курсы", "url": BASE_URL + "/"}],
-        [{"text": "📰 Мы в Дзене", "url": "https://dzen.ru/ratescout"}],
+        [{"text": "📰 Дзен", "url": "https://dzen.ru/ratescout"},
+         {"text": "🅥 ВКонтакте", "url": "https://vk.com/ratescout"}],
     ]
 
 
@@ -2269,7 +2270,7 @@ def write_daily_digest():
     lines += ["", "📉 Топ падения:"]
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
-              "", "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #обзор"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #обзор"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
@@ -2283,8 +2284,9 @@ def render_dzen_rss():
     if not arts:
         return
     author = S.get("owner_email", "") or "info@ratescout.ru"
-    tg_promo = ('<p>📢 Ежедневные курсы, обзор рынка и мини-приложение — в нашем Telegram-канале: '
-                '<a href="https://t.me/ratescout_kurs">t.me/ratescout_kurs</a></p>')
+    tg_promo = ('<p>📢 Ежедневные курсы и обзор рынка — в наших каналах: '
+                'Telegram <a href="https://t.me/ratescout_kurs">t.me/ratescout_kurs</a> · '
+                'ВКонтакте <a href="https://vk.com/ratescout">vk.com/ratescout</a></p>')
     items = ""
     for a in arts:
         og = cover_url(a["slug"], "ru")
