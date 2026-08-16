@@ -1814,7 +1814,19 @@ def review_content(lang, days, ru_word, en_word):
              f'<h2 class="news">{h_up}</h2>{_tbl(ups)}'
              f'<h2 class="news">{h_dn}</h2>{_tbl(downs)}'
              f'<p class="related"><a href="{PREF[lang]}/grafiki/">{allc}</a></p>')
-    return {"h1": h1, "desc": desc, "date": now, "has_data": True, "inner": inner}
+    # Дзен-версия: без inline-SVG (Дзен их не поддерживает) и без таблицы с 8 ссылками (Дзен режет исходящие) —
+    # текст + проценты списком + ОДНА заметная ссылка на полный обзор с графиками на сайте.
+    sid = "nedelya" if days == 7 else "mesyac"
+    site_url = f"{BASE_URL}/obzor/{sid}/"
+    _li = lambda items: "".join(
+        f'<li>{CUR[s]["name"]} ({CUR[s]["ticker"]}): {"+" if p >= 0 else ""}{p:.1f}%</li>' for s, p in items)
+    full = ("Полный обзор с интерактивными графиками — на сайте: " if lang == "ru"
+            else "Full review with interactive charts on the site: ")
+    dzen = (f'<p>{summary}</p>'
+            f'<h3>{h_up}</h3><ul>{_li(ups)}</ul>'
+            f'<h3>{h_dn}</h3><ul>{_li(downs)}</ul>'
+            f'<p>{full}<a href="{site_url}">{site_url}</a></p>')
+    return {"h1": h1, "desc": desc, "date": now, "has_data": True, "inner": inner, "dzen": dzen}
 
 
 def render_review(lang, sid, days, ru_word, en_word):
@@ -1931,7 +1943,7 @@ def render_dzen_rss():
             continue
         url = f"{BASE_URL}/obzor/{sid}/"
         pid = now_dt.strftime("%G-W%V") if d == 7 else now_dt.strftime("%Y-%m")
-        rhtml = rc["inner"].replace('href="/', f'href="{BASE_URL}/')
+        rhtml = rc["dzen"]                    # облегчённая версия под Дзен (без SVG, 1 ссылка на сайт)
         items += ("<item>"
                   f"<title>{xml_escape(rc['h1'])} ({rc['date']})</title>"
                   f"<link>{url}</link><guid isPermaLink=\"false\">{url}#{pid}</guid>"
