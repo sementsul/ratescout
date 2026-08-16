@@ -1,0 +1,33 @@
+name: VK daily digest
+
+# Раз в день постит дневную сводку курсов на стену VK-группы (данные — с боевого сайта, daily.json).
+# Секреты (Settings → Secrets and variables → Actions):
+#   VK_TOKEN     — токен сообщества с правами «Стена» + «Фотографии»
+#   VK_GROUP_ID  — числовой id сообщества (без минуса)
+# Без секретов воркфлоу отработает «в сухую» (ничего не опубликует).
+
+on:
+  schedule:
+    - cron: "13 9 * * *"      # ~12:13 МСК (чуть позже телеграм-дайджеста)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vk-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Post daily digest to VK
+        env:
+          VK_TOKEN: ${{ secrets.VK_TOKEN }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+        run: python3 vk_daily.py
