@@ -769,7 +769,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -785,7 +785,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -978,6 +978,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
     <li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,'nav_reviews')}</a></li>
+    <li><a href="{PREF[lang]}/svodka/">{tr(lang,'nav_svodka')}</a></li>
     <li><a href="{PREF[lang]}/kursy/">{tr(lang,'nav_rates')}</a></li>
     <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
@@ -1912,6 +1913,130 @@ def write_covers():
     print(f"обложки: сгенерировано {n}")
 
 
+def _svodka_rows():
+    """Крипта с ценой в USDT, ликвидностью (число обменников к USDT) и изм. за 24ч."""
+    rows = []
+    for slug, info in CUR.items():
+        if info["category"] != "Криптовалюты":
+            continue
+        price, liq = _usdt_price(slug)
+        chg = CHG_BY.get(slug, {}).get("24h")
+        if chg is not None and abs(chg) > 300:
+            chg = None
+        rows.append((slug, price, liq or 0, chg))
+    return rows
+
+
+def render_svodka(lang):
+    """Сводка рынка: 4 отчёта — индекс/настроение, рейтинг ликвидности, стейблкоины (привязка к $), волатильность."""
+    path = "/svodka/"
+    rows = _svodka_rows()
+    if lang == "ru":
+        h1 = "Сводка крипторынка"
+        title = f"{h1} — ликвидность, стейблкоины, волатильность | {S['name']}"
+        desc = ("Сводка крипторынка: индекс настроения, рейтинг ликвидности валют, привязка стейблкоинов к доллару "
+                "и волатильность за сутки. Данные мониторинга BestChange.")
+        t_liq = ("Валюта", "Обменников", "Цена, USDT")
+        t_stb = ("Стейблкоин", "Цена, USDT", "Откл. от $1")
+        t_vol = ("Валюта", "Изм. за 24ч")
+        h_idx, h_liq, h_stb, h_vol = ("Индекс рынка", "Рейтинг ликвидности",
+                                      "Стейблкоины: привязка к доллару", "Волатильность за сутки")
+        allc = "Все графики по валютам →"
+        idx_note = "Индекс появится с накоплением истории."
+        stb_note = "Пока нет данных по стейблкоинам."
+        mood_g, mood_r, mood_n = "🟢 Рынок в плюсе", "🔴 Рынок в минусе", "⚪ Смешанный рынок"
+    else:
+        h1 = "Crypto market summary"
+        title = f"{h1} — liquidity, stablecoins, volatility | {S['name']}"
+        desc = ("Crypto market summary: mood index, currency liquidity ranking, stablecoin peg to the dollar and "
+                "24h volatility. BestChange monitoring data.")
+        t_liq = ("Currency", "Exchangers", "Price, USDT")
+        t_stb = ("Stablecoin", "Price, USDT", "Dev. from $1")
+        t_vol = ("Currency", "24h change")
+        h_idx, h_liq, h_stb, h_vol = ("Market index", "Liquidity ranking",
+                                      "Stablecoins: peg to the dollar", "24h volatility")
+        allc = "All currency charts →"
+        idx_note = "The index will appear as history accumulates."
+        stb_note = "No stablecoin data yet."
+        mood_g, mood_r, mood_n = "🟢 Market up", "🔴 Market down", "⚪ Mixed market"
+
+    def _lnk(slug):
+        info = CUR[slug]
+        return f'<a href="{cpage(lang, slug)}">{info["name"]} <span class="tk">{info["ticker"]}</span></a>'
+
+    def _table(head, body):
+        h = "".join(f"<th>{c}</th>" for c in head)
+        return f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{h}</tr></thead><tbody>{body}</tbody></table></div>'
+
+    # 1) Индекс/настроение — по топ-20 ликвидным монетам с изм. за 24ч
+    withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
+    if len(withchg) >= 5:
+        avg = sum(r[3] for r in withchg) / len(withchg)
+        up = sum(1 for r in withchg if r[3] > 0)
+        dn = sum(1 for r in withchg if r[3] < 0)
+        mood = mood_g if avg > 0.3 else mood_r if avg < -0.3 else mood_n
+        cls = "up" if avg >= 0 else "down"
+        by = "Средний ход топ-%d ликвидных монет за сутки" % len(withchg) if lang == "ru" else \
+             "Average move of the top-%d liquid coins over 24h" % len(withchg)
+        rose = f"Выросли {up}, снизились {dn}." if lang == "ru" else f"{up} up, {dn} down."
+        idx_html = (f'<p class="big">{mood}</p><p>{by}: '
+                    f'<b class="{cls}">{"+" if avg >= 0 else ""}{avg:.2f}%</b>. {rose}</p>')
+    else:
+        idx_html = f'<p class="updnote">{idx_note}</p>'
+
+    # 2) Ликвидность — топ по числу обменников к USDT
+    liq_top = sorted(rows, key=lambda r: r[2], reverse=True)[:12]
+    liq_body = "".join(f'<tr><td>{_lnk(s)}</td><td>{liq}</td>'
+                       f'<td>{fmt_rate(p) if p else "—"}</td></tr>' for s, p, liq, _ in liq_top)
+
+    # 3) Стейблкоины — отклонение цены в USDT от 1.0
+    stbl = [r for r in rows if CUR[r[0]]["ticker"] in STABLE_T and r[1] is not None]
+    stbl.sort(key=lambda r: abs(r[1] - 1))
+    if stbl:
+        stb_body = ""
+        for s, p, _liq, _ in stbl:
+            dev = (p - 1) * 100
+            cls = "up" if dev >= 0 else "down"
+            stb_body += (f'<tr><td>{_lnk(s)}</td><td>{p:.4f}</td>'
+                         f'<td class="{cls}">{"+" if dev >= 0 else ""}{dev:.2f}%</td></tr>')
+        stb_html = _table(t_stb, stb_body)
+    else:
+        stb_html = f'<p class="updnote">{stb_note}</p>'
+
+    # 4) Волатильность — по абсолютному изменению за 24ч
+    vol = sorted([r for r in rows if r[3] is not None], key=lambda r: abs(r[3]), reverse=True)[:10]
+    if vol:
+        vol_body = ""
+        for s, _p, _liq, chg in vol:
+            cls = "up" if chg >= 0 else "down"
+            vol_body += f'<tr><td>{_lnk(s)}</td><td class="{cls}">{"+" if chg >= 0 else ""}{chg:.1f}%</td></tr>'
+        vol_html = _table(t_vol, vol_body)
+    else:
+        vol_html = f'<p class="updnote">{idx_note}</p>'
+
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1>
+    {trust_bar(lang)}
+    <h2 class="news">{h_idx}</h2>{idx_html}
+    <h2 class="news">{h_liq}</h2>{_table(t_liq, liq_body)}
+    <h2 class="news">{h_stb}</h2>{stb_html}
+    <h2 class="news">{h_vol}</h2>{vol_html}
+    <p class="related"><a href="{PREF[lang]}/grafiki/">{allc}</a></p>
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
 def _daily_movers():
     """Крипто-движения за 24ч (та же логика, что в обзоре): категория Криптовалюты, отсев выбросов."""
     out = []
@@ -2691,6 +2816,7 @@ def static_files():
         items.append(u_entry(pr + "/obzor/sutki/", "hourly", "0.6"))
         items.append(u_entry(pr + "/obzor/nedelya/", "daily", "0.6"))
         items.append(u_entry(pr + "/obzor/mesyac/", "weekly", "0.6"))
+        items.append(u_entry(pr + "/svodka/", "hourly", "0.6"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -2848,6 +2974,7 @@ def main():
         render_directions(lang)
         for _sid, _d, _rw, _ew in REVIEWS:
             render_review(lang, _sid, _d, _rw, _ew)
+        render_svodka(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
