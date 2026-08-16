@@ -666,6 +666,13 @@ refresh-токен → access; HTML-пост caption+картинка+полны
 Blogger (ratescout-ru.blogspot.com) добавлен в строку «Наши каналы» TG/VK-постов, в Дзен-промо и в приветственный
 пост (в футере/раскрытии уже был). Теперь во всех постах перечислены все 5 площадок. Статус: ✅ (проверено).
 
+## UC-79 — Английский Telegram-канал (@ratescout_kursen)
+`write_daily_digest_en()` → `dist/daily-en.json` + `daily-all-en.txt` + EN-картинки (daily-24h-en/daily-week-en.png):
+английский дайджест (топ движений / воскресная сводка), ссылки на /en/, кнопки EN. Хелперы make_daily_image/
+make_weekly_image/full_list_text/full_list_html/_digest_buttons параметризованы `lang`. Workflow `tg-en.yml` тем же
+ботом (TELEGRAM_TOKEN) постит в EN-канал (секрет TELEGRAM_CHANNEL_EN, DAILY_JSON_URL=daily-en.json) — tg_daily.py
+без изменений. Статус: ✅ daily-en.json (EN caption/кнопки/список), RU не сломан (проверено). Нужен секрет + бот-админ.
+
 ## Открытые пункты
 - Дизайн-тема не выбрана (оцениваем референсы; old-hard.ru как основной — отклонён: ретро вредит доверию/конверсии/SEO).
 - Поиск матчит имена как в дампе BestChange (латиница) — кириллические названия банков не находятся.

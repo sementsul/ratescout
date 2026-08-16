@@ -2119,8 +2119,11 @@ def _spark_draw(dr, pts, box, color):
         dr.line(xy, fill=color, width=3, joint="curve")
 
 
-def make_daily_image(out_path, date, gainers, losers):
+def make_daily_image(out_path, date, gainers, losers, lang="ru"):
     """Картинка для Telegram: топ роста/падения за сутки с 24ч-графиками (без emoji — DejaVu их не рисует)."""
+    lab = (("[⇄] Крипторынок за сутки", "▲ Топ роста", "▼ Топ падения", "Полный обзор: ratescout.ru/obzor/sutki")
+           if lang == "ru" else
+           ("[⇄] Crypto market · 24h", "▲ Top gainers", "▼ Top losers", "Full review: ratescout.ru/en/obzor/sutki"))
     W, H = 1080, 1080
     img = Image.new("RGB", (W, H), (11, 11, 11))
     dr = ImageDraw.Draw(img)
@@ -2129,7 +2132,7 @@ def make_daily_image(out_path, date, gainers, losers):
     fh = ImageFont.truetype(FONT_BOLD, 40)
     fr = ImageFont.truetype(FONT_BOLD, 36)
     ff = ImageFont.truetype(FONT_REG, 28)
-    dr.text((56, 44), "[⇄] Крипторынок за сутки", font=fb, fill=(85, 255, 255))
+    dr.text((56, 44), lab[0], font=fb, fill=(85, 255, 255))
     dr.text((56, 108), f"{date} · ratescout.ru", font=ff, fill=(150, 150, 150))
 
     def section(title, items, y0, col):
@@ -2142,14 +2145,18 @@ def make_daily_image(out_path, date, gainers, losers):
             _spark_draw(dr, _pwindow(HISTORY[slug], 1), (600, y + 8, 420, 40), col)
             y += 70
         return y
-    y = section("▲ Топ роста", gainers, 190, (85, 255, 85))
-    section("▼ Топ падения", losers, y + 40, (255, 95, 95))
-    dr.text((56, H - 64), "Полный обзор: ratescout.ru/obzor/sutki", font=ff, fill=(130, 130, 130))
+    y = section(lab[1], gainers, 190, (85, 255, 85))
+    section(lab[2], losers, y + 40, (255, 95, 95))
+    dr.text((56, H - 64), lab[3], font=ff, fill=(130, 130, 130))
     img.save(out_path, "PNG")
 
 
-def make_weekly_image(out_path, date, stbl, liq):
+def make_weekly_image(out_path, date, stbl, liq, lang="ru"):
     """Картинка для воскресной «Сводки»: стейблкоины (откл. от $1) + ликвидность. Без emoji (DejaVu их не рисует)."""
+    lab = (("[⇄] Сводка крипторынка", "Стейблкоины (откл. от $1)", "Ликвидность (обменников к USDT)",
+            "Полная сводка: ratescout.ru/svodka") if lang == "ru" else
+           ("[⇄] Crypto market summary", "Stablecoins (peg to $1)", "Liquidity (exchangers to USDT)",
+            "Full summary: ratescout.ru/en/svodka"))
     W, H = 1080, 1080
     img = Image.new("RGB", (W, H), (11, 11, 11))
     dr = ImageDraw.Draw(img)
@@ -2158,10 +2165,10 @@ def make_weekly_image(out_path, date, stbl, liq):
     fh = ImageFont.truetype(FONT_BOLD, 40)
     fr = ImageFont.truetype(FONT_BOLD, 34)
     ff = ImageFont.truetype(FONT_REG, 28)
-    dr.text((56, 44), "[⇄] Сводка крипторынка", font=fb, fill=(85, 255, 255))
+    dr.text((56, 44), lab[0], font=fb, fill=(85, 255, 255))
     dr.text((56, 108), f"{date} · ratescout.ru", font=ff, fill=(150, 150, 150))
     y = 200
-    dr.text((56, y), "Стейблкоины (откл. от $1)", font=fh, fill=(120, 200, 255))
+    dr.text((56, y), lab[1], font=fh, fill=(120, 200, 255))
     y += 66
     for s, p, _liq, _ in stbl:
         dev = (p - 1) * 100
@@ -2171,13 +2178,13 @@ def make_weekly_image(out_path, date, stbl, liq):
         dr.text((640, y), f"{'+' if dev >= 0 else ''}{dev:.2f}%", font=fr, fill=col)
         y += 62
     y += 44
-    dr.text((56, y), "Ликвидность (обменников к USDT)", font=fh, fill=(255, 220, 120))
+    dr.text((56, y), lab[2], font=fh, fill=(255, 220, 120))
     y += 66
     for s, _p, lq, _ in liq:
         dr.text((70, y), CUR[s]["ticker"], font=fr, fill=(235, 235, 235))
         dr.text((380, y), str(lq), font=fr, fill=(120, 220, 160))
         y += 62
-    dr.text((56, H - 64), "Полная сводка: ratescout.ru/svodka", font=ff, fill=(130, 130, 130))
+    dr.text((56, H - 64), lab[3], font=ff, fill=(130, 130, 130))
     img.save(out_path, "PNG")
 
 
@@ -2234,15 +2241,19 @@ def _digest_weekly(now_dt, out, fl=""):
     print("weekly: сводка готова")
 
 
-def _digest_buttons(primary):
-    """Инлайн-кнопки-ссылки под постом в Telegram (URL-кнопки — работают в канале без сервера).
-    primary — главная кнопка (обзор/сводка); дальше приложение, графики, все курсы."""
-    ptext = "📊 Обзор за сутки" if primary == "/obzor/sutki/" else "📋 Все валюты"
-    # прямая ссылка мини-аппа (t.me/<бот>/<short>) — URL-кнопка запускает Mini App нативно прямо из канала
+def _digest_buttons(primary, lang="ru"):
+    """Инлайн-кнопки-ссылки под постом в Telegram (URL-кнопки — работают в канале без сервера)."""
+    pref = "/en" if lang == "en" else ""
+    if lang == "ru":
+        ptext = "📊 Обзор за сутки" if primary.endswith("/obzor/sutki/") else "📋 Все валюты"
+        b_app, b_charts, b_rates = "🚀 Приложение", "📈 Графики", "💱 Все курсы"
+    else:
+        ptext = "📊 24h review" if primary.endswith("/obzor/sutki/") else "📋 All currencies"
+        b_app, b_charts, b_rates = "🚀 App", "📈 Charts", "💱 All rates"
     return [
         [{"text": ptext, "url": BASE_URL + primary},
-         {"text": "🚀 Приложение", "url": "https://t.me/RateScoutRUBot/ratescout_ru"}],
-        [{"text": "📈 Графики", "url": BASE_URL + "/grafiki/"}, {"text": "💱 Все курсы", "url": BASE_URL + "/"}],
+         {"text": b_app, "url": "https://t.me/RateScoutRUBot/ratescout_ru"}],
+        [{"text": b_charts, "url": BASE_URL + pref + "/grafiki/"}, {"text": b_rates, "url": BASE_URL + pref + "/"}],
         [{"text": "📰 Дзен", "url": "https://dzen.ru/ratescout"},
          {"text": "🅥 ВКонтакте", "url": "https://vk.com/ratescout"}],
     ]
@@ -2266,19 +2277,21 @@ def _full_list_items():
 def _fl_line(t, p, liq, chg):
     ps = fmt_rate(p) if p else "—"
     cs = (("+" if chg >= 0 else "") + f"{chg:.1f}%") if chg is not None else "—"
-    return f"{t}: {ps} · {cs} · {liq}об"
+    return f"{t}: {ps} · {cs} · {liq}"
 
 
-def full_list_text():
+def full_list_text(lang="ru"):
     it = _full_list_items()
-    return (f"📋 Все валюты ({len(it)}) — цена USDT · изм.24ч · обменников:\n\n"
-            + "\n".join(_fl_line(*x) for x in it))
+    h = (f"📋 Все валюты ({len(it)}) — цена USDT · изм.24ч · обменников:" if lang == "ru"
+         else f"📋 All currencies ({len(it)}) — price USDT · 24h · exchangers:")
+    return h + "\n\n" + "\n".join(_fl_line(*x) for x in it)
 
 
-def full_list_html():
+def full_list_html(lang="ru"):
     it = _full_list_items()
-    return ("<p><b>📋 Все валюты — цена USDT · изм.24ч · обменников:</b><br>"
-            + "<br>".join(_fl_line(*x) for x in it) + "</p>")
+    h = ("📋 Все валюты — цена USDT · изм.24ч · обменников:" if lang == "ru"
+         else "📋 All currencies — price USDT · 24h · exchangers:")
+    return "<p><b>" + h + "</b><br>" + "<br>".join(_fl_line(*x) for x in it) + "</p>"
 
 
 def write_daily_digest():
@@ -2320,6 +2333,88 @@ def write_daily_digest():
                "short": short, "title": f"Крипторынок за сутки · {now}"},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"daily: дайджест готов{' с картинкой' if img_url else ' (без картинки)'}")
+
+
+def write_daily_digest_en():
+    """Английский дайджест → dist/daily-en.json + daily-all-en.txt (для EN Telegram-канала). Ссылки на /en/."""
+    now_dt = datetime.now(timezone.utc)
+    fl = full_list_text("en")
+    open(os.path.join(DIST, "daily-all-en.txt"), "w", encoding="utf-8").write(fl)
+    out = os.path.join(DIST, "daily-en.json")
+    now = now_dt.strftime("%d.%m.%Y")
+    chans = ("📢 Our channels: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · "
+             "VK https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · "
+             "Blogger https://ratescout-ru.blogspot.com/")
+    if now_dt.weekday() == 6:                     # воскресенье — сводка
+        rows = _svodka_rows()
+        withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
+        best = {}
+        for r in rows:
+            tk = CUR[r[0]]["ticker"]
+            if tk in STABLE_T and tk != "USDT" and r[1] is not None and (tk not in best or r[2] > best[tk][2]):
+                best[tk] = r
+        stbl = sorted(best.values(), key=lambda r: abs(r[1] - 1), reverse=True)[:5]
+        liq = sorted(rows, key=lambda r: r[2], reverse=True)[:5]
+        if len(withchg) < 5 and not stbl:
+            json.dump({"has_data": False}, open(out, "w"))
+            return
+        if withchg:
+            avg = sum(r[3] for r in withchg) / len(withchg)
+            up = sum(1 for r in withchg if r[3] > 0)
+            dn = sum(1 for r in withchg if r[3] < 0)
+            mood = "🟢 up" if avg > 0.3 else "🔴 down" if avg < -0.3 else "⚪ mixed"
+            idx_line = f"Sentiment: {mood} (avg top-{len(withchg)}: {'+' if avg >= 0 else ''}{avg:.2f}%, ↑{up}/↓{dn})"
+        else:
+            idx_line = "Sentiment: collecting data"
+        allc = [r for r in rows if r[3] is not None]
+        agg = (f"📋 Currencies tracked: {len(CUR)}. Over 24h (crypto, {len(allc)}): "
+               f"{sum(1 for r in allc if r[3] > 0)} up, {sum(1 for r in allc if r[3] < 0)} down."
+               if allc else f"📋 Currencies tracked: {len(CUR)}.")
+        img_url = ""
+        if COVERS_OK:
+            make_weekly_image(os.path.join(DIST, "assets", "daily-week-en.png"), now, stbl, liq, lang="en")
+            img_url = f"{BASE_URL}/assets/daily-week-en.png"
+        lines = [f"🧭 Crypto market summary · {now}", "", agg, idx_line, ""]
+        if stbl:
+            lines.append("💵 Stablecoins (peg to $1):")
+            lines += [f"• {CUR[s]['ticker']} {p:.4f} ({'+' if (p - 1) >= 0 else ''}{(p - 1) * 100:.2f}%)"
+                      for s, p, _l, _c in stbl]
+            lines.append("")
+        lines.append("🏆 Liquidity (exchangers to USDT):")
+        lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
+        lines += ["", f"📊 Full table of all {len(CUR)} currencies → {BASE_URL}/en/svodka/", "", chans, "", "#crypto #rates"]
+        short = (f"🧭 Crypto market summary {now}\n{idx_line}\nFull summary → {BASE_URL}/en/svodka/\n#crypto")[:490]
+        json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
+                   "url": f"{BASE_URL}/en/svodka/", "buttons": _digest_buttons("/en/svodka/", "en"),
+                   "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all-en.txt",
+                   "short": short, "title": f"Crypto market summary · {now}"},
+                  open(out, "w", encoding="utf-8"), ensure_ascii=False)
+        print("daily-en: сводка готова")
+        return
+    movers = _daily_movers()                       # будни — топ движений
+    gainers = [m for m in movers if m[1] > 0][:5]
+    losers = sorted([m for m in movers if m[1] < 0], key=lambda x: x[1])[:5]
+    if len(movers) < 5 or not (gainers or losers):
+        json.dump({"has_data": False}, open(out, "w"))
+        return
+    img_url = ""
+    if COVERS_OK:
+        make_daily_image(os.path.join(DIST, "assets", "daily-24h-en.png"), now, gainers, losers, lang="en")
+        img_url = f"{BASE_URL}/assets/daily-24h-en.png"
+    lines = [f"📊 Crypto market · 24h · {now}", "", "📈 Top gainers:"]
+    lines += [f"• {CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers]
+    lines += ["", "📉 Top losers:"]
+    lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
+    lines += ["", f"Full review & charts → {BASE_URL}/en/obzor/sutki/", "", chans, "", "#crypto #rates"]
+    short = (f"📊 Crypto 24h {now}\n📈 " + " · ".join(f"{CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers[:3])
+             + "\n📉 " + " · ".join(f"{CUR[s]['ticker']} {p:.1f}%" for s, p in losers[:3])
+             + f"\nReview → {BASE_URL}/en/obzor/sutki/\n#crypto")[:490]
+    json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
+               "url": f"{BASE_URL}/en/obzor/sutki/", "buttons": _digest_buttons("/en/obzor/sutki/", "en"),
+               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all-en.txt",
+               "short": short, "title": f"Crypto market · 24h · {now}"},
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print("daily-en: дайджест готов")
 
 
 def render_dzen_rss():
@@ -3357,6 +3452,7 @@ def main():
     copy_assets()
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
+    write_daily_digest_en() # dist/daily-en.json для английского Telegram-канала
     render_dzen_rss()       # ссылается на обложки — после их генерации
     write_catalog_js(catjs)
     print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
