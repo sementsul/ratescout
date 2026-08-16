@@ -769,7 +769,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -785,7 +785,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -977,6 +977,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
     <li><a href="{PREF[lang]}/blog/">{tr(lang,'nav_blog')}</a></li>
     <li><a href="{PREF[lang]}/grafiki/">{tr(lang,'nav_charts')}</a></li>
+    <li><a href="{PREF[lang]}/obzor/nedelya/">{tr(lang,'nav_reviews')}</a></li>
     <li><a href="{PREF[lang]}/kursy/">{tr(lang,'nav_rates')}</a></li>
     <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
     <li><a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a></li>
@@ -1736,6 +1737,110 @@ def render_rss(lang):
     open(full, "w", encoding="utf-8").write(rss)
 
 
+REVIEWS = [("nedelya", 7, "неделю", "week"), ("mesyac", 30, "месяц", "month")]
+
+
+def _span_days(pts):
+    if len(pts) < 2:
+        return 0
+    return (_hist_time(pts[-1][0]) - _hist_time(pts[0][0])).days
+
+
+def _pwindow(pts, days):
+    cut = _hist_time(pts[-1][0]) - timedelta(days=days)
+    w = [p for p in pts if _hist_time(p[0]) >= cut]
+    return w if len(w) >= 2 else pts[-8:]
+
+
+def review_content(lang, days, ru_word, en_word):
+    """Авто-обзор рынка за период: топ роста/падения из истории (нужна история >= days у валюты).
+    Возвращает dict {h1, desc, date, has_data, inner} — используется и страницей, и лентой Дзена."""
+    pk = "7d" if days == 7 else "30d"
+    movers = []
+    for slug, pts in HISTORY.items():
+        if slug not in CUR or _span_days(pts) < days:
+            continue
+        pct = CHG_BY.get(slug, {}).get(pk)
+        if pct is not None:
+            movers.append((slug, pct))
+    now = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    if lang == "ru":
+        h1 = f"Обзор рынка криптовалют за {ru_word}"
+        desc = (f"Какие криптовалюты выросли и упали за {ru_word}: топ роста и падения с графиками. "
+                f"Данные мониторинга BestChange, на {now}.")
+    else:
+        h1 = f"Crypto market review — past {en_word}"
+        desc = (f"Which cryptocurrencies rose and fell over the past {en_word}: top gainers and losers with charts. "
+                f"BestChange data, as of {now}.")
+    if len(movers) < 5:                       # мало истории — честно показываем накопление, в Дзен не публикуем
+        note = (f"Идёт накопление статистики — обзор появится, когда наберётся история за {ru_word} по большему "
+                f"числу валют." if lang == "ru" else
+                f"Collecting data — the review will appear once enough history for the past {en_word} accumulates.")
+        return {"h1": h1, "desc": desc, "date": now, "has_data": False, "inner": f'<p class="updnote">{note}</p>'}
+    movers.sort(key=lambda x: x[1], reverse=True)
+    ups = [m for m in movers if m[1] > 0][:8]
+    downs = sorted([m for m in movers if m[1] < 0], key=lambda x: x[1])[:8]
+    n_up = sum(1 for m in movers if m[1] > 0)
+    n_dn = sum(1 for m in movers if m[1] < 0)
+    th = ("Валюта", "Изм.", "График") if lang == "ru" else ("Currency", "Chg.", "Chart")
+
+    def _rows(items):
+        out = ""
+        for slug, pct in items:
+            info = CUR[slug]
+            cls = "up" if pct >= 0 else "down"
+            sign = "+" if pct >= 0 else ""
+            out += (f'<tr><td><a href="{cpage(lang, slug)}">{info["name"]} '
+                    f'<span class="tk">{info["ticker"]}</span></a></td>'
+                    f'<td class="{cls}">{sign}{pct:.1f}%</td>'
+                    f'<td>{mini_spark(_pwindow(HISTORY[slug], days))}</td></tr>')
+        return out
+
+    def _tbl(items):
+        return (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+                f'<th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th></tr></thead>'
+                f'<tbody>{_rows(items)}</tbody></table></div>')
+    up_lead = ", ".join(f'{CUR[s]["ticker"]} (+{p:.1f}%)' for s, p in ups[:3])
+    dn_lead = ", ".join(f'{CUR[s]["ticker"]} ({p:.1f}%)' for s, p in downs[:3])
+    if lang == "ru":
+        summary = (f"За {ru_word} из {len(movers)} отслеживаемых валют выросли {n_up}, снизились {n_dn}. "
+                   f"Лидеры роста: {up_lead}. Сильнее всех упали: {dn_lead}. "
+                   f"Цены — в USDT по данным мониторинга BestChange.")
+        h_up, h_dn, allc = "Топ роста", "Топ падения", "Все графики по валютам →"
+    else:
+        summary = (f"Over the past {en_word}, of {len(movers)} tracked currencies {n_up} rose and {n_dn} fell. "
+                   f"Top gainers: {up_lead}. Biggest drops: {dn_lead}. Prices in USDT per BestChange monitoring.")
+        h_up, h_dn, allc = "Top gainers", "Top losers", "All currency charts →"
+    inner = (f'<p>{summary}</p>'
+             f'<h2 class="news">{h_up}</h2>{_tbl(ups)}'
+             f'<h2 class="news">{h_dn}</h2>{_tbl(downs)}'
+             f'<p class="related"><a href="{PREF[lang]}/grafiki/">{allc}</a></p>')
+    return {"h1": h1, "desc": desc, "date": now, "has_data": True, "inner": inner}
+
+
+def render_review(lang, sid, days, ru_word, en_word):
+    path = f"/obzor/{sid}/"
+    rc = review_content(lang, days, ru_word, en_word)
+    title = f"{rc['h1']} ({rc['date']}) | {S['name']}"
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": rc["h1"], "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": rc["h1"],
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {rc['h1']}</nav>
+    <h1>{rc['h1']}</h1>
+    {trust_bar(lang)}
+    {rc['inner']}
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, rc["desc"], path) + body)
+
+
 def cover_url(slug, lang):
     """URL обложки статьи: персональная PNG, если генерация доступна, иначе общий og-image."""
     if COVERS_OK:
@@ -1816,6 +1921,26 @@ def render_dzen_rss():
                   f"<description>{xml_escape(a.get('description',''))}</description>"
                   f"<enclosure url=\"{og}\" type=\"image/png\"/>"
                   f"<content:encoded><![CDATA[{html}]]></content:encoded>"
+                  "</item>")
+    # авто-обзоры за неделю/месяц — попадают в Дзен только при наличии данных; guid по периоду
+    # (ISO-неделя / год-месяц) → каждый новый период Дзен публикует как новый пост
+    now_dt = datetime.now(timezone.utc)
+    pubnow = format_datetime(now_dt)
+    for sid, d, rw, ew in REVIEWS:
+        rc = review_content("ru", d, rw, ew)
+        if not rc["has_data"]:
+            continue
+        url = f"{BASE_URL}/obzor/{sid}/"
+        pid = now_dt.strftime("%G-W%V") if d == 7 else now_dt.strftime("%Y-%m")
+        rhtml = rc["inner"].replace('href="/', f'href="{BASE_URL}/')
+        items += ("<item>"
+                  f"<title>{xml_escape(rc['h1'])} ({rc['date']})</title>"
+                  f"<link>{url}</link><guid isPermaLink=\"false\">{url}#{pid}</guid>"
+                  f"<pubDate>{pubnow}</pubDate>"
+                  f"<author>{xml_escape(author)} ({xml_escape(S['name'])})</author>"
+                  f"<description>{xml_escape(rc['desc'])}</description>"
+                  f"<enclosure url=\"{BASE_URL}/assets/og-image.png\" type=\"image/png\"/>"
+                  f"<content:encoded><![CDATA[{rhtml}]]></content:encoded>"
                   "</item>")
     feed = ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" '
@@ -2463,6 +2588,8 @@ def static_files():
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/obzor/nedelya/", "daily", "0.6"))
+        items.append(u_entry(pr + "/obzor/mesyac/", "weekly", "0.6"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -2618,6 +2745,8 @@ def main():
         render_charts_overview(lang)
         render_relative(lang)
         render_directions(lang)
+        for _sid, _d, _rw, _ew in REVIEWS:
+            render_review(lang, _sid, _d, _rw, _ew)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
