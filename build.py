@@ -1989,9 +1989,13 @@ def render_svodka(lang):
     liq_body = "".join(f'<tr><td>{_lnk(s)}</td><td>{liq}</td>'
                        f'<td>{fmt_rate(p) if p else "—"}</td></tr>' for s, p, liq, _ in liq_top)
 
-    # 3) Стейблкоины — отклонение цены в USDT от 1.0
-    stbl = [r for r in rows if CUR[r[0]]["ticker"] in STABLE_T and r[1] is not None]
-    stbl.sort(key=lambda r: abs(r[1] - 1))
+    # 3) Стейблкоины — отклонение цены в USDT от 1.0 (один тикер = одна строка, берём самую ликвидную сеть)
+    _best = {}
+    for r in rows:
+        tk = CUR[r[0]]["ticker"]
+        if tk in STABLE_T and tk != "USDT" and r[1] is not None and (tk not in _best or r[2] > _best[tk][2]):
+            _best[tk] = r        # USDT — база (=1), в peg-отчёт не берём
+    stbl = sorted(_best.values(), key=lambda r: abs(r[1] - 1))
     if stbl:
         stb_body = ""
         for s, p, _liq, _ in stbl:
@@ -2091,9 +2095,88 @@ def make_daily_image(out_path, date, gainers, losers):
     img.save(out_path, "PNG")
 
 
+def make_weekly_image(out_path, date, stbl, liq):
+    """Картинка для воскресной «Сводки»: стейблкоины (откл. от $1) + ликвидность. Без emoji (DejaVu их не рисует)."""
+    W, H = 1080, 1080
+    img = Image.new("RGB", (W, H), (11, 11, 11))
+    dr = ImageDraw.Draw(img)
+    dr.rectangle([0, 0, 16, H], fill=(51, 204, 51))
+    fb = ImageFont.truetype(FONT_BOLD, 46)
+    fh = ImageFont.truetype(FONT_BOLD, 40)
+    fr = ImageFont.truetype(FONT_BOLD, 34)
+    ff = ImageFont.truetype(FONT_REG, 28)
+    dr.text((56, 44), "[⇄] Сводка крипторынка", font=fb, fill=(85, 255, 255))
+    dr.text((56, 108), f"{date} · ratescout.ru", font=ff, fill=(150, 150, 150))
+    y = 200
+    dr.text((56, y), "Стейблкоины (откл. от $1)", font=fh, fill=(120, 200, 255))
+    y += 66
+    for s, p, _liq, _ in stbl:
+        dev = (p - 1) * 100
+        col = (85, 255, 85) if dev >= 0 else (255, 95, 95)
+        dr.text((70, y), CUR[s]["ticker"], font=fr, fill=(235, 235, 235))
+        dr.text((380, y), f"{p:.4f}", font=fr, fill=(200, 200, 200))
+        dr.text((640, y), f"{'+' if dev >= 0 else ''}{dev:.2f}%", font=fr, fill=col)
+        y += 62
+    y += 44
+    dr.text((56, y), "Ликвидность (обменников к USDT)", font=fh, fill=(255, 220, 120))
+    y += 66
+    for s, _p, lq, _ in liq:
+        dr.text((70, y), CUR[s]["ticker"], font=fr, fill=(235, 235, 235))
+        dr.text((380, y), str(lq), font=fr, fill=(120, 220, 160))
+        y += 62
+    dr.text((56, H - 64), "Полная сводка: ratescout.ru/svodka", font=ff, fill=(130, 130, 130))
+    img.save(out_path, "PNG")
+
+
+def _digest_weekly(now_dt, out):
+    """Воскресная «Сводка» для Telegram: настроение + стейблкоины + ликвидность (вместо топ-движений)."""
+    rows = _svodka_rows()
+    withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
+    best = {}
+    for r in rows:
+        tk = CUR[r[0]]["ticker"]
+        if tk in STABLE_T and tk != "USDT" and r[1] is not None and (tk not in best or r[2] > best[tk][2]):
+            best[tk] = r        # USDT — база (=1), не берём
+    stbl = sorted(best.values(), key=lambda r: abs(r[1] - 1), reverse=True)[:5]
+    liq = sorted(rows, key=lambda r: r[2], reverse=True)[:5]
+    if len(withchg) < 5 and not stbl:
+        json.dump({"has_data": False}, open(out, "w"))
+        print("weekly: мало данных — сводка пропущена")
+        return
+    now = now_dt.strftime("%d.%m.%Y")
+    if withchg:
+        avg = sum(r[3] for r in withchg) / len(withchg)
+        up = sum(1 for r in withchg if r[3] > 0)
+        dn = sum(1 for r in withchg if r[3] < 0)
+        mood = "🟢 в плюсе" if avg > 0.3 else "🔴 в минусе" if avg < -0.3 else "⚪ смешанный"
+        idx_line = f"Настроение: {mood} (средний ход топ-{len(withchg)}: {'+' if avg >= 0 else ''}{avg:.2f}%, ↑{up}/↓{dn})"
+    else:
+        idx_line = "Настроение: данные накапливаются"
+    img_url = ""
+    if COVERS_OK:
+        make_weekly_image(os.path.join(DIST, "assets", "daily-week.png"), now, stbl, liq)
+        img_url = f"{BASE_URL}/assets/daily-week.png"
+    lines = [f"🧭 Сводка крипторынка · {now}", "", idx_line, ""]
+    if stbl:
+        lines.append("💵 Стейблкоины (откл. от $1):")
+        lines += [f"• {CUR[s]['ticker']} {p:.4f} ({'+' if (p - 1) >= 0 else ''}{(p - 1) * 100:.2f}%)"
+                  for s, p, _l, _c in stbl]
+        lines.append("")
+    lines.append("🏆 Ликвидность (обменников к USDT):")
+    lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
+    lines += ["", f"Полная сводка → {BASE_URL}/svodka/", "", "#крипта #курсы #сводка"]
+    json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
+               "url": f"{BASE_URL}/svodka/"}, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print("weekly: сводка готова")
+
+
 def write_daily_digest():
-    """Готовит дневной дайджест для Telegram: dist/daily.json {caption,image,url} + картинка daily-24h.png.
-    Постит потом отдельный workflow (tg_daily.py). Если данных мало — has_data:false, публикация пропускается."""
+    """Дайджест для Telegram: dist/daily.json {caption,image,url} + картинка. По воскресеньям — «Сводка»,
+    в будни — топ движений за сутки. Постит отдельный workflow (tg_daily.py). Мало данных → has_data:false."""
+    now_dt = datetime.now(timezone.utc)
+    if now_dt.weekday() == 6:            # воскресенье — «Сводка недели» вместо топ-движений (разнообразие)
+        _digest_weekly(now_dt, os.path.join(DIST, "daily.json"))
+        return
     movers = _daily_movers()
     gainers = [m for m in movers if m[1] > 0][:5]
     losers = sorted([m for m in movers if m[1] < 0], key=lambda x: x[1])[:5]
