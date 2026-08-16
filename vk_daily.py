@@ -69,11 +69,13 @@ def main():
         try:
             img = urllib.request.urlopen(d["image"], timeout=90).read()
             att = upload_photo(img)
-        except Exception as e:                   # noqa: BLE001 — без картинки всё равно опубликуем
-            print(f"фото в VK не загрузилось ({e}) — публикую без него")
+        except Exception as e:                   # noqa: BLE001 — токен сообщества не может грузить фото
+            print(f"фото в VK не загрузилось ({e}) — прикреплю ссылку-карточку")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
-    if att:
-        params["attachments"] = att
+    # фото (если получилось) ИЛИ ссылка на страницу — VK сам построит карточку с превью
+    attach = att or d.get("url", "")
+    if attach:
+        params["attachments"] = attach
     try:
         res = vk("wall.post", params)
         print(f"опубликовано, post_id={res.get('post_id')}")
