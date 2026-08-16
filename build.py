@@ -13,6 +13,28 @@ from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape as xml_escape
 
+# Генерация обложек статей (Pillow). Если библиотеки/шрифтов нет — мягкий фолбэк на общий og-image,
+# сборка НЕ должна падать (ежечасный CI). Флаг COVERS_OK решает, генерим ли персональные обложки.
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    _COVER_LIB = True
+except ImportError:
+    _COVER_LIB = False
+
+
+def _find_font(name):
+    for d in ("/usr/share/fonts/truetype/dejavu/", "/usr/share/fonts/dejavu/",
+              "/usr/share/fonts/TTF/", "/Library/Fonts/"):
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            return p
+    return None
+
+
+FONT_BOLD = _find_font("DejaVuSans-Bold.ttf")
+FONT_REG = _find_font("DejaVuSans.ttf")
+COVERS_OK = _COVER_LIB and bool(FONT_BOLD) and bool(FONT_REG)
+
 try:
     import markdown as _md
     def md_render(s):
@@ -895,8 +917,9 @@ def hreflangs(path):
     return "\n".join(tags)
 
 
-def head(lang, title, desc, path, extra=""):
+def head(lang, title, desc, path, extra="", og_image=None):
     canonical = f"{BASE_URL}{PREF[lang]}{path}"
+    og = og_image or f"{BASE_URL}/assets/og-image.png"
     # автообнаружение RSS: RU — полная лента для Дзена/агрегаторов, EN — англоблоговый фид
     feed_href = f"{BASE_URL}/dzen.xml" if lang == "ru" else f"{BASE_URL}/en/blog/rss.xml"
     feed_title = f"{S['name']} — блог" if lang == "ru" else f"{S['name']} — Blog"
@@ -916,13 +939,13 @@ def head(lang, title, desc, path, extra=""):
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="{canonical}">
 <meta property="og:site_name" content="{S['name']}">
-<meta property="og:image" content="{BASE_URL}/assets/og-image.png">
+<meta property="og:image" content="{og}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
-<meta name="twitter:image" content="{BASE_URL}/assets/og-image.png">
+<meta name="twitter:image" content="{og}">
 <meta name="robots" content="index,follow">
 <meta name="yandex-verification" content="4b39ef5046fa7e8a">
 <meta name="zen-verification" content="AvXwV96CkkGrgi2Dn4bnu0c3gAx52ezYYqNU79rdSigVe2IAJhfqL8E512dfovL5">
@@ -1713,16 +1736,71 @@ def render_rss(lang):
     open(full, "w", encoding="utf-8").write(rss)
 
 
+def cover_url(slug, lang):
+    """URL обложки статьи: персональная PNG, если генерация доступна, иначе общий og-image."""
+    if COVERS_OK:
+        return f"{BASE_URL}/assets/covers/{'en/' if lang == 'en' else ''}{slug}.png"
+    return f"{BASE_URL}/assets/og-image.png"
+
+
+def make_cover(out_path, title):
+    """Рисует обложку 1200×630 с заголовком статьи в фирменном тёмном стиле."""
+    W, H = 1200, 630
+    img = Image.new("RGB", (W, H), (11, 11, 11))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, 16, H], fill=(51, 204, 51))                 # зелёная акцент-полоса слева
+    d.rectangle([0, 0, W - 1, H - 1], outline=(34, 90, 34), width=3)
+    f_brand = ImageFont.truetype(FONT_BOLD, 34)
+    f_title = ImageFont.truetype(FONT_BOLD, 60)
+    f_foot = ImageFont.truetype(FONT_REG, 28)
+    d.text((60, 52), "[⇄] RATESCOUT.RU", font=f_brand, fill=(85, 255, 255))
+    # перенос заголовка по словам под ширину
+    margin, maxw, lh = 60, W - 120, 76
+    words, lines, cur = title.split(), [], ""
+    for w in words:
+        t = (cur + " " + w).strip()
+        if d.textlength(t, font=f_title) <= maxw:
+            cur = t
+        else:
+            if cur:
+                lines.append(cur)
+            cur = w
+    if cur:
+        lines.append(cur)
+    lines = lines[:5]
+    y = (H - lh * len(lines)) // 2 + 8
+    for ln in lines:
+        d.text((margin, y), ln, font=f_title, fill=(240, 240, 240))
+        y += lh
+    d.text((60, H - 72), "Гайды по обмену криптовалют и валют", font=f_foot, fill=(130, 130, 130))
+    img.save(out_path, "PNG")
+
+
+def write_covers():
+    """Генерит персональную обложку для каждой статьи блога (RU и EN). Без Pillow/шрифтов — пропускает."""
+    if not COVERS_OK:
+        print("обложки: Pillow/шрифты недоступны — использую общий og-image")
+        return
+    n = 0
+    for lang in LANGS:
+        d = os.path.join(DIST, "assets", "covers", "en" if lang == "en" else "")
+        os.makedirs(d, exist_ok=True)
+        for a in ARTS[lang]:
+            make_cover(os.path.join(d, f"{a['slug']}.png"), a["title"])
+            n += 1
+    print(f"обложки: сгенерировано {n}")
+
+
 def render_dzen_rss():
     """RSS-лента для авто-публикации в Дзене (RU): полный текст в content:encoded, абсолютные ссылки, обложка.
     Дзен требует именно полный HTML статьи, а не анонс; относительные ссылки на внешней платформе не работают."""
     arts = ARTS["ru"]
     if not arts:
         return
-    og = f"{BASE_URL}/assets/og-image.png"
     author = S.get("owner_email", "") or "info@ratescout.ru"
     items = ""
     for a in arts:
+        og = cover_url(a["slug"], "ru")
         try:
             y, m, d = (int(x) for x in a.get("date", "").split("-"))
             pub = format_datetime(datetime(y, m, d, tzinfo=timezone.utc))
@@ -1755,9 +1833,11 @@ def render_article(a, lang):
     path = f"/blog/{a['slug']}/"
     title = f"{a['title']} | {S['name']}"
     desc = a.get("description", "")
+    cover = cover_url(a["slug"], lang)
     art_ld = jsonld({"@context": "https://schema.org", "@type": "Article", "headline": a["title"],
                      "description": desc, "datePublished": a.get("date", ""),
                      "dateModified": a.get("modified", a.get("date", "")), "inLanguage": LOCALE[lang],
+                     "image": cover,
                      "author": {"@type": "Organization", "name": S["name"]},
                      "publisher": {"@type": "Organization", "name": S["name"],
                                    "logo": {"@type": "ImageObject", "url": f"{BASE_URL}/assets/og-image.png"}},
@@ -1773,7 +1853,7 @@ def render_article(a, lang):
 </div>
 {art_ld}
 {footer(lang)}"""
-    write(lang, path, head(lang, title, desc, path) + body)
+    write(lang, path, head(lang, title, desc, path, og_image=cover) + body)
 
 
 FAQ_ITEMS = {
@@ -2547,9 +2627,10 @@ def main():
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
     render_404()
-    render_dzen_rss()
     static_files()
     copy_assets()
+    write_covers()          # после copy_assets (он rmtree-ит dist/assets)
+    render_dzen_rss()       # ссылается на обложки — после их генерации
     write_catalog_js(catjs)
     print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
     print(f"   asset ver: css={VER['css']} js={VER['js']} cat={VER['cat']}")

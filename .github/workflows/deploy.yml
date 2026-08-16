@@ -35,8 +35,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build deps (markdown для блога)
-        run: pip install --quiet markdown
+      - name: Install build deps (markdown для блога, Pillow + шрифт DejaVu для обложек статей)
+        run: |
+          pip install --quiet markdown Pillow
+          sudo apt-get install -y --no-install-recommends fonts-dejavu-core || echo "шрифт уже есть/пропущен"
 
       - name: Fetch rates (key from Secret — NOT committed, NOT in output)
         env:

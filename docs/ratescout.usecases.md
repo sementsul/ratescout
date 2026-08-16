@@ -532,6 +532,17 @@ activate старые кеши стираются.
   Статус: ✅ XML валиден, 23 item с content:encoded+обложкой, 0 относительных ссылок. Также в `head()` добавлено
   автообнаружение RSS `<link rel="alternate" application/rss+xml>`: RU→/dzen.xml, EN→/en/blog/rss.xml (все стр., проверено).
 
+## UC-63 — Персональная обложка для каждой статьи
+`write_covers()` (Pillow) рисует PNG 1200×630 с заголовком статьи в фирменном тёмном стиле → `dist/assets/covers/<slug>.png`
+(RU) и `covers/en/<slug>.png` (EN). `cover_url()` отдаёт её; при отсутствии Pillow/шрифта — мягкий фолбэк на общий
+og-image (COVERS_OK, сборка не падает). Обложка идёт в: `head(og_image=…)` (og:image/twitter:image статьи),
+Article-схему (`image`), enclosure в `dzen.xml`. Генерация ПОСЛЕ copy_assets (он rmtree-ит assets). CI: +Pillow +fonts-dejavu-core.
+- **Предусловие:** Pillow+шрифт. **Шаги:** собрать → открыть обложку/статью/ленту.
+- **Ожидаемо:** у каждой статьи своя PNG-обложка; в dzen.xml enclosure персональные; og:image статьи = обложка.
+- **Радиус:** `head` (og_image), `render_article`, `render_dzen_rss`, новые `write_covers/make_cover/cover_url`, deploy.yml;
+  соседнее — не-статьи (og-image общий, без изменений). Статус: ✅ 46 обложек 1200×630, dzen enclosure персональные,
+  0 общих og в ленте, кириллица/перенос корректны (визуально проверено).
+
 ## Открытые пункты
 - Дизайн-тема не выбрана (оцениваем референсы; old-hard.ru как основной — отклонён: ретро вредит доверию/конверсии/SEO).
 - Поиск матчит имена как в дампе BestChange (латиница) — кириллические названия банков не находятся.
