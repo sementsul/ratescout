@@ -1,0 +1,35 @@
+name: Watchdog
+
+# Сторож проекта: раз в день проверяет здоровье живого сайта (главная/sitemap/RSS/свежесть курсов)
+# и запас статей в очереди. Если что-то не так — шлёт алерт владельцу в Telegram (если задан ALERT_CHAT_ID)
+# И падает (красный запуск) — тогда GitHub сам присылает письмо владельцу. Всё зелёное — тишина.
+#
+# Секреты (необязательные — без них работает алерт письмом от GitHub при падении):
+#   TELEGRAM_TOKEN — тот же бот, что у каналов
+#   ALERT_CHAT_ID  — id ЛИЧНОГО чата владельца с ботом (напиши боту, узнай chat_id, положи в Secrets)
+
+on:
+  schedule:
+    - cron: "45 6 * * *"      # ~09:45 МСК, до дневных дайджестов
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Health check
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 watchdog.py
