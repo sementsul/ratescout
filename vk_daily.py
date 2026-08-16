@@ -72,10 +72,8 @@ def main():
         except Exception as e:                   # noqa: BLE001 — токен сообщества не может грузить фото
             print(f"фото в VK не загрузилось ({e}) — прикреплю ссылку-карточку")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
-    # фото (если получилось) ИЛИ ссылка на страницу — VK сам построит карточку с превью
-    attach = att or d.get("url", "")
-    if attach:
-        params["attachments"] = attach
+    if att:                                  # фото только если реально загрузилось (нужен user-токен);
+        params["attachments"] = att          # иначе просто текст — VK сам сделает превью из первой ссылки
     try:
         res = vk("wall.post", params)
         print(f"опубликовано, post_id={res.get('post_id')}")
