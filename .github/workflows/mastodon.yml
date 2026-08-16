@@ -1,0 +1,31 @@
+name: Mastodon daily digest
+
+# Раз в день постит короткую сводку в Mastodon (Fediverse). Данные — с боевого сайта (daily.json).
+# Секреты: MASTODON_URL (база инстанса, напр. https://mastodon.social), MASTODON_TOKEN (write:statuses, write:media).
+# Без секретов — сухой прогон.
+
+on:
+  schedule:
+    - cron: "16 9 * * *"      # ~12:16 МСК
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mastodon-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Post daily digest to Mastodon
+        env:
+          MASTODON_URL: ${{ secrets.MASTODON_URL }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+        run: python3 mastodon_daily.py

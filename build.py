@@ -2224,9 +2224,12 @@ def _digest_weekly(now_dt, out, fl=""):
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
               "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #сводка"]
+    short = (f"🧭 Сводка крипторынка {now}\n{idx_line}\n"
+             f"Полная сводка → {BASE_URL}/svodka/\n#крипта #курсы")[:490]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/"),
-               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt"},
+               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt",
+               "short": short, "title": f"Сводка крипторынка · {now}"},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print("weekly: сводка готова")
 
@@ -2307,9 +2310,14 @@ def write_daily_digest():
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
               "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #обзор"]
+    short = (f"📊 Крипторынок за сутки {now}\n📈 "
+             + " · ".join(f"{CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers[:3])
+             + "\n📉 " + " · ".join(f"{CUR[s]['ticker']} {p:.1f}%" for s, p in losers[:3])
+             + f"\nОбзор → {BASE_URL}/obzor/sutki/\n#крипта #курсы")[:490]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/"),
-               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt"},
+               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt",
+               "short": short, "title": f"Крипторынок за сутки · {now}"},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"daily: дайджест готов{' с картинкой' if img_url else ' (без картинки)'}")
 
