@@ -2223,7 +2223,7 @@ def _digest_weekly(now_dt, out):
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
-              "", "#крипта #курсы #сводка"]
+              "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
@@ -2239,6 +2239,7 @@ def _digest_buttons(primary):
         [{"text": ptext, "url": BASE_URL + primary},
          {"text": "🚀 Приложение", "url": "https://t.me/RateScoutRUBot/ratescout_ru"}],
         [{"text": "📈 Графики", "url": BASE_URL + "/grafiki/"}, {"text": "💱 Все курсы", "url": BASE_URL + "/"}],
+        [{"text": "📰 Мы в Дзене", "url": "https://dzen.ru/ratescout"}],
     ]
 
 
@@ -2267,7 +2268,8 @@ def write_daily_digest():
     lines += [f"• {CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers]
     lines += ["", "📉 Топ падения:"]
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
-    lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/", "", "#крипта #курсы #обзор"]
+    lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
+              "📰 Мы в Дзене: https://dzen.ru/ratescout", "", "#крипта #курсы #обзор"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
                "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/")},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
