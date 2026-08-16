@@ -1709,6 +1709,44 @@ def render_rss(lang):
     open(full, "w", encoding="utf-8").write(rss)
 
 
+def render_dzen_rss():
+    """RSS-лента для авто-публикации в Дзене (RU): полный текст в content:encoded, абсолютные ссылки, обложка.
+    Дзен требует именно полный HTML статьи, а не анонс; относительные ссылки на внешней платформе не работают."""
+    arts = ARTS["ru"]
+    if not arts:
+        return
+    og = f"{BASE_URL}/assets/og-image.png"
+    author = S.get("owner_email", "") or "info@ratescout.ru"
+    items = ""
+    for a in arts:
+        try:
+            y, m, d = (int(x) for x in a.get("date", "").split("-"))
+            pub = format_datetime(datetime(y, m, d, tzinfo=timezone.utc))
+        except (ValueError, TypeError):
+            pub = ""
+        url = f"{BASE_URL}/blog/{a['slug']}/"
+        html = a["html"].replace('href="/', f'href="{BASE_URL}/')   # относительные ссылки → абсолютные
+        items += ("<item>"
+                  f"<title>{xml_escape(a['title'])}</title>"
+                  f"<link>{url}</link><guid isPermaLink=\"true\">{url}</guid>"
+                  + (f"<pubDate>{pub}</pubDate>" if pub else "")
+                  + f"<author>{xml_escape(author)} ({xml_escape(S['name'])})</author>"
+                  f"<description>{xml_escape(a.get('description',''))}</description>"
+                  f"<enclosure url=\"{og}\" type=\"image/png\"/>"
+                  f"<content:encoded><![CDATA[{html}]]></content:encoded>"
+                  "</item>")
+    feed = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" '
+            'xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'
+            f'<title>{xml_escape(S["name"])} — блог</title>'
+            f'<link>{BASE_URL}/blog/</link>'
+            '<description>Гайды по обмену криптовалют и валют.</description>'
+            '<language>ru</language>'
+            f'<atom:link href="{BASE_URL}/dzen.xml" rel="self" type="application/rss+xml"/>'
+            f'{items}</channel></rss>')
+    open(os.path.join(DIST, "dzen.xml"), "w", encoding="utf-8").write(feed)
+
+
 def render_article(a, lang):
     path = f"/blog/{a['slug']}/"
     title = f"{a['title']} | {S['name']}"
@@ -2505,6 +2543,7 @@ def main():
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
     render_404()
+    render_dzen_rss()
     static_files()
     copy_assets()
     write_catalog_js(catjs)
