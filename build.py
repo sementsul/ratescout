@@ -2881,6 +2881,20 @@ input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--bd
  background:var(--tg-theme-button-color,var(--acc));color:var(--tg-theme-button-text-color,#001500);font-weight:600;font-size:14px}
 .links a.sec{background:transparent;border:1px solid var(--bd);color:var(--tg-theme-text-color,var(--fg))}
 .foot{color:var(--mut);font-size:11px;text-align:center;margin-top:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{background:var(--tg-theme-bg-color,#000);border:1px solid var(--bd);border-radius:20px;
+ padding:5px 10px;font-size:13px;cursor:pointer}
+.chip b{color:var(--mut);margin-left:6px;font-weight:400}
+.results{list-style:none;margin:8px 0 0;padding:0}
+.results li{display:flex;align-items:center;gap:6px;padding:9px 4px;border-top:1px solid var(--bd);cursor:pointer}
+.results li span{color:var(--mut);font-size:12px}
+.results li b{margin-left:auto;font-weight:700}
+.results li b.up{color:#3c3}.results li b.dn{color:#e55}
+.mut2{color:var(--mut);border:0!important;cursor:default}
+.tabs{display:flex;gap:8px;margin-bottom:4px}
+.tabs button{flex:1;padding:9px;border:1px solid var(--bd);border-radius:9px;background:transparent;
+ color:var(--tg-theme-text-color,var(--fg));font-size:13px;cursor:pointer}
+.tabs button.on{background:var(--acc);color:#001500;border-color:var(--acc);font-weight:700}
 </style>
 </head>
 <body>
@@ -2894,8 +2908,23 @@ input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--bd
     <div><label>Отдаёте</label><select id="from"></select></div>
     <div><label>Получаете</label><select id="to"></select></div>
   </div>
-  <button class="swap" id="swap">⇅ поменять местами</button>
+  <div class="row">
+    <button class="swap" id="swap">⇅ поменять</button>
+    <button class="swap" id="fav">☆ в избранное</button>
+  </div>
   <div class="res" id="res">—</div>
+  <div class="chips" id="favs"></div>
+</div>
+
+<div class="card">
+  <label>Поиск валюты</label>
+  <input id="q" type="search" placeholder="BTC, USDT, Sberbank…" autocomplete="off">
+  <ul class="results" id="qres"></ul>
+</div>
+
+<div class="card">
+  <div class="tabs"><button id="tg-up" class="on">▲ Рост за сутки</button><button id="tg-dn">▼ Падение</button></div>
+  <ul class="results" id="movers"></ul>
 </div>
 
 <div class="links">
@@ -2907,13 +2936,15 @@ input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--bd
 <p class="foot">Справочный сервис (мониторинг курсов), не обменный пункт. Курсы меняются.</p>
 
 <script>
+var BASE='{{BASE}}';
 var tg=window.Telegram&&window.Telegram.WebApp;
 if(tg){try{tg.ready();tg.expand();}catch(e){}}
-// внешние ссылки открываем через Telegram (в приложении), а не поверх мини-аппа
+function open_(url){ if(tg&&tg.openLink){tg.openLink(url);}else{location.href=url;} }
 document.querySelectorAll('a[data-ext]').forEach(function(a){
-  a.addEventListener('click',function(ev){ if(tg&&tg.openLink){ev.preventDefault();tg.openLink(a.href);} });
+  a.addEventListener('click',function(ev){ev.preventDefault();open_(a.href);});
 });
-var CUR={},A=document.getElementById('amt'),F=document.getElementById('from'),T=document.getElementById('to'),R=document.getElementById('res');
+function openCur(s){ open_(BASE+'/valuta/'+s+'/'); }
+var CUR={},KS=[],A=document.getElementById('amt'),F=document.getElementById('from'),T=document.getElementById('to'),R=document.getElementById('res');
 function fmt(v){if(!isFinite(v))return '—';
  if(v>=1000)return v.toLocaleString('ru-RU',{maximumFractionDigits:0});
  if(v>=1)return v.toLocaleString('ru-RU',{maximumFractionDigits:2});
@@ -2924,13 +2955,41 @@ function calc(){var f=CUR[F.value],t=CUR[T.value],a=parseFloat(A.value);
  var r=f.p/t.p;R.innerHTML=fmt(a*r)+' '+t.t+'<small>1 '+f.t+' = '+fmt(r)+' '+t.t+'</small>';}
 [A,F,T].forEach(function(el){el.addEventListener('input',calc);el.addEventListener('change',calc);});
 document.getElementById('swap').addEventListener('click',function(){var x=F.value;F.value=T.value;T.value=x;calc();});
-fetch('{{BASE}}/prices.json').then(function(r){return r.json();}).then(function(j){
- CUR=j.cur;var ks=Object.keys(CUR).sort(function(a,b){return CUR[a].n.localeCompare(CUR[b].n);});
- var opt=ks.map(function(s){return '<option value="'+s+'">'+CUR[s].n+' ('+CUR[s].t+')</option>';}).join('');
+// избранные пары (localStorage)
+function favLoad(){try{return JSON.parse(localStorage.getItem('rs_fav')||'[]');}catch(e){return [];}}
+function favSave(a){try{localStorage.setItem('rs_fav',JSON.stringify(a.slice(0,8)));}catch(e){}}
+function favRender(){var a=favLoad(),el=document.getElementById('favs');
+ el.innerHTML=a.map(function(p,i){var f=CUR[p.f],t=CUR[p.t];if(!f||!t)return '';
+  return '<span class="chip" data-i="'+i+'">'+f.t+'→'+t.t+'<b data-x="'+i+'">×</b></span>';}).join('');
+ el.querySelectorAll('.chip').forEach(function(c){c.addEventListener('click',function(ev){
+   var a=favLoad();if(ev.target.hasAttribute('data-x')){a.splice(+ev.target.getAttribute('data-x'),1);favSave(a);favRender();return;}
+   var p=a[+c.getAttribute('data-i')];F.value=p.f;T.value=p.t;calc();});});}
+document.getElementById('fav').addEventListener('click',function(){var a=favLoad();
+ if(!a.some(function(p){return p.f===F.value&&p.t===T.value;})){a.unshift({f:F.value,t:T.value});favSave(a);favRender();}});
+// поиск валют
+var Q=document.getElementById('q'),QR=document.getElementById('qres');
+Q.addEventListener('input',function(){var v=Q.value.trim().toLowerCase();
+ if(!v){QR.innerHTML='';return;}
+ var hits=KS.filter(function(s){var c=CUR[s];return c.n.toLowerCase().indexOf(v)>=0||c.t.toLowerCase().indexOf(v)>=0||s.indexOf(v)>=0;}).slice(0,12);
+ QR.innerHTML=hits.map(function(s){return '<li data-s="'+s+'">'+CUR[s].n+' <span>'+CUR[s].t+'</span></li>';}).join('');
+ QR.querySelectorAll('li').forEach(function(li){li.addEventListener('click',function(){openCur(li.getAttribute('data-s'));});});});
+// топ за сутки
+function movers(up){var arr=KS.filter(function(s){return CUR[s].c==='kriptovalyuty'&&typeof CUR[s].g==='number';})
+  .sort(function(a,b){return up?CUR[b].g-CUR[a].g:CUR[a].g-CUR[b].g;}).slice(0,7);
+ var el=document.getElementById('movers');
+ if(!arr.length){el.innerHTML='<li class="mut2">Данные накапливаются</li>';return;}
+ el.innerHTML=arr.map(function(s){var g=CUR[s].g,c=g>=0?'up':'dn';
+  return '<li data-s="'+s+'">'+CUR[s].n+' <span>'+CUR[s].t+'</span><b class="'+c+'">'+(g>=0?'+':'')+g+'%</b></li>';}).join('');
+ el.querySelectorAll('li[data-s]').forEach(function(li){li.addEventListener('click',function(){openCur(li.getAttribute('data-s'));});});}
+document.getElementById('tg-up').addEventListener('click',function(){this.classList.add('on');document.getElementById('tg-dn').classList.remove('on');movers(true);});
+document.getElementById('tg-dn').addEventListener('click',function(){this.classList.add('on');document.getElementById('tg-up').classList.remove('on');movers(false);});
+fetch(BASE+'/prices.json').then(function(r){return r.json();}).then(function(j){
+ CUR=j.cur;KS=Object.keys(CUR).sort(function(a,b){return CUR[a].n.localeCompare(CUR[b].n);});
+ var opt=KS.map(function(s){return '<option value="'+s+'">'+CUR[s].n+' ('+CUR[s].t+')</option>';}).join('');
  F.innerHTML=opt;T.innerHTML=opt;
- F.value=CUR['bitcoin']?'bitcoin':ks[0];
- T.value=CUR['sberbank']?'sberbank':(CUR['tether-trc20']?'tether-trc20':ks[1]);
- calc();
+ F.value=CUR['bitcoin']?'bitcoin':KS[0];
+ T.value=CUR['sberbank']?'sberbank':(CUR['tether-trc20']?'tether-trc20':KS[1]);
+ calc();favRender();movers(true);
 }).catch(function(){R.textContent='Не удалось загрузить курсы';});
 </script>
 </body></html>"""
@@ -3051,7 +3110,11 @@ def write_prices():
             continue
         p, _ = _usdt_price(slug)
         if p is not None:
-            m[slug] = {"n": info["name"], "t": info["ticker"], "c": CAT_SLUG.get(info["category"], "prochee"), "p": p}
+            e = {"n": info["name"], "t": info["ticker"], "c": CAT_SLUG.get(info["category"], "prochee"), "p": p}
+            g = CHG_BY.get(slug, {}).get("24h")     # изм. за 24ч (для «топ за сутки» в мини-аппе)
+            if g is not None and abs(g) <= 300:
+                e["g"] = round(g, 1)
+            m[slug] = e
     ut = CUR.get("tether-trc20")
     if ut:
         m["tether-trc20"] = {"n": ut["name"], "t": ut["ticker"], "c": CAT_SLUG.get(ut["category"], "prochee"), "p": 1.0}
