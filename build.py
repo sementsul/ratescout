@@ -2223,7 +2223,7 @@ def _digest_weekly(now_dt, out, fl=""):
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
-              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru", "", "#крипта #курсы #сводка"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://ratescout-ru.blogspot.com/", "", "#крипта #курсы #сводка"]
     short = (f"🧭 Сводка крипторынка {now}\n{idx_line}\n"
              f"Полная сводка → {BASE_URL}/svodka/\n#крипта #курсы")[:490]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
@@ -2309,7 +2309,7 @@ def write_daily_digest():
     lines += ["", "📉 Топ падения:"]
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
-              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru", "", "#крипта #курсы #обзор"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://ratescout-ru.blogspot.com/", "", "#крипта #курсы #обзор"]
     short = (f"📊 Крипторынок за сутки {now}\n📈 "
              + " · ".join(f"{CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers[:3])
              + "\n📉 " + " · ".join(f"{CUR[s]['ticker']} {p:.1f}%" for s, p in losers[:3])
@@ -2332,7 +2332,8 @@ def render_dzen_rss():
     tg_promo = ('<p>📢 Ежедневные курсы и обзор рынка — в наших каналах: '
                 'Telegram <a href="https://t.me/ratescout_kurs">t.me/ratescout_kurs</a> · '
                 'ВКонтакте <a href="https://vk.com/ratescout">vk.com/ratescout</a> · '
-                'Mastodon <a href="https://mastodon.social/@ratescout_ru">@ratescout_ru</a></p>')
+                'Mastodon <a href="https://mastodon.social/@ratescout_ru">@ratescout_ru</a> · '
+                'Blogger <a href="https://ratescout-ru.blogspot.com/">ratescout-ru.blogspot.com</a></p>')
     items = ""
     for a in arts:
         og = cover_url(a["slug"], "ru")

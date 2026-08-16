@@ -23,7 +23,8 @@ CAPTION = (
     "🚀 Мини-приложение: конвертер, поиск валют, топ за сутки.\n"
     "📰 Мы также в Дзене: https://dzen.ru/ratescout\n"
     "🅥 И во ВКонтакте: https://vk.com/ratescout\n"
-    "🐘 Mastodon: https://mastodon.social/@ratescout_ru\n\n"
+    "🐘 Mastodon: https://mastodon.social/@ratescout_ru\n"
+    "📝 Blog: https://ratescout-ru.blogspot.com/\n\n"
     "ℹ️ Справочный сервис (мониторинг курсов), не обменный пункт. Не является финансовой рекомендацией."
 )
 BUTTONS = [
