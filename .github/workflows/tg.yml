@@ -1,0 +1,34 @@
+name: Telegram daily digest
+
+# Раз в день публикует дневной дайджест курсов (топ роста/падения за сутки + картинка с 24ч-графиками)
+# в Telegram-канал. Данные берёт с боевого сайта (daily.json, который генерит deploy.yml).
+# Секреты (Settings → Secrets and variables → Actions):
+#   TELEGRAM_TOKEN    — токен бота от @BotFather
+#   TELEGRAM_CHANNEL  — @username канала (бот — админ канала)
+# Без секретов воркфлоу отработает «в сухую» (ничего не опубликует, только напечатает дайджест).
+
+on:
+  schedule:
+    - cron: "10 9 * * *"      # каждый день ~12:10 МСК (09:10 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tg-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Post daily digest to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+        run: python3 tg_daily.py

@@ -1912,6 +1912,87 @@ def write_covers():
     print(f"обложки: сгенерировано {n}")
 
 
+def _daily_movers():
+    """Крипто-движения за 24ч (та же логика, что в обзоре): категория Криптовалюты, отсев выбросов."""
+    out = []
+    for slug, pts in HISTORY.items():
+        if slug not in CUR or _span_days(pts) < 1 or CUR[slug]["category"] != "Криптовалюты":
+            continue
+        pct = CHG_BY.get(slug, {}).get("24h")
+        if pct is None or abs(pct) > 300:
+            continue
+        out.append((slug, pct))
+    out.sort(key=lambda x: x[1], reverse=True)
+    return out
+
+
+def _spark_draw(dr, pts, box, color):
+    vals = [p[1] for p in pts] or [0.0, 0.0]
+    mn, mx = min(vals), max(vals)
+    span = (mx - mn) or (mx or 1.0)
+    x, y, w, h = box
+    n = len(vals)
+    xy = [(x + (i / (n - 1) if n > 1 else 0) * w, y + (1 - (v - mn) / span) * h) for i, v in enumerate(vals)]
+    if len(xy) >= 2:
+        dr.line(xy, fill=color, width=3, joint="curve")
+
+
+def make_daily_image(out_path, date, gainers, losers):
+    """Картинка для Telegram: топ роста/падения за сутки с 24ч-графиками (без emoji — DejaVu их не рисует)."""
+    W, H = 1080, 1080
+    img = Image.new("RGB", (W, H), (11, 11, 11))
+    dr = ImageDraw.Draw(img)
+    dr.rectangle([0, 0, 16, H], fill=(51, 204, 51))
+    fb = ImageFont.truetype(FONT_BOLD, 46)
+    fh = ImageFont.truetype(FONT_BOLD, 40)
+    fr = ImageFont.truetype(FONT_BOLD, 36)
+    ff = ImageFont.truetype(FONT_REG, 28)
+    dr.text((56, 44), "[⇄] Крипторынок за сутки", font=fb, fill=(85, 255, 255))
+    dr.text((56, 108), f"{date} · ratescout.ru", font=ff, fill=(150, 150, 150))
+
+    def section(title, items, y0, col):
+        dr.text((56, y0), title, font=fh, fill=col)
+        y = y0 + 66
+        for slug, pct in items[:5]:
+            sign = "+" if pct >= 0 else ""
+            dr.text((70, y), CUR[slug]["ticker"], font=fr, fill=(235, 235, 235))
+            dr.text((320, y), f"{sign}{pct:.1f}%", font=fr, fill=col)
+            _spark_draw(dr, _pwindow(HISTORY[slug], 1), (600, y + 8, 420, 40), col)
+            y += 70
+        return y
+    y = section("▲ Топ роста", gainers, 190, (85, 255, 85))
+    section("▼ Топ падения", losers, y + 40, (255, 95, 95))
+    dr.text((56, H - 64), "Полный обзор: ratescout.ru/obzor/sutki", font=ff, fill=(130, 130, 130))
+    img.save(out_path, "PNG")
+
+
+def write_daily_digest():
+    """Готовит дневной дайджест для Telegram: dist/daily.json {caption,image,url} + картинка daily-24h.png.
+    Постит потом отдельный workflow (tg_daily.py). Если данных мало — has_data:false, публикация пропускается."""
+    movers = _daily_movers()
+    gainers = [m for m in movers if m[1] > 0][:5]
+    losers = sorted([m for m in movers if m[1] < 0], key=lambda x: x[1])[:5]
+    out = os.path.join(DIST, "daily.json")
+    if len(movers) < 5 or not (gainers or losers):
+        json.dump({"has_data": False}, open(out, "w"))
+        print("daily: данных мало — TG-дайджест пропустит")
+        return
+    now = datetime.now(timezone.utc).strftime("%d.%m.%Y")
+    img_url = ""
+    if COVERS_OK:
+        make_daily_image(os.path.join(DIST, "assets", "daily-24h.png"), now, gainers, losers)
+        img_url = f"{BASE_URL}/assets/daily-24h.png"
+    lines = [f"📊 Крипторынок за сутки · {now}", ""]
+    lines.append("📈 Топ роста:")
+    lines += [f"• {CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers]
+    lines += ["", "📉 Топ падения:"]
+    lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
+    lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/", "", "#крипта #курсы #обзор"]
+    json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
+               "url": f"{BASE_URL}/obzor/sutki/"}, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"daily: дайджест готов{' с картинкой' if img_url else ' (без картинки)'}")
+
+
 def render_dzen_rss():
     """RSS-лента для авто-публикации в Дзене (RU): полный текст в content:encoded, абсолютные ссылки, обложка.
     Дзен требует именно полный HTML статьи, а не анонс; относительные ссылки на внешней платформе не работают."""
@@ -2777,6 +2858,7 @@ def main():
     static_files()
     copy_assets()
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
+    write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
     render_dzen_rss()       # ссылается на обложки — после их генерации
     write_catalog_js(catjs)
     print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
