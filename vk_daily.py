@@ -77,6 +77,7 @@ def main():
             att = upload_photo(img)
         except Exception as e:                   # noqa: BLE001 — токен сообщества не может грузить фото
             print(f"фото в VK не загрузилось ({e}) — прикреплю ссылку-карточку")
+    print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:                                  # фото только если реально загрузилось (нужен user-токен);
         params["attachments"] = att          # иначе просто текст — VK сам сделает превью из первой ссылки
