@@ -921,6 +921,7 @@ def head(lang, title, desc, path, extra=""):
 <meta name="twitter:image" content="{BASE_URL}/assets/og-image.png">
 <meta name="robots" content="index,follow">
 <meta name="yandex-verification" content="4b39ef5046fa7e8a">
+<meta name="zen-verification" content="AvXwV96CkkGrgi2Dn4bnu0c3gAx52ezYYqNU79rdSigVe2IAJhfqL8E512dfovL5">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
