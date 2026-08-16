@@ -10,6 +10,7 @@ Refresh-токен получается один раз (OAuth Playground), да
 import html
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -29,8 +30,13 @@ def access_token():
         return json.load(r)["access_token"]
 
 
+def _linkify(text):
+    # обычные URL → кликабельные <a> (в HTML Blogger автолинка нет)
+    return re.sub(r'(https?://[^\s<]+)', r'<a href="\1">\1</a>', text)
+
+
 def build_html(d):
-    cap = html.escape(d.get("caption", "")).replace("\n", "<br>")
+    cap = _linkify(html.escape(d.get("caption", "")).replace("\n", "<br>"))
     img = f'<p><img src="{html.escape(d["image"])}" alt="Крипторынок за сутки" /></p>' if d.get("image") else ""
     parts = [img, f"<p>{cap}</p>"]
     if d.get("full_list"):
