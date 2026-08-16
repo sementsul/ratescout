@@ -43,6 +43,8 @@ def main():
     else:
         method = "sendMessage"
         payload = {"chat_id": CHANNEL, "text": caption, "disable_web_page_preview": "true"}
+    if d.get("buttons"):                        # инлайн-кнопки-ссылки (обзор/приложение/графики/курсы)
+        payload["reply_markup"] = json.dumps({"inline_keyboard": d["buttons"]})
     req = urllib.request.Request(api + method, data=urllib.parse.urlencode(payload).encode(), method="POST")
     try:
         with urllib.request.urlopen(req, timeout=30) as r:

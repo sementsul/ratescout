@@ -2166,8 +2166,19 @@ def _digest_weekly(now_dt, out):
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"Полная сводка → {BASE_URL}/svodka/", "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
-               "url": f"{BASE_URL}/svodka/"}, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+               "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print("weekly: сводка готова")
+
+
+def _digest_buttons(primary):
+    """Инлайн-кнопки-ссылки под постом в Telegram (URL-кнопки — работают в канале без сервера).
+    primary — главная кнопка (обзор/сводка); дальше приложение, графики, все курсы."""
+    ptext = "📊 Обзор за сутки" if primary == "/obzor/sutki/" else "🧭 Полная сводка"
+    return [
+        [{"text": ptext, "url": BASE_URL + primary}, {"text": "🚀 Приложение", "url": BASE_URL + "/app/"}],
+        [{"text": "📈 Графики", "url": BASE_URL + "/grafiki/"}, {"text": "💱 Все курсы", "url": BASE_URL + "/"}],
+    ]
 
 
 def write_daily_digest():
@@ -2197,7 +2208,8 @@ def write_daily_digest():
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/", "", "#крипта #курсы #обзор"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
-               "url": f"{BASE_URL}/obzor/sutki/"}, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+               "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/")},
+              open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"daily: дайджест готов{' с картинкой' if img_url else ' (без картинки)'}")
 
 
@@ -2839,6 +2851,98 @@ def write_catalog_js(js):
     open(os.path.join(DIST, "assets", "catalog.js"), "w", encoding="utf-8").write(js)
 
 
+MINIAPP_HTML = """<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RateScout — курсы и конвертер</title>
+<meta name="robots" content="noindex">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0b0b0b;--fg:#eaeaea;--mut:#8a8a8a;--acc:#33cc33;--card:#141414;--bd:#264026}
+*{box-sizing:border-box}
+body{margin:0;padding:14px;font:16px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;
+ background:var(--tg-theme-bg-color,var(--bg));color:var(--tg-theme-text-color,var(--fg))}
+h1{font-size:20px;margin:4px 0 2px}
+.mut{color:var(--tg-theme-hint-color,var(--mut));font-size:13px;margin:0 0 14px}
+.card{background:var(--tg-theme-secondary-bg-color,var(--card));border:1px solid var(--bd);
+ border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 4px}
+input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--bd);
+ background:var(--tg-theme-bg-color,#000);color:var(--tg-theme-text-color,var(--fg));font-size:16px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.swap{margin:8px 0;width:100%;padding:9px;border:1px solid var(--bd);border-radius:9px;
+ background:transparent;color:var(--acc);font-size:14px;cursor:pointer}
+.res{font-size:22px;font-weight:700;margin-top:12px;color:var(--acc)}
+.res small{display:block;color:var(--mut);font-size:12px;font-weight:400;margin-top:2px}
+.links{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.links a{display:block;text-align:center;padding:12px;border-radius:10px;text-decoration:none;
+ background:var(--tg-theme-button-color,var(--acc));color:var(--tg-theme-button-text-color,#001500);font-weight:600;font-size:14px}
+.links a.sec{background:transparent;border:1px solid var(--bd);color:var(--tg-theme-text-color,var(--fg))}
+.foot{color:var(--mut);font-size:11px;text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<h1>RateScout</h1>
+<p class="mut">Курсы обмена и конвертер · данные мониторинга BestChange</p>
+
+<div class="card">
+  <label>Сумма</label>
+  <input id="amt" type="number" inputmode="decimal" value="1" min="0">
+  <div class="row">
+    <div><label>Отдаёте</label><select id="from"></select></div>
+    <div><label>Получаете</label><select id="to"></select></div>
+  </div>
+  <button class="swap" id="swap">⇅ поменять местами</button>
+  <div class="res" id="res">—</div>
+</div>
+
+<div class="links">
+  <a href="{{BASE}}/obzor/sutki/" data-ext>📊 Обзор за сутки</a>
+  <a href="{{BASE}}/grafiki/" data-ext>📈 Графики</a>
+  <a href="{{BASE}}/svodka/" class="sec" data-ext>🧭 Сводка</a>
+  <a href="{{BASE}}/" class="sec" data-ext>💱 Все курсы</a>
+</div>
+<p class="foot">Справочный сервис (мониторинг курсов), не обменный пункт. Курсы меняются.</p>
+
+<script>
+var tg=window.Telegram&&window.Telegram.WebApp;
+if(tg){try{tg.ready();tg.expand();}catch(e){}}
+// внешние ссылки открываем через Telegram (в приложении), а не поверх мини-аппа
+document.querySelectorAll('a[data-ext]').forEach(function(a){
+  a.addEventListener('click',function(ev){ if(tg&&tg.openLink){ev.preventDefault();tg.openLink(a.href);} });
+});
+var CUR={},A=document.getElementById('amt'),F=document.getElementById('from'),T=document.getElementById('to'),R=document.getElementById('res');
+function fmt(v){if(!isFinite(v))return '—';
+ if(v>=1000)return v.toLocaleString('ru-RU',{maximumFractionDigits:0});
+ if(v>=1)return v.toLocaleString('ru-RU',{maximumFractionDigits:2});
+ if(v>=0.0001)return (+v.toFixed(6)).toString();
+ return v.toFixed(12).replace(/0+$/,'').replace(/\\.$/,'')||'0';}
+function calc(){var f=CUR[F.value],t=CUR[T.value],a=parseFloat(A.value);
+ if(!f||!t||!(a>=0)){R.textContent='—';return;}
+ var r=f.p/t.p;R.innerHTML=fmt(a*r)+' '+t.t+'<small>1 '+f.t+' = '+fmt(r)+' '+t.t+'</small>';}
+[A,F,T].forEach(function(el){el.addEventListener('input',calc);el.addEventListener('change',calc);});
+document.getElementById('swap').addEventListener('click',function(){var x=F.value;F.value=T.value;T.value=x;calc();});
+fetch('{{BASE}}/prices.json').then(function(r){return r.json();}).then(function(j){
+ CUR=j.cur;var ks=Object.keys(CUR).sort(function(a,b){return CUR[a].n.localeCompare(CUR[b].n);});
+ var opt=ks.map(function(s){return '<option value="'+s+'">'+CUR[s].n+' ('+CUR[s].t+')</option>';}).join('');
+ F.innerHTML=opt;T.innerHTML=opt;
+ F.value=CUR['bitcoin']?'bitcoin':ks[0];
+ T.value=CUR['sberbank']?'sberbank':(CUR['tether-trc20']?'tether-trc20':ks[1]);
+ calc();
+}).catch(function(){R.textContent='Не удалось загрузить курсы';});
+</script>
+</body></html>"""
+
+
+def render_miniapp():
+    """Telegram Mini App — статичная страница /app/ (конвертер по prices.json + ссылки, тема Telegram)."""
+    d = os.path.join(DIST, "app")
+    os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(MINIAPP_HTML.replace("{{BASE}}", BASE_URL))
+
+
 def render_404():
     """Своя 404 (GitHub Pages отдаёт /404.html при отсутствии страницы). Пути абсолютные."""
     lang = "ru"
@@ -3067,6 +3171,7 @@ def main():
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
     render_404()
+    render_miniapp()
     static_files()
     copy_assets()
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
