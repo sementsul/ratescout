@@ -2181,7 +2181,7 @@ def make_weekly_image(out_path, date, stbl, liq):
     img.save(out_path, "PNG")
 
 
-def _digest_weekly(now_dt, out):
+def _digest_weekly(now_dt, out, fl=""):
     """Воскресная «Сводка» для Telegram: настроение + стейблкоины + ликвидность (вместо топ-движений)."""
     rows = _svodka_rows()
     withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
@@ -2225,7 +2225,8 @@ def _digest_weekly(now_dt, out):
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
               "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #сводка"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
-               "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/")},
+               "url": f"{BASE_URL}/svodka/", "buttons": _digest_buttons("/svodka/"),
+               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt"},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print("weekly: сводка готова")
 
@@ -2244,12 +2245,47 @@ def _digest_buttons(primary):
     ]
 
 
+def _full_list_items():
+    """Все валюты: (тикер, цена USDT, ликвидность, изм.24ч), сорт по ликвидности."""
+    it = []
+    for slug, info in CUR.items():
+        price, liq = _usdt_price(slug)
+        if slug == "tether-trc20":
+            price = 1.0
+        chg = CHG_BY.get(slug, {}).get("24h")
+        if chg is not None and abs(chg) > 300:
+            chg = None
+        it.append((info["ticker"], price, liq or 0, chg))
+    it.sort(key=lambda x: x[2], reverse=True)
+    return it
+
+
+def _fl_line(t, p, liq, chg):
+    ps = fmt_rate(p) if p else "—"
+    cs = (("+" if chg >= 0 else "") + f"{chg:.1f}%") if chg is not None else "—"
+    return f"{t}: {ps} · {cs} · {liq}об"
+
+
+def full_list_text():
+    it = _full_list_items()
+    return (f"📋 Все валюты ({len(it)}) — цена USDT · изм.24ч · обменников:\n\n"
+            + "\n".join(_fl_line(*x) for x in it))
+
+
+def full_list_html():
+    it = _full_list_items()
+    return ("<p><b>📋 Все валюты — цена USDT · изм.24ч · обменников:</b><br>"
+            + "<br>".join(_fl_line(*x) for x in it) + "</p>")
+
+
 def write_daily_digest():
-    """Дайджест для Telegram: dist/daily.json {caption,image,url} + картинка. По воскресеньям — «Сводка»,
-    в будни — топ движений за сутки. Постит отдельный workflow (tg_daily.py). Мало данных → has_data:false."""
+    """Дайджест для Telegram: dist/daily.json {caption,image,url,full_list,full_list_url} + картинка + полный
+    список всех валют (dist/daily-all.txt). Воскресенье — «Сводка», будни — топ движений. Постит tg_daily.py."""
     now_dt = datetime.now(timezone.utc)
+    fl = full_list_text()
+    open(os.path.join(DIST, "daily-all.txt"), "w", encoding="utf-8").write(fl)   # полный список файлом (для TG)
     if now_dt.weekday() == 6:            # воскресенье — «Сводка недели» вместо топ-движений (разнообразие)
-        _digest_weekly(now_dt, os.path.join(DIST, "daily.json"))
+        _digest_weekly(now_dt, os.path.join(DIST, "daily.json"), fl)
         return
     movers = _daily_movers()
     gainers = [m for m in movers if m[1] > 0][:5]
@@ -2272,7 +2308,8 @@ def write_daily_digest():
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
               "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout", "", "#крипта #курсы #обзор"]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
-               "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/")},
+               "url": f"{BASE_URL}/obzor/sutki/", "buttons": _digest_buttons("/obzor/sutki/"),
+               "full_list": fl, "full_list_url": f"{BASE_URL}/daily-all.txt"},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"daily: дайджест готов{' с картинкой' if img_url else ' (без картинки)'}")
 
@@ -2317,7 +2354,7 @@ def render_dzen_rss():
         url = f"{BASE_URL}/obzor/{sid}/"
         pid = (now_dt.strftime("%Y-%m-%d") if d == 1
                else now_dt.strftime("%G-W%V") if d == 7 else now_dt.strftime("%Y-%m"))
-        rhtml = rc["dzen"]                    # облегчённая версия под Дзен (без SVG, 1 ссылка на сайт)
+        rhtml = rc["dzen"] + full_list_html()   # облегчённая версия + полный список всех валют текстом
         items += ("<item>"
                   f"<title>{xml_escape(rc['h1'])} ({rc['date']})</title>"
                   f"<link>{url}</link><guid isPermaLink=\"false\">{url}#{pid}</guid>"

@@ -60,6 +60,10 @@ def main():
         print("нет данных за сутки — публикация пропущена")
         return 0
     msg = d["caption"]
+    if d.get("full_list"):                       # полный список всех валют текстом (у VK лимит ~16000)
+        msg = msg + "\n\n" + d["full_list"]
+        if len(msg) > 15800:
+            msg = msg[:15800] + "\n…полный список: " + d.get("url", "")
     if not VK_TOKEN or not VK_GROUP:
         print("VK_TOKEN/VK_GROUP_ID не заданы — сухой прогон (не публикую).\n--- пост ---")
         print(msg)

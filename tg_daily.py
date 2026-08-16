@@ -50,10 +50,22 @@ def main():
         with urllib.request.urlopen(req, timeout=30) as r:
             res = json.load(r)
         print("опубликовано" if res.get("ok") else f"ошибка Telegram: {res}")
-        return 0 if res.get("ok") else 1
     except Exception as e:                      # noqa: BLE001
         print(f"ошибка отправки: {e}")
         return 1
+    # полный список всех валют — отдельным сообщением-документом (в одно сообщение 330 строк не влезают)
+    if d.get("full_list_url"):
+        dp = {"chat_id": CHANNEL, "document": d["full_list_url"],
+              "caption": "📋 Полный список всех валют — цена USDT · изм.24ч · обменников"}
+        try:
+            r2 = urllib.request.Request(api + "sendDocument",
+                                        data=urllib.parse.urlencode(dp).encode(), method="POST")
+            with urllib.request.urlopen(r2, timeout=40) as r:
+                res2 = json.load(r)
+            print("список-файл: " + ("ок" if res2.get("ok") else f"ошибка {res2}"))
+        except Exception as e:                  # noqa: BLE001
+            print(f"список-файл не отправлен: {e}")
+    return 0
 
 
 if __name__ == "__main__":
