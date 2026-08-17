@@ -3361,6 +3361,87 @@ def render_bank_hub(to_slug, lang):
     write(lang, path, head(lang, title, desc, path) + body)
 
 
+_AML_JS = r"""
+var input=document.getElementById('amlAddr'),btn=document.getElementById('amlBtn'),out=document.getElementById('amlResult');
+var S=null;
+function det(a){
+  if(/^0x[a-fA-F0-9]{40}$/.test(a))return{c:'ETH',e:'https://etherscan.io/address/'+a};
+  if(/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(a))return{c:'BTC',e:'https://mempool.space/address/'+a};
+  if(/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(a))return{c:'TRON',e:'https://tronscan.org/#/address/'+a};
+  if(/^(ltc1|[LM])[a-km-zA-HJ-NP-Z1-9]{25,60}$/.test(a))return{c:'LTC',e:'https://litecoinspace.org/address/'+a};
+  if(/^4[0-9AB][0-9A-Za-z]{93}$/.test(a))return{c:'XMR',e:''};
+  return null;
+}
+function esc(s){return String(s).replace(/[<>&"]/g,function(x){return{'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[x];});}
+function load(cb){if(S)return cb();fetch('/aml-sanctions.json').then(function(r){return r.json();}).then(function(d){var a=d.addresses||[];S={set:new Set(a),low:new Set(a.map(function(x){return x.toLowerCase();})),n:d.count||0};cb();}).catch(function(){S={set:new Set(),low:new Set(),n:-1};cb();});}
+function onchain(d,a,box){try{
+  if(d.c==='BTC'){fetch('https://mempool.space/api/address/'+a).then(function(r){return r.json();}).then(function(x){var s=x.chain_stats||{};var bal=((s.funded_txo_sum||0)-(s.spent_txo_sum||0))/1e8;box.textContent=I.onchain+': '+I.tx+' '+(s.tx_count||0)+', '+I.bal+' '+bal.toFixed(8)+' BTC.';}).catch(function(){box.textContent=I.onchainFail;});}
+  else if(d.c==='ETH'){fetch('https://eth.blockscout.com/api/v2/addresses/'+a).then(function(r){return r.json();}).then(function(x){var bal=x.coin_balance?(Number(x.coin_balance)/1e18).toFixed(6):'?';box.textContent=I.onchain+': '+I.bal+' '+bal+' ETH.';}).catch(function(){box.textContent=I.onchainFail;});}
+  else{box.textContent='';}
+}catch(e){box.textContent=I.onchainFail;}}
+function check(){
+  var a=(input.value||'').trim();if(!a){out.innerHTML='';return;}
+  var d=det(a);
+  if(!d){out.innerHTML='<div style="color:#ffcc33">'+esc(I.unrec)+'</div>';return;}
+  load(function(){
+    var bad=S.set.has(a)||S.low.has(a.toLowerCase());
+    var h='<p>'+I.net+': <b>'+esc(d.c)+'</b></p>';
+    if(S.n===-1)h+='<div style="color:#ffcc33">'+esc(I.listNA)+'</div>';
+    else if(bad)h+='<div style="color:#ff5555;font-weight:700">'+esc(I.sanc)+'</div>';
+    else h+='<div style="color:#55ff55;font-weight:700">'+esc(I.clean)+'</div>';
+    if(d.e)h+='<p><a href="'+d.e+'" target="_blank" rel="nofollow noopener">'+esc(I.expl)+'</a></p>';
+    h+='<div id="amlChain" class="updnote">'+esc(I.loading)+'</div>';
+    out.innerHTML=h;onchain(d,a,document.getElementById('amlChain'));
+  });
+}
+btn.addEventListener('click',check);
+input.addEventListener('keydown',function(e){if(e.key==='Enter')check();});
+"""
+
+
+def aml_checker(lang):
+    """Клиентский AML-чек: валидация формата + санкционный список OFAC + базовые ончейн-данные. Честно, без скоринга."""
+    ru = lang == "ru"
+    cnt = 0
+    try:
+        cnt = json.load(open(os.path.join(ROOT, "aml-sanctions.json"), encoding="utf-8")).get("count", 0)
+    except Exception:                              # noqa: BLE001
+        cnt = 0
+    i18n = {
+        "ph": "Вставьте криптоадрес (BTC, ETH, TRON, LTC, XMR)" if ru else "Paste a crypto address (BTC, ETH, TRON, LTC, XMR)",
+        "btn": "Проверить" if ru else "Check",
+        "net": "Сеть" if ru else "Network",
+        "unrec": ("Адрес не распознан. Поддерживаются BTC, ETH, TRON, LTC, XMR." if ru
+                  else "Address not recognized. Supported: BTC, ETH, TRON, LTC, XMR."),
+        "sanc": "⚠️ Адрес найден в санкционном списке OFAC" if ru else "⚠️ Address is in the OFAC sanctions list",
+        "clean": "✅ В санкционном списке OFAC не найден" if ru else "✅ Not found in the OFAC sanctions list",
+        "expl": "Посмотреть транзакции в эксплорере →" if ru else "View transactions in explorer →",
+        "loading": "Загрузка ончейн-данных…" if ru else "Loading on-chain data…",
+        "onchain": "Ончейн" if ru else "On-chain",
+        "onchainFail": "Ончейн-данные недоступны — смотрите в эксплорере." if ru else "On-chain data unavailable — see the explorer.",
+        "tx": "транзакций" if ru else "transactions",
+        "bal": "баланс" if ru else "balance",
+        "listNA": "Санкционный список сейчас недоступен — попробуйте позже." if ru else "Sanctions list unavailable now — try later.",
+    }
+    disc = ((f"Базовая проверка: формат адреса, санкционный список OFAC ({cnt} адресов, обновляется автоматически) "
+             "и базовые ончейн-данные. Это НЕ полноценный AML-скоринг — миксеры, скам и даркнет не проверяются. "
+             "Для полной проверки используйте специализированные AML-сервисы. Результат справочный.") if ru else
+            (f"Basic check: address format, OFAC sanctions list ({cnt} addresses, auto-updated) and basic on-chain "
+             "data. This is NOT a full AML score — mixers, scams and darknet are not checked. For a full check use "
+             "specialized AML services. For reference only."))
+    h = "Проверить адрес" if ru else "Check an address"
+    form = (f'<h2 id="check">{h}</h2>'
+            '<div class="amlbox" style="border:2px solid #55ffff;padding:14px;margin:10px 0;background:#001a1a">'
+            f'<input id="amlAddr" type="text" autocomplete="off" spellcheck="false" placeholder="{i18n["ph"]}" '
+            'style="width:100%;box-sizing:border-box;padding:9px;background:#000;color:#0f0;'
+            'border:1px solid #55ffff;font-family:inherit">'
+            f'<button id="amlBtn" type="button" style="margin-top:8px;padding:9px 18px;background:#0000aa;'
+            f'color:#fff;border:1px solid #55ffff;cursor:pointer;font-family:inherit">{i18n["btn"]}</button>'
+            '<div id="amlResult" style="margin-top:12px"></div>'
+            f'<p class="updnote">{disc}</p></div>')
+    return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>"
+
+
 def compliance_pages(lang):
     if lang == "ru":
         render_page(lang, "o-servise", "Что такое BestChange",
@@ -3383,8 +3464,8 @@ def compliance_pages(lang):
 <h2>Когда делать</h2><ul><li>перед приёмом крупной суммы в крипте;</li><li>перед обменом крипты на рубли/наличные;</li>
 <li>если контрагент незнаком.</li></ul>
 <h2>Как проверить</h2>
-<p>AML-проверка выполняется через специализированные сервисы анализа блокчейна: вы указываете адрес и получаете
-   отчёт о рисках. Инструмент анализа адреса есть и у BestChange, и у ряда других сервисов.</p>""",
+<p>Полноценный AML-скоринг (миксеры, скам, даркнет) выполняют специализированные сервисы анализа блокчейна.
+   Ниже — наша <b>базовая</b> проверка: формат адреса и официальный санкционный список OFAC.</p>""" + aml_checker(lang),
                     "AML-проверка")
         render_page(lang, "raskrytie", "Раскрытие информации и дисклеймеры",
                     "Партнёрское раскрытие и правовая информация RateScout.",
@@ -3440,8 +3521,8 @@ def compliance_pages(lang):
 <h2>When to do it</h2><ul><li>before receiving a large crypto amount;</li><li>before exchanging crypto to cash/bank;</li>
 <li>if the counterparty is unknown.</li></ul>
 <h2>How to check</h2>
-<p>An AML check is done via blockchain analysis services: you enter an address and get a risk report. An address
-   analysis tool is available on BestChange and a number of other services.</p>""",
+<p>A full AML score (mixers, scams, darknet) is done by specialized blockchain analysis services. Below is our
+   <b>basic</b> check: address format and the official OFAC sanctions list.</p>""" + aml_checker(lang),
                     "AML check")
         render_page(lang, "raskrytie", "Disclosure and disclaimers",
                     "Affiliate disclosure and legal information of RateScout.",
@@ -3733,6 +3814,10 @@ def static_files():
     open(os.path.join(DIST, ".nojekyll"), "w").write("")
     # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
+    # санкционный список OFAC для клиентского AML-чека (ephemeral; кладём в dist, чтобы браузер мог фетчить)
+    _amlp = os.path.join(ROOT, "aml-sanctions.json")
+    if os.path.exists(_amlp):
+        shutil.copy(_amlp, os.path.join(DIST, "aml-sanctions.json"))
     write_llms()
     write_widget()
     write_prices()

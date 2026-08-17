@@ -55,6 +55,9 @@ jobs:
           COINGECKO_KEY: ${{ secrets.COINGECKO_KEY }}
         run: python3 fetch_market.py || echo "⚠️ рыночные данные пропущены — собираю без них"
 
+      - name: Fetch OFAC sanctions list → aml-sanctions.json
+        run: python3 fetch_aml.py || echo "⚠️ санкционный список пропущен — AML-чек без него"
+
       - name: Build static site
         run: python3 build.py
 
