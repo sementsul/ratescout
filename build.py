@@ -4280,7 +4280,7 @@ def static_files():
         "icons": [{"src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
     }, ensure_ascii=False, indent=2))
     open(os.path.join(DIST, "sw.js"), "w", encoding="utf-8").write(
-        "const C='ratescout-v2';\n"
+        "const C='ratescout-v3';\n"
         "self.addEventListener('install',e=>self.skipWaiting());\n"
         # при активации новой версии — стереть старые кеши (иначе отдаются устаревшие страницы)
         "self.addEventListener('activate',e=>e.waitUntil("
