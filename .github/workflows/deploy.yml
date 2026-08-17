@@ -56,6 +56,8 @@ jobs:
         run: python3 fetch_market.py || echo "⚠️ рыночные данные пропущены — собираю без них"
 
       - name: Fetch OFAC sanctions list → aml-sanctions.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # аутентиф. доступ к GitHub API (без 429 на raw)
         run: python3 fetch_aml.py || echo "⚠️ санкционный список пропущен — AML-чек без него"
 
       - name: Build static site
