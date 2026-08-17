@@ -19,8 +19,9 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 TOKEN = os.environ.get("YANDEX_OAUTH_TOKEN")
-COUNTER = os.environ.get("YANDEX_METRIKA_COUNTER", "111586112")
-HOST = os.environ.get("YANDEX_HOST", "https://ratescout.ru")
+# `or` — а не default в get(): незаданный секрет в CI приходит ПУСТОЙ строкой и затёр бы дефолт.
+COUNTER = os.environ.get("YANDEX_METRIKA_COUNTER") or "111586112"
+HOST = os.environ.get("YANDEX_HOST") or "https://ratescout.ru"
 WM = "https://api.webmaster.yandex.net/v4"
 MET = "https://api-metrika.yandex.net/stat/v1/data"
 
