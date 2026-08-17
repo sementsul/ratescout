@@ -1,0 +1,36 @@
+name: Search Console report
+
+# Раз в неделю (пн, утро) шлёт владельцу в Telegram отчёт из Google Search Console:
+# клики/показы/динамика, топ-запросы, топ-страницы и «дожать» (2-я страница выдачи — что усилить).
+# Секреты: GSC_SA_JSON (ключ сервис-аккаунта), GSC_SITE (ресурс), TELEGRAM_TOKEN, ALERT_CHAT_ID.
+# Без секретов — сухой прогон. Ручной запуск — workflow_dispatch.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"       # понедельник ~10:00 МСК
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gsc-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install google-auth
+        run: pip install --quiet google-auth
+      - name: Weekly Search Console report
+        env:
+          GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
+          GSC_SITE: ${{ secrets.GSC_SITE }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 gsc_report.py
