@@ -1425,6 +1425,13 @@ for _k, _v in RATES.items():
 # Полное множество страниц-пар (для sitemap RU / конвертера / проверок ссылок).
 PAIR_SET_ALL = PAIR_SET | {(p["from"], p["to"]) for p in PAIR_PAGES_RU}
 
+# Карта: валюта → покрытые направления с её участием (для статической перелинковки со страниц валют).
+DIRS_BY_CUR = {}
+for _f, _t in PAIR_SET_ALL:
+    _c = (RATES.get(f"{_f}>{_t}") or {}).get("count", 0) or 0
+    DIRS_BY_CUR.setdefault(_f, []).append((_f, _t, _c))
+    DIRS_BY_CUR.setdefault(_t, []).append((_f, _t, _c))
+
 # Банковские хабы: «все монеты → конкретный получатель» (крупные RUB-направления).
 # Страница /na/<slug>/ агрегирует крипто→этот банк с курсами — высокоинтентный money-лендинг.
 BANK_HUB_LIST = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub",
@@ -2003,6 +2010,21 @@ def pair_link_li(p, lang):
             f'{CUR[p["to"]]["name"]} <span>{CUR[p["to"]]["ticker"]}</span></a></li>')
 
 
+def currency_directions(slug, lang):
+    """Статический блок «Направления обмена {тикер}»: топ покрытых пар с этой валютой по ликвидности.
+    Даёт входящие внутренние ссылки на страницы /obmen/ (для SEO). EN — только существующие 714 пар."""
+    ds = DIRS_BY_CUR.get(slug, [])
+    if lang == "en":
+        ds = [d for d in ds if (d[0], d[1]) in PAIR_SET]
+    if not ds:
+        return ""
+    ds = sorted(ds, key=lambda d: d[2], reverse=True)[:30]
+    items = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in ds)
+    h = (f"Направления обмена {CUR[slug]['ticker']}" if lang == "ru"
+         else f"{CUR[slug]['ticker']} exchange directions")
+    return f'<h2 class="news">{h}</h2><ul class="dlist">{items}</ul>'
+
+
 def popular_block(slug, lang):
     pops = popular_involving(slug)
     if not pops:
@@ -2269,7 +2291,7 @@ def render_currency(slug, info, lang):
     {currency_metrics_block(slug, info, lang)}
     {history_table(slug, lang)}
     {rate_table(slug, info, lang)}
-    {popular_block(slug, lang)}
+    {currency_directions(slug, lang)}
     <h2 class="news">{tr(lang,'how_to')} {name}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(tr(lang,'how_to') + ' ' + name, steps)}
