@@ -51,6 +51,8 @@ def recrawl(base, full_url):
         except Exception:                          # noqa: BLE001
             err = {"error_message": e.reason}
         return False, err.get("error_code") or err.get("error_message") or str(e.code)
+    except Exception as e:                         # noqa: BLE001 — сеть/таймаут: не роняем весь прогон
+        return False, f"сбой запроса: {str(e)[:80]}"
 
 
 def send_telegram(text):
