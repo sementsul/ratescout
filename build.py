@@ -419,7 +419,7 @@ def render_directions(lang):
             return ""
         lis = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in pairs)
         return f'<h2 class="news">{h}</h2><ul class="dlist">{lis}</ul>'
-    crypto_rub = [c for c in cand if CUR[c[0]]["category"] == "Криптовалюты" and c[1] in HI_TO][:8]
+    crypto_rub = [c for c in cand if CUR[c[0]]["category"] == "Криптовалюты" and c[1] in HI_RECV][:8]
     usdt_cards = [c for c in cand if c[0].startswith("tether")
                   and c[1] in ("visa-mastercard-rub", "sberbank", "tinkoff", "sbp", "mir")][:8]
     themes = _theme(th_crub, crypto_rub) + _theme(th_ucard, usdt_cards)
@@ -705,17 +705,24 @@ if os.path.exists(_tp):
         TOP = []
 TOP_SET = {(p["from"], p["to"]) for p in TOP}
 
-# Высокоинтентные пары: топ-крипта → главные RUB-направления (только где есть реальный курс).
-# Дают SEO-страницы под запросы «обменять <крипта> на <банк>/наличные/СБП», без пустышек.
-HI_FROM = ["tether-trc20", "bitcoin", "tether-bep20", "tether-erc20", "ethereum",
-           "litecoin", "monero", "tron", "usdcoin", "tether-ton"]
-HI_TO = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub", "mir",
-         "alfaclick", "vtb", "gazprombank", "yoomoney", "raiffeisen-bank", "ozon"]
+# Высокоинтентные направления: топ-крипта ↔ главные банки/кошельки/наличные (только где есть реальный курс).
+# Обе стороны: крипта→получатель («вывести USDT на Сбербанк») и получатель→крипта («купить BTC за рубли»).
+# Каждая пара гейтится наличием курса в RATES — пустых страниц не создаём. Slug-и сверены с каталогом.
+HI_CRYPTO = ["tether-trc20", "bitcoin", "ethereum", "tether-erc20", "tether-bep20", "usd-coin",
+             "tron", "litecoin", "monero", "solana", "tether-polygon", "bitcoin-cash", "dogecoin",
+             "tether-ton", "binance-coin", "dash", "cardano", "ripple"]
+HI_RECV = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub", "mir", "alfaclick",
+           "vtb", "gazprombank", "yoomoney", "raiffeisen-bank", "ozon", "visa-mastercard-usd",
+           "visa-mastercard-euro", "wise", "paypal-usd", "kaspi-bank", "monobank", "capitalist"]
 EXTRA_PAIRS = []
-for _f in HI_FROM:
-    for _t in HI_TO:
-        if _f in CUR and _t in CUR and (_f, _t) not in TOP_SET and RATES.get(f"{_f}>{_t}"):
-            EXTRA_PAIRS.append({"from": _f, "to": _t})
+_ep_seen = set()
+for _c in HI_CRYPTO:
+    for _r in HI_RECV:
+        for _f, _t in ((_c, _r), (_r, _c)):        # прямое (вывод) и обратное (покупка) направления
+            if (_f in CUR and _t in CUR and (_f, _t) not in TOP_SET
+                    and (_f, _t) not in _ep_seen and RATES.get(f"{_f}>{_t}")):
+                _ep_seen.add((_f, _t))
+                EXTRA_PAIRS.append({"from": _f, "to": _t})
 
 # Все пары, для которых генерим страницы (топ + высокоинтентные), с дедупом.
 PAIR_PAGES = TOP + EXTRA_PAIRS
@@ -3480,7 +3487,7 @@ def main():
     write_article_announce() # article-today.json — анонс вышедшей сегодня статьи
     render_dzen_rss()       # ссылается на обложки — после их генерации
     write_catalog_js(catjs)
-    print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(TOP)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
+    print(f"✅ dist/: {LANGS} × (главная + {len(CUR)} валют + {len(PAIR_PAGES)} пар + {1+len(ARTS['ru'])} блог + 4 инфо) + sitemap/robots")
     print(f"   asset ver: css={VER['css']} js={VER['js']} cat={VER['cat']}")
 
 
