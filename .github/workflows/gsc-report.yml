@@ -25,8 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install google-auth
-        run: pip install --quiet google-auth
+      - name: Install deps
+        run: pip install --quiet google-auth requests
       - name: Weekly Search Console report
         env:
           GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
