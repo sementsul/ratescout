@@ -1362,14 +1362,9 @@ show(cc);}).catch(function(){});})();"""
 
 
 def partner_block(lang):
-    """Партнёрская ссылка Telegram Wallet в футере + гео-JS (один на страницу). Скрыто по умолчанию, fail-safe."""
-    if lang == "ru":
-        txt = (f'🅣 Кошелёк в Telegram — <a href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">открыть</a> '
-               '<span class="tk">· партнёрская ссылка</span>')
-    else:
-        txt = (f'🅣 Telegram Wallet — <a href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">open</a> '
-               '<span class="tk">· affiliate link</span>')
-    return f'<div class="rs-partner-geo links" hidden>{txt}</div><script>{_GEO_JS}</script>'
+    """Только гео-JS в футере (один на страницу) — раскрывает партнёрские блоки .rs-partner-geo вне РФ.
+    Саму ссылку из футера убрали; промо остаётся в CTA под поиском (wallet_cta)."""
+    return f'<script>{_GEO_JS}</script>'
 
 
 def donations_block(lang):
