@@ -61,13 +61,24 @@ def yandex_diagnostics():
         d = _yget(f"{WM}/user/{uid}/hosts/{hid}/diagnostics/", token)
     except Exception as e:                         # noqa: BLE001
         return f"🟡 Яндекс диагностика: ошибка — {str(e)[:100]}"
-    probs = d.get("problems", []) if isinstance(d, dict) else []
-    present = [p for p in probs if (p.get("state") or "PRESENT") != "ABSENT"]
-    if not present:
+    print("DBG diag:", json.dumps(d, ensure_ascii=False)[:900])
+    probs = d.get("problems") if isinstance(d, dict) else d
+    items = []
+    if isinstance(probs, dict):                    # {"TYPE": {...}} или {"TYPE": "PRESENT"}
+        for k, v in probs.items():
+            st = v.get("state") if isinstance(v, dict) else v
+            sev = v.get("severity") if isinstance(v, dict) else "?"
+            items.append((sev, k, st))
+    elif isinstance(probs, list):
+        for p in probs:
+            if isinstance(p, dict):
+                items.append((p.get("severity", "?"), p.get("problem_type", "?"), p.get("state", "?")))
+    active = [i for i in items if str(i[2]).upper() != "ABSENT"]
+    if not active:
         return "🟡 Яндекс диагностика: активных проблем нет"
     L = ["🟡 Яндекс диагностика:"]
-    for p in present:
-        L.append(f"  [{p.get('severity','?')}] {p.get('problem_type','?')} — {p.get('state','?')}")
+    for sev, typ, st in active:
+        L.append(f"  [{sev}] {typ} — {st}")
     return "\n".join(L)
 
 
