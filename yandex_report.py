@@ -43,7 +43,8 @@ def _last_value(hist):
 
 
 # --- Вебмастер ------------------------------------------------------------------------------------
-def webmaster_report():
+def webmaster_report(stats):
+    """stats — dict, куда складываем числа для сравнительного блока (insearch/clicks/shows)."""
     L = ["🔎 Яндекс.Вебмастер"]
     try:
         user_id = yget(f"{WM}/user")["user_id"]
@@ -78,6 +79,7 @@ def webmaster_report():
         frm = (today - timedelta(days=30)).isoformat()
         h = yget(f"{base}/search-urls/in-search/history?date_from={frm}&date_to={today.isoformat()}")
         v = _last_value(h)
+        stats["insearch"] = v or 0
         return f"страниц в поиске: {v if v is not None else 0}" + \
                (" (Яндекс ещё не добавил в поиск — идёт обход)" if not v else "")
     L.append("  " + sub(_insearch, "in-search"))
@@ -96,16 +98,61 @@ def webmaster_report():
     def _queries():
         q = yget(f"{base}/search-queries/popular?order_by=TOTAL_SHOWS"
                  f"&query_indicator=TOTAL_SHOWS&query_indicator=TOTAL_CLICKS")
-        rows = q.get("queries", [])[:8]
+        rows = q.get("queries", [])
+        stats["shows"] = sum((r.get("indicators", {}).get("TOTAL_SHOWS") or 0) for r in rows)
+        stats["clicks"] = sum((r.get("indicators", {}).get("TOTAL_CLICKS") or 0) for r in rows)
         if not rows:
             return "топ-запросы: пока нет"
         out = ["  топ-запросы (показы·клики):"]
-        for r in rows:
+        for r in rows[:8]:
             ind = r.get("indicators", {})
             out.append(f"    {r.get('query_text','?')} — "
                        f"{ind.get('TOTAL_SHOWS','?')}·{ind.get('TOTAL_CLICKS','?')}")
         return "\n".join(out)
     L.append(sub(_queries, "  queries"))
+    return "\n".join(L)
+
+
+def gsc_totals():
+    """Клики/показы Google Search Console за осевшую неделю (для сравнения). None — если нет ключа."""
+    sa = os.environ.get("GSC_SA_JSON")
+    if not sa:
+        return None
+    from google.oauth2 import service_account
+    import google.auth.transport.requests
+    creds = service_account.Credentials.from_service_account_info(
+        json.loads(sa), scopes=["https://www.googleapis.com/auth/webmasters.readonly"])
+    creds.refresh(google.auth.transport.requests.Request())
+    site = os.environ.get("GSC_SITE") or "https://ratescout.ru/"
+    today = datetime.now(timezone.utc).date()
+    end = today - timedelta(days=3)
+    start = end - timedelta(days=6)
+    body = json.dumps({"startDate": start.isoformat(), "endDate": end.isoformat(), "dimensions": []}).encode()
+    url = f"https://www.googleapis.com/webmasters/v3/sites/{urllib.parse.quote(site, safe='')}/searchAnalytics/query"
+    req = urllib.request.Request(url, data=body, method="POST",
+                                 headers={"Authorization": f"Bearer {creds.token}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        rows = json.load(r).get("rows", [])
+    if rows:
+        return rows[0].get("clicks", 0), rows[0].get("impressions", 0)
+    return 0, 0
+
+
+def compare_block(ystats):
+    """Сравнительный блок Google vs Яндекс за 7 дней (поиск)."""
+    try:
+        g = gsc_totals()
+    except Exception as e:                         # noqa: BLE001
+        g = None
+        print(f"gsc_totals: {e}")
+    yc, ysh, yin = ystats.get("clicks", 0), ystats.get("shows", 0), ystats.get("insearch", 0)
+    L = ["⚖️ Google vs Яндекс (7 дней, поиск)"]
+    if g:
+        L.append(f"  Клики:  Google {g[0]:.0f}  ·  Яндекс {yc:.0f}")
+        L.append(f"  Показы: Google {g[1]:.0f}  ·  Яндекс {ysh:.0f}")
+    else:
+        L.append(f"  Яндекс: клики {yc:.0f} · показы {ysh:.0f}  (Google — нет ключа GSC)")
+    L.append(f"  Страниц в поиске: Яндекс {yin:.0f}  ·  Google — см. отчёт GSC")
     return "\n".join(L)
 
 
@@ -181,7 +228,9 @@ def main():
     if not TOKEN:
         print("YANDEX_OAUTH_TOKEN не задан — сухой прогон (Вебмастер+Метрика не запрашивались).")
         return 0
-    text = webmaster_report() + "\n\n" + metrika_report()
+    ystats = {}
+    wm = webmaster_report(ystats)
+    text = compare_block(ystats) + "\n\n" + wm + "\n\n" + metrika_report()
     print(text)
     send_telegram(text)
     return 0

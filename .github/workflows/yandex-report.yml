@@ -24,11 +24,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install deps (google-auth для сравнения с GSC)
+        run: pip install --quiet google-auth requests
       - name: Weekly Yandex report
         env:
           YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
           YANDEX_METRIKA_COUNTER: ${{ secrets.YANDEX_METRIKA_COUNTER }}
           YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
+          GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
+          GSC_SITE: ${{ secrets.GSC_SITE }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
         run: python3 yandex_report.py
