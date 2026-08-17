@@ -382,6 +382,7 @@ def render_home(lang):
     {search_box(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
+      <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -469,6 +470,88 @@ def render_directions(lang):
     {trust_bar(lang)}
     {table}
     {themes}
+  </div>
+</div>
+{il}{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
+
+
+def render_market_leaders(lang):
+    """Лидеры крипторынка по данным CoinGecko: капитализация, объём, движения за 7д. Рыночные факты, справочно."""
+    path = "/lidery-rynka/"
+    items = [(s, d) for s, d in MARKET.items() if s in CUR and d.get("mcap")]
+    ru = lang == "ru"
+    if ru:
+        title = f"Лидеры крипторынка — капитализация, объём, движения | {S['name']}"
+        desc = ("Топ криптовалют по капитализации и объёму торгов, лидеры роста и падения за 7 дней. "
+                "Рыночные данные CoinGecko, обновление ежечасно.")
+        h1, lead = "Лидеры крипторынка", ("Криптовалюты по капитализации и объёму торгов, а также лидеры "
+                                          "движения за неделю. Рыночные данные — по CoinGecko, справочно.")
+    else:
+        title = f"Crypto market leaders — market cap, volume, movers | {S['name']}"
+        desc = ("Top cryptocurrencies by market cap and trading volume, weekly gainers and losers. "
+                "CoinGecko market data, hourly updates.")
+        h1, lead = "Crypto market leaders", ("Cryptocurrencies by market cap and trading volume, plus weekly "
+                                             "movers. Market data from CoinGecko, for reference.")
+
+    def _nm(s):
+        return f'<a href="{cpage(lang, s)}">{CUR[s]["name"]} <span class="tk">{CUR[s]["ticker"]}</span></a>'
+
+    def _pct(v):
+        return (f'<span class="{"up" if v >= 0 else "down"}">{"+" if v >= 0 else ""}{v:.1f}%</span>'
+                if v is not None else "—")
+
+    def _tbl(cols, rows_html):
+        head_html = "".join(f"<th>{c}</th>" for c in cols)
+        return (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{head_html}</tr></thead>'
+                f'<tbody>{rows_html}</tbody></table></div>')
+
+    blocks = ""
+    if items:
+        cap = sorted(items, key=lambda x: x[1].get("rank") or 9999)[:30]
+        rows = "".join(f'<tr><td>{d.get("rank", "")}</td><td>{_nm(s)}</td><td>{_human_usd(d["mcap"], lang)}</td>'
+                       f'<td>{_human_usd(d.get("vol", 0), lang)}</td><td>{_pct(d.get("chg7d"))}</td></tr>'
+                       for s, d in cap)
+        blocks += (f'<h2 class="news">{"По капитализации" if ru else "By market cap"}</h2>'
+                   + _tbl(("#", "Валюта" if ru else "Currency", "Капитализация" if ru else "Market cap",
+                           "Объём 24ч" if ru else "Vol 24h", "7д" if ru else "7d"), rows))
+        vol = sorted(items, key=lambda x: x[1].get("vol") or 0, reverse=True)[:20]
+        rows2 = "".join(f'<tr><td>{i}</td><td>{_nm(s)}</td><td>{_human_usd(d.get("vol", 0), lang)}</td>'
+                        f'<td>{_human_usd(d["mcap"], lang)}</td></tr>' for i, (s, d) in enumerate(vol, 1))
+        blocks += (f'<h2 class="news">{"По объёму торгов (24ч)" if ru else "By trading volume (24h)"}</h2>'
+                   + _tbl(("#", "Валюта" if ru else "Currency", "Объём 24ч" if ru else "Vol 24h",
+                           "Капитализация" if ru else "Market cap"), rows2))
+        mv = [(s, d) for s, d in items if d.get("chg7d") is not None]
+        if mv:
+            gain = sorted(mv, key=lambda x: x[1]["chg7d"], reverse=True)[:10]
+            loss = sorted(mv, key=lambda x: x[1]["chg7d"])[:10]
+
+            def _ml(lst):
+                return "".join(f'<tr><td>{_nm(s)}</td><td>{_pct(d["chg7d"])}</td></tr>' for s, d in lst)
+            blocks += (f'<h2 class="news">{"Лидеры роста за 7д" if ru else "Top gainers (7d)"}</h2>'
+                       + _tbl(("Валюта" if ru else "Currency", "7д" if ru else "7d"), _ml(gain)))
+            blocks += (f'<h2 class="news">{"Лидеры падения за 7д" if ru else "Top losers (7d)"}</h2>'
+                       + _tbl(("Валюта" if ru else "Currency", "7д" if ru else "7d"), _ml(loss)))
+    else:
+        blocks = f'<p class="updnote">{"Рыночные данные обновляются." if ru else "Market data updating."}</p>'
+
+    src = "Источник рыночных данных: CoinGecko. Приведено справочно." if ru else \
+          "Market data source: CoinGecko. For reference."
+    il = itemlist_ld([(f'{CUR[s]["ticker"]}', BASE_URL + cpage(lang, s)) for s, _ in items[:20]]) if items else ""
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    crumbs += jsonld({"@context": "https://schema.org", "@type": "CollectionPage", "name": h1,
+                      "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang], "dateModified": modified_iso()})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    {blocks}
+    <p class="updnote">{src}</p>
   </div>
 </div>
 {il}{crumbs}
@@ -1037,7 +1120,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи", "nav_leaders": "Лидеры рынка",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -1053,7 +1136,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles", "nav_leaders": "Market leaders",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -1728,6 +1811,7 @@ def render_currency(slug, info, lang):
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
+      <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -3614,6 +3698,7 @@ def static_files():
         items.append(u_entry(pr + "/obzor/nedelya/", "daily", "0.6"))
         items.append(u_entry(pr + "/obzor/mesyac/", "weekly", "0.6"))
         items.append(u_entry(pr + "/svodka/", "hourly", "0.6"))
+        items.append(u_entry(pr + "/lidery-rynka/", "hourly", "0.6"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -3776,6 +3861,7 @@ def main():
         for _sid, _d, _rw, _ew in REVIEWS:
             render_review(lang, _sid, _d, _rw, _ew)
         render_svodka(lang)
+        render_market_leaders(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
