@@ -395,6 +395,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
+      <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -642,6 +643,64 @@ def compare_pairs():
     coins = sorted(((s, d.get("rank") or 9999) for s, d in MARKET.items() if s in CUR), key=lambda x: x[1])
     slugs = [s for s, _ in coins[:20]]
     return [(slugs[i], slugs[j]) for i in range(len(slugs)) for j in range(i + 1, len(slugs))]
+
+
+def render_compare_index(lang):
+    """Хаб сравнения валют /sravnenie/: два выпадающих списка → переход на /sravnenie/A-vs-B/, + список пар (SEO/без JS)."""
+    path = "/sravnenie/"
+    ru = lang == "ru"
+    coins = sorted(((s, d.get("rank") or 9999) for s, d in MARKET.items() if s in CUR), key=lambda x: x[1])
+    slugs = [s for s, _ in coins[:20]]
+    if not slugs:
+        return
+    opts = "".join(f'<option value="{i}">{CUR[s]["ticker"]} — {CUR[s]["name"]}</option>' for i, s in enumerate(slugs))
+    opts_b = "".join(f'<option value="{i}"{" selected" if i == 1 else ""}>{CUR[s]["ticker"]} — {CUR[s]["name"]}</option>'
+                     for i, s in enumerate(slugs))
+    links = " · ".join(f'<a href="{PREF[lang]}/sravnenie/{a}-vs-{b}/">{CUR[a]["ticker"]} vs {CUR[b]["ticker"]}</a>'
+                       for a, b in compare_pairs())
+    js = ("(function(){var S=" + json.dumps(slugs) + ",B=" + json.dumps(PREF[lang] + "/sravnenie/") + ";"
+          "var a=document.getElementById('cmpA'),b=document.getElementById('cmpB'),g=document.getElementById('cmpGo'),"
+          "w=document.getElementById('cmpWarn');if(!g)return;"
+          "g.addEventListener('click',function(){var i=+a.value,j=+b.value;"
+          "if(i===j){w.hidden=false;return;}w.hidden=true;var lo=Math.min(i,j),hi=Math.max(i,j);"
+          "location.href=B+S[lo]+'-vs-'+S[hi]+'/';});})();")
+    if ru:
+        title = f"Сравнение криптовалют — выберите две валюты | {S['name']}"
+        desc = ("Сравните две криптовалюты по цене, изменению, капитализации, объёму и ATH. Выберите валюты — "
+                "получите сравнение. Данные мониторинга BestChange и CoinGecko.")
+        h1, lead = "Сравнение криптовалют", "Выберите две валюты — покажем их рядом по ключевым показателям."
+        la, lb, btn, warn = "Первая валюта", "Вторая валюта", "Сравнить", "Выберите две разные валюты."
+        poph = "Популярные сравнения"
+    else:
+        title = f"Compare cryptocurrencies — pick two coins | {S['name']}"
+        desc = ("Compare two cryptocurrencies by price, change, market cap, volume and ATH. Pick coins — get the "
+                "comparison. BestChange monitoring and CoinGecko data.")
+        h1, lead = "Compare cryptocurrencies", "Pick two coins — we'll show them side by side on key metrics."
+        la, lb, btn, warn = "First coin", "Second coin", "Compare", "Pick two different coins."
+        poph = "Popular comparisons"
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    bodyhtml = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    <div class="conv dosblue dosborder">
+      <p><label>{la}: <select id="cmpA">{opts}</select></label></p>
+      <p><label>{lb}: <select id="cmpB">{opts_b}</select></label></p>
+      <p><button id="cmpGo" type="button" class="cta">{btn}</button></p>
+      <p id="cmpWarn" class="updnote" hidden style="color:#ffcc33">{warn}</p>
+    </div>
+    <h2 class="news">{poph}</h2>
+    <p class="dlist">{links}</p>
+  </div>
+</div>
+{crumbs}
+<script>{js}</script>
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + bodyhtml)
 
 
 def render_compare(a, b, lang):
@@ -1393,7 +1452,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи", "nav_leaders": "Лидеры рынка", "nav_mood": "Индекс страха",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи", "nav_leaders": "Лидеры рынка", "nav_mood": "Индекс страха", "nav_compare": "Сравнение валют",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -1409,7 +1468,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles", "nav_leaders": "Market leaders", "nav_mood": "Fear & Greed",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles", "nav_leaders": "Market leaders", "nav_mood": "Fear & Greed", "nav_compare": "Compare coins",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -2209,6 +2268,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
+      <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -4183,6 +4243,7 @@ def static_files():
         items.append(u_entry(pr + "/lidery-rynka/", "hourly", "0.6"))
         items.append(u_entry(pr + "/koshelki/", "monthly", "0.5"))
         items.append(u_entry(pr + "/stablecoins/", "hourly", "0.6"))
+        items.append(u_entry(pr + "/sravnenie/", "weekly", "0.6"))
         items.append(u_entry(pr + "/nastroeniya/", "daily", "0.6"))
         items.append(u_entry(pr + "/halving/", "daily", "0.6"))
         items += [u_entry(pr + f"/sravnenie/{_a}-vs-{_b}/", "daily", "0.5") for _a, _b in compare_pairs()]
@@ -4357,6 +4418,7 @@ def main():
         render_stablecoins(lang)
         render_fng(lang)
         render_halving(lang)
+        render_compare_index(lang)
         for _ca, _cb in compare_pairs():
             render_compare(_ca, _cb, lang)
         render_widget_page(lang)
