@@ -14,4 +14,3 @@ __pycache__/
 *.spec
 .DS_Store
 market.json
-aml-sanctions.json

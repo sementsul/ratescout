@@ -65,13 +65,13 @@ jobs:
 
       - name: Persist rate history back to repo (once/day, skip ci)
         run: |
-          if ! git diff --quiet -- history.json; then
+          if ! git diff --quiet -- history.json aml-sanctions.json; then
             git config user.name "ratescout-bot"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add history.json
-            git commit -m "chore(history): дневной снимок курсов [skip ci]"
+            git add history.json aml-sanctions.json
+            git commit -m "chore(data): снимок курсов + санкционный список OFAC [skip ci]"
             git push
-            echo "✅ history.json обновлён и запушен"
+            echo "✅ history.json/aml-sanctions.json обновлены и запушены"
           else
             echo "история без изменений — коммит не нужен"
           fi

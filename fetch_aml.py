@@ -42,8 +42,11 @@ def fetch(chain):
     raise RuntimeError(last or "fail")
 
 
+CRITICAL = {"XBT", "ETH", "TRX", "USDT"}         # без этих сетей список считаем неполным
+
+
 def main():
-    addrs, ok, per = set(), 0, {}
+    addrs, ok, per, failed = set(), 0, {}, set()
     for ch in CHAINS:
         try:
             got = [ln.strip() for ln in fetch(ch).splitlines() if ln.strip() and not ln.startswith("#")]
@@ -52,15 +55,28 @@ def main():
             addrs.update(got)
             ok += 1
         except Exception as e:                     # noqa: BLE001
+            failed.add(ch)
             print(f"OFAC {ch}: пропуск ({e})")
         time.sleep(0.5)
+
     out = os.path.join(ROOT, "aml-sanctions.json")
+    crit_fail = failed & CRITICAL
+    degraded = bool(crit_fail) or len(addrs) < 500
+    if degraded and os.path.exists(out):
+        # НЕ перезаписываем полный список неполным — оставляем прошлый хороший (last-good)
+        try:
+            prev = json.load(open(out, encoding="utf-8")).get("count", 0)
+        except (ValueError, OSError):
+            prev = 0
+        print(f"⚠️ неполный набор ({len(addrs)} адр., упали критичные: {sorted(crit_fail) or '—'}) — "
+              f"оставляю прошлый список ({prev} адр.), не перезаписываю")
+        return 0
+    if degraded:
+        print(f"⚠️ неполный набор ({len(addrs)} адр.) и нет прошлого файла — пишу что есть")
     json.dump({"updated": int(time.time()), "count": len(addrs), "addresses": sorted(addrs)},
               open(out, "w", encoding="utf-8"), ensure_ascii=False)
     print(f"aml-sanctions.json: {len(addrs)} адресов из {ok}/{len(CHAINS)} сетей "
           f"(XBT={per.get('XBT', 0)}, ETH={per.get('ETH', 0)}, TRX={per.get('TRX', 0)}, USDT={per.get('USDT', 0)})")
-    if len(addrs) < 300:
-        print("⚠️ подозрительно мало адресов — часть сетей не загрузилась")
     return 0
 
 

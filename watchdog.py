@@ -72,6 +72,21 @@ def check_freshness():
     return None
 
 
+def check_aml():
+    """Санкционный список OFAC для /aml/ должен быть полным (защита от неполной загрузки)."""
+    code, body = _get("/aml-sanctions.json")
+    if code != 200:
+        return f"aml-sanctions.json: не 200 ({code}) — AML-чек без списка"
+    try:
+        cnt = json.loads(body).get("count", 0)
+    except Exception as e:                        # noqa: BLE001
+        return f"aml-sanctions.json: не разобрать ({e})"
+    if cnt < 500:
+        return f"санкционный список OFAC неполный: {cnt} адресов (< 500) — AML-чек может врать «чисто»"
+    print(f"  санкционный список OFAC: {cnt} адресов — ок")
+    return None
+
+
 def check_queue():
     """Считает статьи с release в будущем (запас дрип-публикации). Работает по checkout репозитория."""
     today = datetime.now(timezone.utc).date()
@@ -118,6 +133,7 @@ def main():
         check_page("/sitemap.xml", "sitemap.xml"),
         check_feed(),
         check_freshness(),
+        check_aml(),
         check_queue(),
     ]
     problems = [p for p in checks if p]
