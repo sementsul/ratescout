@@ -1372,6 +1372,24 @@ def partner_block(lang):
     return f'<div class="rs-partner-geo links" hidden>{txt}</div><script>{_GEO_JS}</script>'
 
 
+def donations_block(lang):
+    """Крипто-донаты владельца. Гео-гейт (класс .rs-partner-geo): скрыт по умолчанию, показываем только вне РФ
+    (в России публичный сбор крипты — серая зона). Адреса публичные (не секреты)."""
+    rows = [("Bitcoin (BTC)", "bc1q37p5grfj4rlynxu82ld6zqyy6r59jcnqtm55xx"),
+            ("TON (Toncoin)", "UQCMDVJBDsriYx1b0QEZk_1_ubEHQpdIfu0td13ateCxtZTl"),
+            ("Ethereum (ETH)", "0x08D5E0819D04CA18f3BdbA2a3c8C26a4103abFD8"),
+            ("TRON (TRX)", "TS8YEsYet7q6CGVs3KckuPsdAtR51dxRUw")]
+    body = "".join(f'<tr><td>{n}</td><td><code>{a}</code></td></tr>' for n, a in rows)
+    if lang == "ru":
+        h, lead = "Поддержать проект", ("Проект развивается на энтузиазме. Если он вам полезен — можно поддержать "
+                                        "в криптовалюте (по желанию, необязательно):")
+    else:
+        h, lead = "Support the project", ("The project runs on enthusiasm. If you find it useful, you can support "
+                                          "it in crypto (optional):")
+    return (f'<div class="rs-partner-geo" hidden><h2>{h}</h2><p>{lead}</p>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><tbody>{body}</tbody></table></div></div>')
+
+
 def wallet_cta(lang):
     """CTA «Создать кошелёк» (Telegram Wallet) под поиском. Тот же гео-гейт (класс .rs-partner-geo), скрыт по умолчанию.
     Открытая партнёрская ссылка с пометкой — не маскировка."""
@@ -3526,7 +3544,8 @@ def compliance_pages(lang):
    и <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.
    Telegram-канал: <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">t.me/ratescout_kurs</a>,
    ВКонтакте: <a href="https://vk.com/ratescout" target="_blank" rel="noopener me">vk.com/ratescout</a>,
-   Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>""",
+   Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>"""
+                    + donations_block(lang),
                     "Раскрытие")
         render_page(lang, "politika", "Политика конфиденциальности",
                     f"Политика обработки данных и cookie на сайте {S['domain']} (152-ФЗ).",
@@ -3583,7 +3602,8 @@ def compliance_pages(lang):
    and <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.
    Telegram channel: <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">t.me/ratescout_kurs</a>,
    VK: <a href="https://vk.com/ratescout" target="_blank" rel="noopener me">vk.com/ratescout</a>,
-   Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>""",
+   Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>"""
+                    + donations_block(lang),
                     "Disclosure")
         render_page(lang, "politika", "Privacy policy",
                     f"Data and cookie processing policy on {S['domain']}.",
