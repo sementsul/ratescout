@@ -1,0 +1,34 @@
+name: Yandex report
+
+# Раз в неделю шлёт владельцу в Telegram отчёт Яндекса: Вебмастер (индексация+запросы) и Метрика (трафик).
+# Один OAuth-токен с двумя доступами. Без токена — сухой прогон. Ручной запуск — workflow_dispatch.
+# Секреты: YANDEX_OAUTH_TOKEN, YANDEX_METRIKA_COUNTER (опц.), YANDEX_HOST (опц.), TELEGRAM_TOKEN, ALERT_CHAT_ID.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"       # понедельник ~11:00 МСК (после Google-отчёта)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yandex-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Weekly Yandex report
+        env:
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_METRIKA_COUNTER: ${{ secrets.YANDEX_METRIKA_COUNTER }}
+          YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 yandex_report.py
