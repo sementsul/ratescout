@@ -77,6 +77,7 @@ def webmaster_report():
         today = datetime.now(timezone.utc).date()
         frm = (today - timedelta(days=30)).isoformat()
         h = yget(f"{base}/search-urls/in-search/history?date_from={frm}&date_to={today.isoformat()}")
+        print("DBG insearch:", json.dumps(h, ensure_ascii=False)[:600])
         return f"страниц в поиске: {_last_value(h)}"
     L.append("  " + sub(_insearch, "in-search"))
 
@@ -85,6 +86,7 @@ def webmaster_report():
         frm = (today - timedelta(days=30)).isoformat()
         h = yget(f"{base}/indexing/history?date_from={frm}&date_to={today.isoformat()}"
                  f"&indexing_indicators=DOWNLOADED")
+        print("DBG indexing:", json.dumps(h, ensure_ascii=False)[:600])
         ind = h.get("indicators", {}) if isinstance(h, dict) else {}
         return f"загружено роботом: {_last_value(ind.get('DOWNLOADED'))}"
     L.append("  " + sub(_indexing, "indexing"))
