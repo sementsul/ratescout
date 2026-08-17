@@ -1350,10 +1350,14 @@ def search_box(lang):
 </div>"""
 
 
-WALLET_URL = "https://telegram.me/wallet/start?startapp=ref-3-7ZelA1cR5QI"
-# Гео-гейт: раскрывает ВСЕ блоки .rs-partner-geo только при уверенном «не Россия»; РФ/неизвестно/сбой → скрыто.
-_GEO_JS = r"""(function(){var els=document.querySelectorAll('.rs-partner-geo');if(!els.length)return;
-function show(cc){if(cc&&cc!=='RU')for(var i=0;i<els.length;i++)els[i].hidden=false;}
+WALLET_URL = "https://telegram.me/wallet/start?startapp=ref-3-7ZelA1cR5QI"   # реф — только вне РФ
+WALLET_PLAIN = "https://t.me/wallet"                                        # обычная ссылка (для всех, вкл. РФ)
+# Гео-гейт (только при уверенном «не Россия»; РФ/неизвестно/сбой → как есть):
+#  · раскрывает блоки .rs-partner-geo;  · подменяет href у .js-wallet-ref на реф (data-ref).
+_GEO_JS = r"""(function(){var els=document.querySelectorAll('.rs-partner-geo'),refs=document.querySelectorAll('.js-wallet-ref');
+if(!els.length&&!refs.length)return;
+function show(cc){if(cc&&cc!=='RU'){for(var i=0;i<els.length;i++)els[i].hidden=false;
+for(var j=0;j<refs.length;j++){if(refs[j].getAttribute('data-ref'))refs[j].href=refs[j].getAttribute('data-ref');}}}
 try{var c=localStorage.getItem('rs_cc'),t=+localStorage.getItem('rs_cc_t')||0;
 if(c&&(Date.now()-t)<86400000){show(c);return;}}catch(e){}
 fetch('https://get.geojs.io/v1/ip/country.json').then(function(r){return r.json();}).then(function(d){
@@ -1386,18 +1390,85 @@ def donations_block(lang):
 
 
 def wallet_cta(lang):
-    """CTA «Создать кошелёк» (Telegram Wallet) под поиском. Тот же гео-гейт (класс .rs-partner-geo), скрыт по умолчанию.
-    Открытая партнёрская ссылка с пометкой — не маскировка."""
+    """CTA под поиском → информационный каталог кошельков (/koshelki/). Виден всем (это справка, не реклама)."""
     if lang == "ru":
-        title, sub, btn, mark = ("🅣 Кошелёк в Telegram", "Криптокошелёк прямо в Telegram — без установки приложений.",
-                                 "Создать кошелёк", "партнёрская ссылка")
+        title, sub, btn = ("🔑 Криптокошелёк", "Где хранить и куда выводить крипту — подборка кошельков.",
+                           "Каталог кошельков →")
     else:
-        title, sub, btn, mark = ("🅣 Telegram Wallet", "A crypto wallet right inside Telegram — no app install.",
-                                 "Create a wallet", "affiliate link")
-    return (f'<div class="rs-partner-geo conv dosblue dosborder" hidden>'
-            f'<h3>{title}</h3><p class="updnote">{sub}</p>'
-            f'<a class="cta" href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">{btn}</a>'
-            f'<p class="updnote"><span class="tk">· {mark}</span></p></div>')
+        title, sub, btn = ("🔑 Crypto wallet", "Where to keep and cash out crypto — a pick of wallets.",
+                           "Wallets catalog →")
+    return (f'<div class="conv dosblue dosborder"><h3>{title}</h3><p class="updnote">{sub}</p>'
+            f'<a class="cta" href="{PREF[lang]}/koshelki/">{btn}</a></div>')
+
+
+def render_koshelki(lang):
+    """Информационный каталог криптокошельков (справка, не реклама): нейтральные описания + обычные ссылки.
+    Telegram Wallet — обычная ссылка (t.me/wallet) для всех; реф подставляется гео-JS ТОЛЬКО вне РФ (data-ref)."""
+    path = "/koshelki/"
+    ru = lang == "ru"
+    # (имя, RU-описание, EN-описание, ссылка, is_tg)
+    wallets = [
+        ("Telegram Wallet", "Кошелёк прямо в Telegram, без установки приложений: TON, USDT, BTC.",
+         "A wallet inside Telegram, no app install: TON, USDT, BTC.", WALLET_PLAIN, True),
+        ("Trust Wallet", "Популярный мобильный мультивалютный кошелёк (самостоятельное хранение).",
+         "Popular mobile multi-currency non-custodial wallet.", "https://trustwallet.com/", False),
+        ("MetaMask", "Кошелёк для Ethereum и EVM-сетей — расширение браузера и приложение.",
+         "Wallet for Ethereum and EVM networks — browser extension and app.", "https://metamask.io/", False),
+        ("Ledger", "Аппаратный кошелёк (холодное хранение) для долгого хранения крупных сумм.",
+         "Hardware wallet (cold storage) for long-term holding.", "https://www.ledger.com/", False),
+        ("Exodus", "Десктоп- и мобильный мультивалютный кошелёк с обменом внутри.",
+         "Desktop and mobile multi-currency wallet with built-in swaps.", "https://www.exodus.com/", False),
+    ]
+    if ru:
+        title = f"Криптокошельки: где завести и как выбрать | {S['name']}"
+        desc = ("Подборка криптокошельков для хранения и вывода: Telegram Wallet, Trust Wallet, MetaMask, Ledger, "
+                "Exodus — нейтральные описания и официальные ссылки. Справочно.")
+        h1, lead = "Криптокошельки — где завести", ("Чтобы менять и хранить криптовалюту, нужен кошелёк. Ниже — "
+            "популярные варианты с короткими описаниями и официальными ссылками. Это справочная информация, "
+            "не рекомендация; выбор — за вами.")
+        coln = ("Кошелёк", "Описание", "")
+        go = "Перейти"
+    else:
+        title = f"Crypto wallets: where to get one and how to choose | {S['name']}"
+        desc = ("A pick of crypto wallets to keep and cash out: Telegram Wallet, Trust Wallet, MetaMask, Ledger, "
+                "Exodus — neutral descriptions and official links. For reference.")
+        h1, lead = "Crypto wallets — where to get one", ("To exchange and store crypto you need a wallet. Below are "
+            "popular options with short descriptions and official links. This is reference info, not advice; "
+            "the choice is yours.")
+        coln = ("Wallet", "Description", "")
+        go = "Open"
+    rows = ""
+    for name, dru, den, url, is_tg in wallets:
+        d = dru if ru else den
+        if is_tg:
+            link = (f'<a class="js-wallet-ref" href="{url}" data-ref="{WALLET_URL}" target="_blank" '
+                    f'rel="nofollow noopener">{go}</a>'
+                    f'<span class="rs-partner-geo tk" hidden> · {"партнёрская" if ru else "affiliate"}</span>')
+        else:
+            link = f'<a href="{url}" target="_blank" rel="nofollow noopener">{go}</a>'
+        rows += f'<tr><td><b>{name}</b></td><td>{d}</td><td>{link}</td></tr>'
+    table = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>'
+             f'{"".join(f"<th>{c}</th>" for c in coln)}</tr></thead><tbody>{rows}</tbody></table></div>')
+    note = ("Ссылки ведут на официальные сайты кошельков. RateScout — справочный сервис, не связан с ними и не даёт "
+            "финансовых рекомендаций. Храните seed-фразу в тайне." if ru else
+            "Links lead to the wallets' official sites. RateScout is a reference service, not affiliated with them "
+            "and gives no financial advice. Keep your seed phrase private.")
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    body = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    {table}
+    <p class="updnote">{note}</p>
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + body)
 
 
 def footer(lang):
@@ -3837,6 +3908,7 @@ def static_files():
         items.append(u_entry(pr + "/obzor/mesyac/", "weekly", "0.6"))
         items.append(u_entry(pr + "/svodka/", "hourly", "0.6"))
         items.append(u_entry(pr + "/lidery-rynka/", "hourly", "0.6"))
+        items.append(u_entry(pr + "/koshelki/", "monthly", "0.5"))
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -4004,6 +4076,7 @@ def main():
             render_review(lang, _sid, _d, _rw, _ew)
         render_svodka(lang)
         render_market_leaders(lang)
+        render_koshelki(lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
