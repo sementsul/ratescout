@@ -60,6 +60,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # аутентиф. доступ к GitHub API (без 429 на raw)
         run: python3 fetch_aml.py || echo "⚠️ санкционный список пропущен — AML-чек без него"
 
+      - name: Fetch Fear & Greed index (free) → fng.json
+        run: python3 fetch_fng.py || echo "⚠️ индекс страха пропущен"
+
       - name: Build static site
         run: python3 build.py
 

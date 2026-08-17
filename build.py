@@ -223,6 +223,15 @@ if os.path.exists(_mp):
     except (ValueError, OSError):
         MARKET = {}
 
+# Индекс страха и жадности (fetch_fng.py, ephemeral) — {value, class, ts} или пусто.
+FNG = {}
+_fp = os.path.join(ROOT, "fng.json")
+if os.path.exists(_fp):
+    try:
+        FNG = json.load(open(_fp, encoding="utf-8"))
+    except (ValueError, OSError):
+        FNG = {}
+
 # % изменения по валютам за периоды — предрасчёт (для сортировки таблиц), заполняется в main()
 CHG_BY = {}
 
@@ -373,6 +382,7 @@ def render_home(lang):
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
     <div class="dosblue dosborder">{intro}</div>
     {trust_bar(lang)}
+    <div class="mktwidgets">{fng_widget(lang)}{halving_widget(lang)}</div>
     {pop}
     <h2 class="news">{tr(lang,'catalog')} <span class="cnt">{total}</span></h2>
     {cat_html}
@@ -537,6 +547,12 @@ def render_market_leaders(lang):
     else:
         blocks = f'<p class="updnote">{"Рыночные данные обновляются." if ru else "Market data updating."}</p>'
 
+    cmp = compare_pairs()[:15]
+    if cmp:
+        cl = " · ".join(f'<a href="{PREF[lang]}/sravnenie/{a}-vs-{b}/">{CUR[a]["ticker"]} vs {CUR[b]["ticker"]}</a>'
+                        for a, b in cmp)
+        blocks += f'<h2 class="news">{"Сравнения валют" if ru else "Currency comparisons"}</h2><p class="dlist">{cl}</p>'
+
     src = "Источник рыночных данных: CoinGecko. Приведено справочно." if ru else \
           "Market data source: CoinGecko. For reference."
     il = itemlist_ld([(f'{CUR[s]["ticker"]}', BASE_URL + cpage(lang, s)) for s, _ in items[:20]]) if items else ""
@@ -558,6 +574,261 @@ def render_market_leaders(lang):
 {il}{crumbs}
 {footer(lang)}"""
     write(lang, path, head(lang, title, desc, path) + body)
+
+
+def render_stablecoins(lang):
+    """Депег-монитор: отклонение стейблкоинов от $1 (цена в USDT). Данные — _svodka_rows (мониторинг BestChange)."""
+    path = "/stablecoins/"
+    ru = lang == "ru"
+    rows = _svodka_rows()
+    best = {}
+    for r in rows:
+        tk = CUR[r[0]]["ticker"]
+        if tk in STABLE_T and r[1] is not None and (tk not in best or r[2] > best[tk][2]):
+            best[tk] = r
+    items = sorted(best.values(), key=lambda r: abs((r[1] or 1) - 1), reverse=True)
+    if ru:
+        title = f"Стейблкоины — привязка к доллару (депег-монитор) | {S['name']}"
+        desc = ("Мониторинг привязки стейблкоинов (USDT, USDC, DAI и др.) к $1: текущее отклонение цены и статус. "
+                "Данные мониторинга BestChange, обновление ежечасно.")
+        h1, lead = "Стейблкоины: привязка к доллару", ("Стейблкоины должны стоить около $1. Ниже — текущее "
+            "отклонение их цены (в USDT) от доллара: чем больше отклонение, тем сильнее «депег». Справочно.")
+        cols, ok_l, warn_l, bad_l = ("Стейблкоин", "Цена, USDT", "Откл. от $1", "Статус"), "в привязке", "лёгкий депег", "депег"
+        empty = "Данные обновляются."
+    else:
+        title = f"Stablecoins — dollar peg (depeg monitor) | {S['name']}"
+        desc = ("Stablecoin peg monitor (USDT, USDC, DAI and others) to $1: current price deviation and status. "
+                "BestChange monitoring data, hourly updates.")
+        h1, lead = "Stablecoins: dollar peg", ("Stablecoins should trade near $1. Below is the current deviation of "
+            "their price (in USDT) from the dollar: the larger the deviation, the bigger the depeg. For reference.")
+        cols, ok_l, warn_l, bad_l = ("Stablecoin", "Price, USDT", "Dev. from $1", "Status"), "on peg", "slight depeg", "depeg"
+        empty = "Data updating."
+    body = ""
+    for s, p, _liq, _ in items:
+        dev, ad = (p - 1) * 100, abs((p - 1) * 100)
+        cls = "up" if dev >= 0 else "down"
+        st = ok_l if ad < 0.5 else (warn_l if ad < 1.5 else bad_l)
+        stc = ' class="down"' if ad >= 1.5 else ""
+        body += (f'<tr><td><a href="{cpage(lang, s)}">{CUR[s]["name"]} <span class="tk">{CUR[s]["ticker"]}</span></a></td>'
+                 f'<td>{p:.4f}</td><td class="{cls}">{"+" if dev >= 0 else ""}{dev:.2f}%</td><td{stc}>{st}</td></tr>')
+    table = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{"".join(f"<th>{c}</th>" for c in cols)}'
+             f'</tr></thead><tbody>{body}</tbody></table></div>') if body else f'<p class="updnote">{empty}</p>'
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    bodyhtml = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    {table}
+    <p class="updnote">{"Отклонение считается по цене стейблкоина в USDT. Значительный депег — повод проверить новости актива." if ru else "Deviation is measured by the stablecoin price in USDT. A large depeg is a reason to check the asset news."}</p>
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + bodyhtml)
+
+
+def _px(slug):
+    h = HISTORY.get(slug) or []
+    return h[-1][1] if h else None
+
+
+def compare_pairs():
+    """Неупорядоченные пары среди топ-20 крипто по капитализации (из MARKET) — для страниц сравнения."""
+    coins = sorted(((s, d.get("rank") or 9999) for s, d in MARKET.items() if s in CUR), key=lambda x: x[1])
+    slugs = [s for s, _ in coins[:20]]
+    return [(slugs[i], slugs[j]) for i in range(len(slugs)) for j in range(i + 1, len(slugs))]
+
+
+def render_compare(a, b, lang):
+    """Сравнение двух валют: цена, изменения, капитализация, объём, ATH, RSI. Данные — наши + CoinGecko."""
+    ia, ib = CUR.get(a), CUR.get(b)
+    if not ia or not ib:
+        return
+    ta, tb = ia["ticker"], ib["ticker"]
+    path = f"/sravnenie/{a}-vs-{b}/"
+    ru = lang == "ru"
+    ma, mb = MARKET.get(a, {}), MARKET.get(b, {})
+    g1, g2 = currency_metrics(a) or {}, currency_metrics(b) or {}
+
+    def pc(v):
+        return f'<span class="{"up" if v >= 0 else "down"}">{"+" if v >= 0 else ""}{v:.1f}%</span>' if v is not None else "—"
+
+    def usd(x):
+        return _human_usd(x, lang) if x else "—"
+
+    def ath(m):
+        return f'{fmt_rate(m["ath"])} ({m["ath_chg"]:.0f}%)' if m.get("ath") else "—"
+    metrics = [
+        ("Цена, USDT" if ru else "Price, USDT", fmt_rate(_px(a)) if _px(a) else "—", fmt_rate(_px(b)) if _px(b) else "—"),
+        ("Изм. 24ч" if ru else "Change 24h", pc(g1.get("24h")), pc(g2.get("24h"))),
+        ("Изм. 7д" if ru else "Change 7d", pc(ma.get("chg7d")), pc(mb.get("chg7d"))),
+        ("Изм. 30д" if ru else "Change 30d", pc(ma.get("chg30d")), pc(mb.get("chg30d"))),
+        ("Капитализация" if ru else "Market cap", usd(ma.get("mcap")) + (f' #{ma["rank"]}' if ma.get("rank") else ""),
+         usd(mb.get("mcap")) + (f' #{mb["rank"]}' if mb.get("rank") else "")),
+        ("Объём 24ч" if ru else "Volume 24h", usd(ma.get("vol")), usd(mb.get("vol"))),
+        ("Ист. максимум (ATH)" if ru else "All-time high", ath(ma), ath(mb)),
+    ]
+    if g1.get("rsi") is not None or g2.get("rsi") is not None:
+        metrics.append(("RSI (14)", f'{g1["rsi"]:.0f}' if g1.get("rsi") is not None else "—",
+                        f'{g2["rsi"]:.0f}' if g2.get("rsi") is not None else "—"))
+    rows = "".join(f'<tr><td>{m}</td><td>{va}</td><td>{vb}</td></tr>' for m, va, vb in metrics)
+    if ru:
+        title = f"{ta} vs {tb} — сравнение: курс, капитализация, динамика | {S['name']}"
+        desc = (f"Сравнение {ia['name']} ({ta}) и {ib['name']} ({tb}): цена, изменение за 24ч/7д/30д, капитализация, "
+                f"объём торгов, ATH. Данные мониторинга BestChange и CoinGecko.")
+        h1, lead = f"{ta} vs {tb} — сравнение", (f"Сравнение {ia['name']} и {ib['name']} по ключевым показателям — "
+            "цена, динамика, капитализация. Справочно, не рекомендация.")
+        colh = ("Показатель", ta, tb)
+    else:
+        title = f"{ta} vs {tb} — comparison: price, market cap, dynamics | {S['name']}"
+        desc = (f"Compare {ia['name']} ({ta}) and {ib['name']} ({tb}): price, 24h/7d/30d change, market cap, "
+                f"trading volume, ATH. BestChange monitoring and CoinGecko data.")
+        h1, lead = f"{ta} vs {tb} — comparison", (f"Comparing {ia['name']} and {ib['name']} on key metrics — "
+            "price, dynamics, market cap. For reference, not advice.")
+        colh = ("Metric", ta, tb)
+    table = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{"".join(f"<th>{c}</th>" for c in colh)}'
+             f'</tr></thead><tbody>{rows}</tbody></table></div>')
+    rel = (f'<p class="related"><a href="{cpage(lang, a)}">{ia["name"]} {ta}</a> · '
+           f'<a href="{cpage(lang, b)}">{ib["name"]} {tb}</a> · '
+           f'<a href="{PREF[lang]}/lidery-rynka/">{"Лидеры рынка" if ru else "Market leaders"}</a></p>')
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": f"{ta} vs {tb}", "item": BASE_URL + PREF[lang] + path}]})
+    bodyhtml = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {ta} vs {tb}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {trust_bar(lang)}
+    {table}
+    {rel}
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + bodyhtml)
+
+
+FNG_CLASS_RU = {"Extreme Fear": "Крайний страх", "Fear": "Страх", "Neutral": "Нейтрально",
+                "Greed": "Жадность", "Extreme Greed": "Крайняя жадность"}
+
+
+def _fng_color(v):
+    return ("#ff5555" if v < 25 else "#ff9933" if v < 45 else "#ffdd33" if v < 55 else "#88dd44" if v < 75 else "#33cc33")
+
+
+def fng_widget(lang):
+    if "value" not in FNG:
+        return ""
+    v, ru = FNG["value"], lang == "ru"
+    lab = FNG_CLASS_RU.get(FNG.get("class", ""), FNG.get("class", "")) if ru else FNG.get("class", "")
+    col = _fng_color(v)
+    h = "Индекс страха и жадности" if ru else "Fear & Greed Index"
+    return (f'<div class="conv dosblue dosborder"><h3><a href="{PREF[lang]}/nastroeniya/">{h}</a></h3>'
+            f'<p class="big" style="color:{col};margin:4px 0">{v}<span class="tk" style="color:{col}"> /100 · {lab}</span></p>'
+            f'<div style="height:8px;background:#002;border:1px solid #55ffff">'
+            f'<div style="height:100%;width:{v}%;background:{col}"></div></div></div>')
+
+
+def render_fng(lang):
+    path = "/nastroeniya/"
+    ru = lang == "ru"
+    if ru:
+        title = f"Индекс страха и жадности криптовалют — сегодня | {S['name']}"
+        desc = "Индекс страха и жадности (Crypto Fear & Greed) — настроение крипторынка сегодня по шкале 0–100. Источник: alternative.me."
+        h1, lead = "Индекс страха и жадности", ("Индекс показывает настроение крипторынка по шкале 0–100: низкие "
+            "значения — страх (часто рынок перепродан), высокие — жадность (перегрет). Это ориентир, не сигнал.")
+        scale = [("0–24", "Крайний страх"), ("25–44", "Страх"), ("45–54", "Нейтрально"),
+                 ("55–74", "Жадность"), ("75–100", "Крайняя жадность")]
+        src = "Источник: alternative.me. Приведено справочно, не является рекомендацией."
+    else:
+        title = f"Crypto Fear & Greed Index — today | {S['name']}"
+        desc = "Crypto Fear & Greed Index — market sentiment today on a 0–100 scale. Source: alternative.me."
+        h1, lead = "Fear & Greed Index", ("The index shows crypto market sentiment on a 0–100 scale: low means fear "
+            "(often oversold), high means greed (overheated). A guide, not a signal.")
+        scale = [("0–24", "Extreme Fear"), ("25–44", "Fear"), ("45–54", "Neutral"),
+                 ("55–74", "Greed"), ("75–100", "Extreme Greed")]
+        src = "Source: alternative.me. For reference, not advice."
+    scale_html = "".join(f'<tr><td>{r}</td><td>{n}</td></tr>' for r, n in scale)
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    bodyhtml = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {fng_widget(lang) or '<p class="updnote">' + ('Индекс обновляется.' if ru else 'Index updating.') + '</p>'}
+    <h2 class="news">{"Шкала" if ru else "Scale"}</h2>
+    <div class="rtbl-wrap"><table class="rtbl"><tbody>{scale_html}</tbody></table></div>
+    <p class="updnote">{src}</p>
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + bodyhtml)
+
+
+_HALVING_JS = r"""(function(){var el=document.getElementById('halvingBox');if(!el)return;
+var T=1050000,tgt=null,b=el.querySelector('.hvb'),t=el.querySelector('.hvt');
+function f(s){s=Math.max(0,s|0);var d=(s/86400)|0,h=((s%86400)/3600)|0,m=((s%3600)/60)|0,x=s%60;return d+'д '+h+'ч '+m+'м '+x+'с';}
+function tick(){if(tgt&&t)t.textContent=f((tgt-Date.now())/1000);}
+function go(h){var bl=T-h;if(bl<0)bl=0;if(b)b.textContent=bl;tgt=Date.now()+bl*600000;tick();setInterval(tick,1000);}
+fetch('https://mempool.space/api/blocks/tip/height').then(function(r){return r.text();}).then(function(x){go(parseInt(x,10));}).catch(function(){tgt=Date.UTC(2028,3,15);if(b)b.textContent='~';tick();setInterval(tick,1000);});})();"""
+
+
+def halving_widget(lang):
+    ru = lang == "ru"
+    h = "До халвинга Bitcoin" if ru else "Bitcoin halving in"
+    sub = "Блоков осталось" if ru else "Blocks left"
+    return (f'<div id="halvingBox" class="conv dosblue dosborder"><h3><a href="{PREF[lang]}/halving/">{h}</a></h3>'
+            f'<p class="big" style="margin:4px 0"><span class="hvt">…</span></p>'
+            f'<p class="updnote">{sub}: <span class="hvb">…</span> → блок 1&nbsp;050&nbsp;000</p></div>'
+            f'<script>{_HALVING_JS}</script>')
+
+
+def render_halving(lang):
+    path = "/halving/"
+    ru = lang == "ru"
+    if ru:
+        title = f"Халвинг Bitcoin — сколько осталось (счётчик) | {S['name']}"
+        desc = "Сколько осталось до следующего халвинга Bitcoin: счётчик по блокам и времени. Что такое халвинг и как он влияет на рынок."
+        h1, lead = "Халвинг Bitcoin — обратный отсчёт", ("Халвинг — плановое сокращение награды за блок Bitcoin "
+            "вдвое, происходит каждые 210 000 блоков (примерно раз в 4 года). Следующий — на блоке 1 050 000.")
+        exp = ("<h2 class=\"news\">Что такое халвинг</h2><p>Каждые 210 000 блоков награда майнерам за блок "
+               "уменьшается вдвое. Это снижает эмиссию новых BTC. Исторически халвинги связывают с рыночными циклами, "
+               "но прямой гарантии движения цены нет — это не прогноз.</p>"
+               "<p class=\"related\"><a href=\"/blog/halving-bitcoin/\">Подробнее о халвинге в блоге</a></p>")
+        src = "Счётчик оценочный: считается по текущей высоте блока и среднему времени блока (~10 мин)."
+    else:
+        title = f"Bitcoin halving countdown — time left | {S['name']}"
+        desc = "How long until the next Bitcoin halving: a countdown by blocks and time. What halving is and how it affects the market."
+        h1, lead = "Bitcoin halving countdown", ("Halving is the scheduled 50% cut of the Bitcoin block reward, "
+            "every 210,000 blocks (about every 4 years). The next one is at block 1,050,000.")
+        exp = ("<h2 class=\"news\">What is halving</h2><p>Every 210,000 blocks the miner block reward is cut in half, "
+               "reducing new BTC issuance. Halvings are associated with market cycles, but there is no guaranteed price "
+               "move — this is not a forecast.</p>")
+        src = "Estimated countdown: based on the current block height and average block time (~10 min)."
+    crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": tr(lang, "monitor"), "item": BASE_URL + PREF[lang] + "/"},
+        {"@type": "ListItem", "position": 2, "name": h1, "item": BASE_URL + PREF[lang] + path}]})
+    bodyhtml = f"""{header(lang, path)}
+<div id="main">
+  <div id="content" style="float:none;width:100%">
+    <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
+    <h1>{h1}</h1><p>{lead}</p>
+    {halving_widget(lang)}
+    {exp}
+    <p class="updnote">{src}</p>
+  </div>
+</div>
+{crumbs}
+{footer(lang)}"""
+    write(lang, path, head(lang, title, desc, path) + bodyhtml)
 
 
 def render_charts_overview(lang):
@@ -3909,6 +4180,10 @@ def static_files():
         items.append(u_entry(pr + "/svodka/", "hourly", "0.6"))
         items.append(u_entry(pr + "/lidery-rynka/", "hourly", "0.6"))
         items.append(u_entry(pr + "/koshelki/", "monthly", "0.5"))
+        items.append(u_entry(pr + "/stablecoins/", "hourly", "0.6"))
+        items.append(u_entry(pr + "/nastroeniya/", "daily", "0.6"))
+        items.append(u_entry(pr + "/halving/", "daily", "0.6"))
+        items += [u_entry(pr + f"/sravnenie/{_a}-vs-{_b}/", "daily", "0.5") for _a, _b in compare_pairs()]
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
@@ -4077,6 +4352,11 @@ def main():
         render_svodka(lang)
         render_market_leaders(lang)
         render_koshelki(lang)
+        render_stablecoins(lang)
+        render_fng(lang)
+        render_halving(lang)
+        for _ca, _cb in compare_pairs():
+            render_compare(_ca, _cb, lang)
         render_widget_page(lang)
         render_faq(lang)
         render_blog(lang)
