@@ -67,6 +67,21 @@ def announce_mastodon(d):
         return f"Mastodon: ошибка {e}"
 
 
+def announce_owner(d):
+    """Личный пинг владельцу в день выхода статьи (в дополнение к постам в каналы)."""
+    tok, chat = os.environ.get("TELEGRAM_TOKEN"), os.environ.get("ALERT_CHAT_ID")
+    if not tok or not chat:
+        return "Owner: чата нет"
+    text = f"📣 Сегодня вышла статья:\n{d['title']}\n{d['url']}\n\nАнонс отправлен в каналы."
+    try:
+        r = _post(f"https://api.telegram.org/bot{tok}/sendMessage",
+                  urllib.parse.urlencode({"chat_id": chat, "text": text,
+                                          "disable_web_page_preview": "true"}).encode())
+        return "Owner: ок" if r.get("ok") else f"Owner: {r}"
+    except Exception as e:                        # noqa: BLE001
+        return f"Owner: ошибка {e}"
+
+
 def main():
     try:
         with urllib.request.urlopen(SRC, timeout=30) as r:
@@ -78,7 +93,7 @@ def main():
         print("сегодня новой статьи нет — анонс пропущен")
         return 0
     print(f"анонс: {d['title']}")
-    for fn in (announce_telegram, announce_vk, announce_mastodon):
+    for fn in (announce_telegram, announce_vk, announce_mastodon, announce_owner):
         print(" ", fn(d))
     return 0
 

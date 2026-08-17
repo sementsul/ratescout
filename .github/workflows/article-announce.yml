@@ -32,4 +32,5 @@ jobs:
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
           MASTODON_URL: ${{ secrets.MASTODON_URL }}
           MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
         run: python3 article_announce.py
