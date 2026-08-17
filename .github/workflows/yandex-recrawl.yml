@@ -1,0 +1,33 @@
+name: Yandex recrawl
+
+# Отправляет ключевые страницы на переобход в Яндекс.Вебмастере (recrawl queue).
+# Ручной запуск + раз в неделю (пн). Уважает суточную квоту — шлёт список и останавливается на исчерпании.
+# Секреты: YANDEX_OAUTH_TOKEN, YANDEX_HOST (опц.), TELEGRAM_TOKEN+ALERT_CHAT_ID (опц., для сводки).
+
+on:
+  schedule:
+    - cron: "30 8 * * 1"      # понедельник ~11:30 МСК (после отчётов)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yandex-recrawl
+  cancel-in-progress: false
+
+jobs:
+  recrawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Submit key pages to Yandex recrawl
+        env:
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 yandex_recrawl.py
