@@ -1406,6 +1406,19 @@ _seen = set()
 PAIR_PAGES = [p for p in PAIR_PAGES if not ((p["from"], p["to"]) in _seen or _seen.add((p["from"], p["to"])))]
 PAIR_SET = {(p["from"], p["to"]) for p in PAIR_PAGES}
 
+# RU-only расширение: страницы под ВСЕ направления с ≥ MIN_RU_COUNT обменников (кроме уже в PAIR_PAGES).
+# Даёт большой SEO-охват + внутренние ссылки для конвертера; English оставляем компактным (только PAIR_PAGES).
+MIN_RU_COUNT = 10
+PAIR_PAGES_RU = []
+for _k, _v in RATES.items():
+    if (_v.get("count", 0) or 0) >= MIN_RU_COUNT:
+        _f, _t = _k.split(">", 1)
+        if _f in CUR and _t in CUR and (_f, _t) not in _seen:
+            _seen.add((_f, _t))
+            PAIR_PAGES_RU.append({"from": _f, "to": _t})
+# Полное множество страниц-пар (для sitemap RU / конвертера / проверок ссылок).
+PAIR_SET_ALL = PAIR_SET | {(p["from"], p["to"]) for p in PAIR_PAGES_RU}
+
 # Банковские хабы: «все монеты → конкретный получатель» (крупные RUB-направления).
 # Страница /na/<slug>/ агрегирует крипто→этот банк с курсами — высокоинтентный money-лендинг.
 BANK_HUB_LIST = ["sberbank", "tinkoff", "sbp", "cash-ruble", "visa-mastercard-rub",
@@ -4224,6 +4237,8 @@ def static_files():
         items += [u_entry(pr + f"/valuta/{s}/", "hourly", "0.6") for s in CUR]
         items += [u_entry(pr + f"/kupit/{s}/", "hourly", "0.6") for s in CUR]
         items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "hourly", "0.8") for p in PAIR_PAGES]
+        if lg == "ru":
+            items += [u_entry(pr + f"/obmen/{p['from']}-{p['to']}/", "daily", "0.4") for p in PAIR_PAGES_RU]
         if ARTS[lg]:
             items.append(u_entry(pr + "/blog/", "weekly", "0.7"))
             _bpages = (len(ARTS[lg]) + BLOG_PER_PAGE - 1) // BLOG_PER_PAGE
@@ -4279,6 +4294,12 @@ def static_files():
         "e.respondWith(fetch(q).then(r=>{const c=r.clone();caches.open(C).then(x=>x.put(q,c));return r})"
         ".catch(()=>caches.match(q)));});")
     open(os.path.join(DIST, ".nojekyll"), "w").write("")
+    # карта покрытия направлений для конвертера: какие /obmen/ существуют (RU — все, EN — только 714).
+    json.dump({"p": [f"{a}-{b}" for a, b in PAIR_SET_ALL]},
+              open(os.path.join(DIST, "pairs.json"), "w"), separators=(",", ":"))
+    os.makedirs(os.path.join(DIST, "en"), exist_ok=True)
+    json.dump({"p": [f"{a}-{b}" for a, b in PAIR_SET]},
+              open(os.path.join(DIST, "en", "pairs.json"), "w"), separators=(",", ":"))
     # IndexNow: ключ-файл (публичный, не секрет) для мгновенной переиндексации Яндекс/Bing
     open(os.path.join(DIST, INDEXNOW_KEY + ".txt"), "w").write(INDEXNOW_KEY)
     # санкционный список OFAC для клиентского AML-чека (ephemeral; кладём в dist, чтобы браузер мог фетчить)
@@ -4429,6 +4450,9 @@ def main():
             render_article(a, lang)
         for p in PAIR_PAGES:
             render_pair(p["from"], p["to"], lang)
+        if lang == "ru":                    # RU-only расширение направлений (≥3 обменников)
+            for p in PAIR_PAGES_RU:
+                render_pair(p["from"], p["to"], lang)
     render_404()
     render_miniapp()
     static_files()

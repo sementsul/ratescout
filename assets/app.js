@@ -131,6 +131,14 @@
   var rn = document.getElementById("convRates");
   if (rn) { try { RATES = JSON.parse(rn.textContent); ROWNER = rn.getAttribute("data-owner") || ""; } catch (e) { RATES = null; } }
 
+  // карта покрытия направлений: если для пары есть наша страница /obmen/from-to/ — ведём внутрь, иначе в BestChange.
+  var CPRE = conv.getAttribute("data-prefix") || "";
+  var COV = null;
+  fetch(CPRE + "/pairs.json").then(function (r) { return r.json(); }).then(function (d) {
+    COV = {}; var a = d.p || []; for (var i = 0; i < a.length; i++) COV[a[i]] = 1;
+    if (typeof update === "function") update();
+  }).catch(function () { COV = {}; });
+
   function fmtNum(v) {
     if (!isFinite(v)) return "";
     if (v >= 1000) return v.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
@@ -150,8 +158,18 @@
 
   function update() {
     var f = elFrom.value, t = elTo.value;
-    if (f === t) { elGo.href = "https://www.bestchange.ru/?p=" + REF; elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return; }
-    elGo.href = deep(f, t);
+    if (f === t) {
+      elGo.href = "https://www.bestchange.ru/?p=" + REF;
+      elGo.setAttribute("target", "_blank"); elGo.setAttribute("rel", "nofollow noopener sponsored");
+      elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return;
+    }
+    if (COV && COV[f + "-" + t]) {                 // есть наша страница направления → ведём внутрь (не прямая реклама)
+      elGo.href = CPRE + "/obmen/" + f + "-" + t + "/";
+      elGo.removeAttribute("target"); elGo.setAttribute("rel", "nofollow");
+    } else {                                       // страницы нет → в BestChange (реф сохраняется)
+      elGo.href = deep(f, t);
+      elGo.setAttribute("target", "_blank"); elGo.setAttribute("rel", "nofollow noopener sponsored");
+    }
     elGo.textContent = OPEN + ": " + bySlug[f].t + " → " + bySlug[t].t + " →";
     estimate();
   }
