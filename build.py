@@ -1349,6 +1349,28 @@ def search_box(lang):
 </div>"""
 
 
+_GEO_JS = r"""(function(){var el=document.getElementById('rsPartner');if(!el)return;
+function show(cc){if(cc&&cc!=='RU')el.hidden=false;}
+try{var c=localStorage.getItem('rs_cc'),t=+localStorage.getItem('rs_cc_t')||0;
+if(c&&(Date.now()-t)<86400000){show(c);return;}}catch(e){}
+fetch('https://get.geojs.io/v1/ip/country.json').then(function(r){return r.json();}).then(function(d){
+var cc=(d&&d.country)||'';try{localStorage.setItem('rs_cc',cc);localStorage.setItem('rs_cc_t',''+Date.now());}catch(e){}
+show(cc);}).catch(function(){});})();"""
+
+
+def partner_block(lang):
+    """Партнёрская ссылка Telegram Wallet. Гео-гейт (клиент, fail-safe скрыто): показываем ТОЛЬКО при уверенном
+    «не Россия»; РФ/неизвестно/сбой → скрыто. Ссылка открытая, с пометкой «партнёрская» (не маскировка)."""
+    url = "https://telegram.me/wallet/start?startapp=ref-3-7ZelA1cR5QI"
+    if lang == "ru":
+        txt = (f'🅣 Кошелёк в Telegram — <a href="{url}" target="_blank" rel="sponsored nofollow noopener">открыть</a> '
+               '<span class="tk">· партнёрская ссылка</span>')
+    else:
+        txt = (f'🅣 Telegram Wallet — <a href="{url}" target="_blank" rel="sponsored nofollow noopener">open</a> '
+               '<span class="tk">· affiliate link</span>')
+    return f'<div id="rsPartner" class="links" hidden>{txt}</div><script>{_GEO_JS}</script>'
+
+
 def footer(lang):
     if lang == "ru":
         disc = ("RateScout — независимый информационный сервис мониторинга курсов. Мы не обменный пункт и не "
@@ -1371,6 +1393,7 @@ def footer(lang):
     return f"""<div id="footer">
   <div class="disc">{disc}</div>
   <div class="links">{links}</div>
+  {partner_block(lang)}
   <div class="fine">{fine}</div>
 </div>
 </div>
@@ -3471,7 +3494,8 @@ def compliance_pages(lang):
                     "Партнёрское раскрытие и правовая информация RateScout.",
                     f"""<h1>Раскрытие информации и дисклеймеры</h1>
 <h2>Партнёрское раскрытие</h2><p>RateScout — независимый информационный сервис. Ссылки ведут в BestChange; по
-   партнёрской программе возможно вознаграждение. Это не реклама от имени BestChange.</p>
+   партнёрской программе возможно вознаграждение. Это не реклама от имени BestChange. Отдельные сторонние сервисы
+   могут быть помечены как «партнёрская ссылка» — по ним также возможно вознаграждение.</p>
 <h2>Дисклеймер</h2><p>Информация справочная, не является финансовой/инвестиционной/юридической рекомендацией.
    Курсы меняются. Решение об обмене — самостоятельно и на свой риск. 18+.</p>
 <h2>Соответствие законодательству</h2>
@@ -3528,7 +3552,8 @@ def compliance_pages(lang):
                     "Affiliate disclosure and legal information of RateScout.",
                     f"""<h1>Disclosure and disclaimers</h1>
 <h2>Affiliate disclosure</h2><p>RateScout is an independent information service. Links lead to BestChange; through
-   the affiliate program we may earn a commission. This is not advertising on behalf of BestChange (FTC disclosure).</p>
+   the affiliate program we may earn a commission. This is not advertising on behalf of BestChange (FTC disclosure).
+   Some third-party services may be marked as an "affiliate link" — we may also earn a commission from those.</p>
 <h2>Disclaimer</h2><p>Information is for reference and is not financial, investment or legal advice. Rates change.
    You decide to exchange on your own and at your own risk. 18+.</p>
 <h2>Legal</h2><ul><li><b>US:</b> FTC affiliate disclosure; the service is unavailable to sanctioned persons/territories (OFAC).</li>
