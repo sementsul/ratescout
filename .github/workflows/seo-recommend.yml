@@ -1,0 +1,43 @@
+name: SEO recommendations
+
+# Раз в неделю: по запросам Google Search Console формирует рекомендации «создать / усилить» направления,
+# шлёт компактную сводку владельцу в Telegram и выкладывает полный список артефактом (seo-recommendations.md).
+# Ничего не публикует и не меняет сайт — только советует; решение за человеком.
+# Секреты: GSC_SA_JSON, GSC_SITE, TELEGRAM_TOKEN, ALERT_CHAT_ID (те же, что у отчёта/сторожа).
+
+on:
+  schedule:
+    - cron: "0 7 * * 4"       # четверг ~10:00 МСК
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-recommend
+  cancel-in-progress: false
+
+jobs:
+  recommend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install --quiet google-auth requests
+      - name: Build SEO recommendations
+        env:
+          GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
+          GSC_SITE: ${{ secrets.GSC_SITE }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 seo_recommend.py
+      - name: Upload recommendations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-recommendations
+          path: seo-recommendations.md
+          if-no-files-found: ignore
