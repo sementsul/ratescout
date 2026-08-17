@@ -50,6 +50,11 @@ jobs:
       - name: Update rate history (daily snapshot → history.json)
         run: python3 history.py || echo "⚠️ история пропущена"
 
+      - name: Fetch market data (CoinGecko, free, no key) → market.json
+        env:
+          COINGECKO_KEY: ${{ secrets.COINGECKO_KEY }}
+        run: python3 fetch_market.py || echo "⚠️ рыночные данные пропущены — собираю без них"
+
       - name: Build static site
         run: python3 build.py
 

@@ -214,6 +214,15 @@ if os.path.exists(_pp):
     except (ValueError, OSError):
         POPULAR = {}
 
+# Рыночные метрики из CoinGecko (fetch_market.py, ephemeral) — капитализация/объём/ATH по крипто-валютам.
+MARKET = {}
+_mp = os.path.join(ROOT, "market.json")
+if os.path.exists(_mp):
+    try:
+        MARKET = json.load(open(_mp, encoding="utf-8")).get("coins", {})
+    except (ValueError, OSError):
+        MARKET = {}
+
 # % изменения по валютам за периоды — предрасчёт (для сортировки таблиц), заполняется в main()
 CHG_BY = {}
 
@@ -885,6 +894,62 @@ def currency_metrics_block(slug, info, lang):
     return (f'<h2 class="news">{h}</h2>'
             f'<div class="rtbl-wrap"><table class="rtbl"><tbody>{body}</tbody></table></div>'
             f'<p class="updnote">{disc}</p>')
+
+
+def _human_usd(n, lang):
+    """$1.28 трлн / $850 млрд … (RU) или T/B/M/K (EN)."""
+    try:
+        n = float(n)
+    except (TypeError, ValueError):
+        return "—"
+    for div, ru, en in ((1e12, "трлн", "T"), (1e9, "млрд", "B"), (1e6, "млн", "M"), (1e3, "тыс", "K")):
+        if n >= div:
+            return f"${n / div:.2f} {ru if lang == 'ru' else en}"
+    return f"${n:.0f}"
+
+
+def _human_num(n, lang):
+    try:
+        n = float(n)
+    except (TypeError, ValueError):
+        return "—"
+    for div, ru, en in ((1e12, "трлн", "T"), (1e9, "млрд", "B"), (1e6, "млн", "M"), (1e3, "тыс", "K")):
+        if n >= div:
+            return f"{n / div:.2f} {ru if lang == 'ru' else en}"
+    return f"{n:.0f}"
+
+
+def market_block(slug, info, lang):
+    """Блок «Рыночные данные» по CoinGecko (капитализация/объём/ATH/предложение). Факты рынка, с указанием источника."""
+    d = MARKET.get(slug)
+    if not d or not d.get("mcap"):
+        return ""
+    ru, t = lang == "ru", info["ticker"]
+    rows = []
+    cap = _human_usd(d["mcap"], lang)
+    if d.get("rank"):
+        cap += f' <span class="tk">#{d["rank"]}</span>'
+    rows.append(("Капитализация" if ru else "Market cap", cap))
+    if d.get("vol"):
+        rows.append(("Объём торгов (24ч)" if ru else "Volume (24h)", _human_usd(d["vol"], lang)))
+    if d.get("ath"):
+        athc = d.get("ath_chg")
+        note = f' <span class="down">{athc:.0f}% {"от ATH" if ru else "from ATH"}</span>' if athc is not None else ""
+        rows.append(("Исторический максимум" if ru else "All-time high", f'{fmt_rate(d["ath"])} USD{note}'))
+    if d.get("supply"):
+        rows.append(("В обращении" if ru else "Circulating supply", f'{_human_num(d["supply"], lang)} {t}'))
+    for pk, ru_l, en_l in (("chg7d", "Изменение 7д (биржи)", "Change 7d (market)"),
+                           ("chg30d", "Изменение 30д (биржи)", "Change 30d (market)")):
+        v = d.get(pk)
+        if v is not None:
+            cls = "up" if v >= 0 else "down"
+            rows.append((ru_l if ru else en_l, f'<span class="{cls}">{"+" if v >= 0 else ""}{v:.1f}%</span>'))
+    body = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in rows)
+    h = f"Рыночные данные {t}" if ru else f"{t} market data"
+    src = ("Источник: CoinGecko. Приведено справочно." if ru else "Source: CoinGecko. For reference.")
+    return (f'<h2 class="news">{h}</h2>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><tbody>{body}</tbody></table></div>'
+            f'<p class="updnote">{src}</p>')
 
 
 def rate_of(frm, to):
@@ -1644,6 +1709,7 @@ def render_currency(slug, info, lang):
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
+    {market_block(slug, info, lang)}
     {currency_metrics_block(slug, info, lang)}
     {history_table(slug, lang)}
     {rate_table(slug, info, lang)}
