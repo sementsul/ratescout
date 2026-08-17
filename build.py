@@ -1044,7 +1044,9 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <meta name="zen-verification" content="AvXwV96CkkGrgi2Dn4bnu0c3gAx52ezYYqNU79rdSigVe2IAJhfqL8E512dfovL5">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://mc.yandex.ru">
 <link rel="dns-prefetch" href="https://mc.yandex.ru">
 <link rel="preconnect" href="https://www.googletagmanager.com">
@@ -1998,6 +2000,31 @@ def make_cover(out_path, title):
         y += lh
     d.text((60, H - 72), "Гайды по обмену криптовалют и валют", font=f_foot, fill=(130, 130, 130))
     img.save(out_path, "PNG")
+
+
+def write_favicons():
+    """Растровые иконки в корне: /favicon.ico (16/32/48) + apple-touch-icon.png. Дизайн — DOS-бокс со
+    стрелками обмена (как favicon.svg). Закрывает FAVICON_PROBLEM Яндекса (он ищет растровый /favicon.ico)."""
+    if not _COVER_LIB:
+        print("favicon: Pillow недоступен — остаётся только SVG")
+        return
+    S0 = 256
+    img = Image.new("RGB", (S0, S0), (0, 0, 170))          # #0000aa — синий DOS-фон
+    d = ImageDraw.Draw(img)
+    cyan = (85, 255, 255)                                  # #55ffff — циан-рамка
+    d.rectangle([14, 14, S0 - 15, S0 - 15], outline=cyan, width=14)   # внешняя рамка
+    d.rectangle([44, 44, S0 - 45, S0 - 45], outline=cyan, width=6)    # внутренняя рамка
+    # две стрелки обмена: верхняя вправо, нижняя влево
+    d.line([(92, 104), (168, 104)], fill=cyan, width=12)
+    d.polygon([(168, 88), (168, 120), (192, 104)], fill=cyan)         # → голова
+    d.line([(88, 152), (164, 152)], fill=cyan, width=12)
+    d.polygon([(88, 136), (88, 168), (64, 152)], fill=cyan)           # ← голова
+    root = DIST
+    img.save(os.path.join(root, "favicon.ico"), format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+    img.resize((180, 180)).save(os.path.join(root, "apple-touch-icon.png"))
+    os.makedirs(os.path.join(root, "assets"), exist_ok=True)
+    img.resize((32, 32)).save(os.path.join(root, "assets", "favicon-32.png"))
+    print("favicon: /favicon.ico + apple-touch-icon.png сгенерированы")
 
 
 def write_covers():
@@ -3569,6 +3596,7 @@ def main():
     render_miniapp()
     static_files()
     copy_assets()
+    write_favicons()        # /favicon.ico + apple-touch (после copy_assets)
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
     write_daily_digest_en() # dist/daily-en.json для английского Telegram-канала
