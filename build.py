@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape as xml_escape
 # Генерация обложек статей (Pillow). Если библиотеки/шрифтов нет — мягкий фолбэк на общий og-image,
 # сборка НЕ должна падать (ежечасный CI). Флаг COVERS_OK решает, генерим ли персональные обложки.
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont, ImageOps
     _COVER_LIB = True
 except ImportError:
     _COVER_LIB = False
@@ -2027,19 +2027,34 @@ def write_favicons():
     print("favicon: /favicon.ico + apple-touch-icon.png сгенерированы")
 
 
+def _use_custom_cover(src, dest):
+    """Кастомная обложка от пользователя: нормализуем в 1080×1080 PNG (как генерённые)."""
+    img = Image.open(src).convert("RGB")
+    img = ImageOps.fit(img, (1080, 1080), Image.LANCZOS)
+    img.save(dest, "PNG")
+
+
 def write_covers():
-    """Генерит персональную обложку для каждой статьи блога (RU и EN). Без Pillow/шрифтов — пропускает."""
+    """Обложка для каждой статьи: кастомная из article_covers/<slug>.png, иначе генерим из заголовка."""
     if not COVERS_OK:
         print("обложки: Pillow/шрифты недоступны — использую общий og-image")
         return
-    n = 0
+    n, custom = 0, 0
     for lang in LANGS:
         d = os.path.join(DIST, "assets", "covers", "en" if lang == "en" else "")
         os.makedirs(d, exist_ok=True)
         for a in ARTS[lang]:
-            make_cover(os.path.join(d, f"{a['slug']}.png"), a["title"])
+            dest = os.path.join(d, f"{a['slug']}.png")
+            src = os.path.join(ROOT, "article_covers", f"{a['slug']}.png")
+            if os.path.exists(src):
+                try:
+                    _use_custom_cover(src, dest); custom += 1
+                except Exception:                  # noqa: BLE001 — битый файл → генерим из заголовка
+                    make_cover(dest, a["title"])
+            else:
+                make_cover(dest, a["title"])
             n += 1
-    print(f"обложки: сгенерировано {n}")
+    print(f"обложки: сгенерировано {n} (из них кастомных {custom})")
 
 
 def _svodka_rows():
