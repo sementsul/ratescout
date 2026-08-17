@@ -204,6 +204,16 @@ if os.path.exists(_hp):
     except (ValueError, OSError):
         HISTORY = {}
 
+# Популярность направлений по данным Google Поиска (клики), ключ "from>to". Пишется раз в неделю
+# workflow-ом SEO (gsc_report.py) и коммитится в репо; при отсутствии — ранжируем только по мониторингу.
+POPULAR = {}
+_pp = os.path.join(ROOT, "popular.json")
+if os.path.exists(_pp):
+    try:
+        POPULAR = json.load(open(_pp, encoding="utf-8")).get("clicks", {})
+    except (ValueError, OSError):
+        POPULAR = {}
+
 # % изменения по валютам за периоды — предрасчёт (для сортировки таблиц), заполняется в main()
 CHG_BY = {}
 
@@ -362,6 +372,7 @@ def render_home(lang):
     {converter_html(lang)}
     {search_box(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
+      <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -382,7 +393,11 @@ def render_directions(lang):
         r = rate_of(p["from"], p["to"])
         if r and r.get("count"):
             cand.append((p["from"], p["to"], r))
-    cand.sort(key=lambda x: (x[2].get("count", 0), x[2].get("reserve", 0) or 0), reverse=True)
+    # ранжирование: сначала переходы из Google Поиска (если данные есть), затем факт мониторинга.
+    def _pop(f, t):
+        return POPULAR.get(f"{f}>{t}", 0)
+    has_gsc = any(_pop(f, t) for f, t, _ in cand)
+    cand.sort(key=lambda x: (_pop(x[0], x[1]), x[2].get("count", 0), x[2].get("reserve", 0) or 0), reverse=True)
     if lang == "ru":
         title = f"Самые популярные направления обмена — ТОП по обменникам | {S['name']}"
         desc = ("ТОП направлений обмена криптовалют и валют: ранжирование по числу обменников и резерву. "
@@ -403,11 +418,18 @@ def render_directions(lang):
         cols = ("#", "Direction", "Rate", "Exchangers", "Reserve")
         th_crub, th_ucard = "Crypto → rubles", "Stablecoins → cards/SBP"
         empty = "Directions will appear after data loads."
+    srch_note = ""
+    if has_gsc:
+        srch_note = (" Порядок учитывает переходы из Google Поиска за последнее время." if lang == "ru"
+                     else " The order factors in visits from Google Search over the recent period.")
     rows = []
     for i, (f, t, r) in enumerate(cand[:50], 1):
         fT, tT = CUR[f]["ticker"], CUR[t]["ticker"]
+        clk = _pop(f, t)
+        badge = (f' <span class="tk" title="{"переходов из поиска" if lang=="ru" else "search visits"}">🔍 {clk}</span>'
+                 if clk else "")
         rows.append(f'<tr><td>{i}</td><td><a href="{pair_url(lang, f, t)}">{CUR[f]["name"]} '
-                    f'<span class="tk">{fT}</span> → {CUR[t]["name"]} <span class="tk">{tT}</span></a></td>'
+                    f'<span class="tk">{fT}</span> → {CUR[t]["name"]} <span class="tk">{tT}</span></a>{badge}</td>'
                     f'<td>{fmt_rate(r["rate"])} {tT}</td><td>{r.get("count", 0)}</td>'
                     f'<td>{fmt_rate(r.get("reserve", 0))} {tT}</td></tr>')
     head_html = "".join(f"<th>{c}</th>" for c in cols)
@@ -434,7 +456,7 @@ def render_directions(lang):
 <div id="main">
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {h1}</nav>
-    <h1>{h1}</h1><p>{lead}</p>
+    <h1>{h1}</h1><p>{lead}{srch_note}</p>
     {trust_bar(lang)}
     {table}
     {themes}
@@ -1462,6 +1484,7 @@ def render_currency(slug, info, lang):
     {search_box(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>
+      <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>

@@ -17,12 +17,18 @@
 """
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+ROOT = os.path.dirname(os.path.abspath(__file__))
 SITE = os.environ.get("GSC_SITE", "sc-domain:ratescout.ru")
+try:
+    _CUR = json.load(open(os.path.join(ROOT, "currencies.json"), encoding="utf-8"))["currencies"]
+except (OSError, ValueError):
+    _CUR = {}
 API = "https://www.googleapis.com/webmasters/v3/sites/{site}/searchAnalytics/query"
 SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
 LAG_DAYS = 3          # данные GSC отстают на ~2-3 дня — берём осевшее окно
@@ -132,6 +138,36 @@ def send_telegram(text):
             print(f"ошибка отправки: {ex}")
 
 
+def _url_to_pair(url):
+    """/obmen/<from>-<to>/ (в т.ч. /en/...) -> (from, to) по каталогу; иначе None."""
+    m = re.search(r"/obmen/([a-z0-9-]+)/", url)
+    if not m or not _CUR:
+        return None
+    full = m.group(1)
+    for f in _CUR:
+        if full.startswith(f + "-"):
+            t = full[len(f) + 1:]
+            if t in _CUR:
+                return (f, t)
+    return None
+
+
+def write_popular(token):
+    """popular.json — клики по направлениям /obmen/ из GSC (для ранжирования страницы /napravleniya/)."""
+    today = datetime.now(timezone.utc).date()
+    end = today - timedelta(days=LAG_DAYS)
+    start = end - timedelta(days=27)          # 4 недели — устойчивее к шуму
+    rows = _query(token, start.isoformat(), end.isoformat(), ["page"], 1000)
+    clicks = {}
+    for x in rows:
+        pair = _url_to_pair(x["keys"][0])
+        if pair and x.get("clicks"):
+            clicks[f"{pair[0]}>{pair[1]}"] = clicks.get(f"{pair[0]}>{pair[1]}", 0) + int(x["clicks"])
+    out = os.path.join(ROOT, "popular.json")
+    json.dump({"clicks": clicks}, open(out, "w", encoding="utf-8"), ensure_ascii=False)
+    print(f"popular.json: направлений с кликами {len(clicks)}")
+
+
 def main():
     sa = os.environ.get("GSC_SA_JSON")
     if not sa:
@@ -141,6 +177,7 @@ def main():
     try:
         token = _access_token(sa)
         report = build_report(token)
+        write_popular(token)                       # обновляем popular.json для страницы /napravleniya/
     except Exception as ex:                        # noqa: BLE001
         report = f"⚠️ Отчёт Search Console не собрался: {ex}"
         print(report)

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write        # для коммита popular.json (популярность направлений из GSC)
 
 concurrency:
   group: gsc-report
@@ -34,3 +34,13 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
         run: python3 gsc_report.py
+      - name: Commit popular.json
+        if: always()
+        run: |
+          if [ -f popular.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add popular.json
+            git diff --staged --quiet || git commit -m "chore(seo): обновить popular.json (популярность направлений из GSC)"
+            git push
+          fi
