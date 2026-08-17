@@ -1140,11 +1140,17 @@ def currency_chart(slug, info, lang):
 def pair_chart(f, t, lang):
     """График динамики курса пары (кросс-курс history[from]/history[to], выровненный по времени).
     Тот же интерактивный компонент, что на страницах валют. Нет истории по одной из валют — не рисуем."""
+    base = "tether-trc20"                           # база истории (цена всех в USDT); своего ряда нет (=1)
     hf, ht = HISTORY.get(f) or [], HISTORY.get(t) or []
-    if len(hf) < 2 or len(ht) < 2:
+    if t == base and len(hf) >= 2:                   # X → USDT: ряд = цена X в USDT (напрямую)
+        pts = [[d, v] for d, v in hf]
+    elif f == base and len(ht) >= 2:                 # USDT → X: ряд = 1/цена X
+        pts = [[d, 1.0 / v] for d, v in ht if v]
+    elif len(hf) >= 2 and len(ht) >= 2:              # обе стороны есть → кросс-курс
+        tmap = {d: v for d, v in ht}
+        pts = [[d, vf / tmap[d]] for d, vf in hf if tmap.get(d)]
+    else:
         return ""
-    tmap = {d: v for d, v in ht}
-    pts = [[d, vf / tmap[d]] for d, vf in hf if tmap.get(d)]
     if len(pts) < 2:
         return ""
     # заякорить серию на текущий лучший курс: последняя точка = курс из шапки, тренд сохраняется
