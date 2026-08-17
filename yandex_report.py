@@ -77,18 +77,20 @@ def webmaster_report():
         today = datetime.now(timezone.utc).date()
         frm = (today - timedelta(days=30)).isoformat()
         h = yget(f"{base}/search-urls/in-search/history?date_from={frm}&date_to={today.isoformat()}")
-        print("DBG insearch:", json.dumps(h, ensure_ascii=False)[:600])
-        return f"страниц в поиске: {_last_value(h)}"
+        v = _last_value(h)
+        return f"страниц в поиске: {v if v is not None else 0}" + \
+               (" (Яндекс ещё не добавил в поиск — идёт обход)" if not v else "")
     L.append("  " + sub(_insearch, "in-search"))
 
     def _indexing():
         today = datetime.now(timezone.utc).date()
         frm = (today - timedelta(days=30)).isoformat()
         h = yget(f"{base}/indexing/history?date_from={frm}&date_to={today.isoformat()}"
-                 f"&indexing_indicators=DOWNLOADED")
-        print("DBG indexing:", json.dumps(h, ensure_ascii=False)[:600])
+                 f"&indexing_indicators=HTTP_2XX,HTTP_5XX")
         ind = h.get("indicators", {}) if isinstance(h, dict) else {}
-        return f"загружено роботом: {_last_value(ind.get('DOWNLOADED'))}"
+        ok = sum(x.get("value", 0) for x in ind.get("HTTP_2XX", []))
+        err = sum(x.get("value", 0) for x in ind.get("HTTP_5XX", []))
+        return f"обход роботом (2XX за период): {ok}" + (f" · ошибки 5XX: {err}" if err else "")
     L.append("  " + sub(_indexing, "indexing"))
 
     def _queries():
