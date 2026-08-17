@@ -713,6 +713,70 @@ def currency_chart(slug, info, lang):
             f'<p class="updnote">{note}</p>')
 
 
+def pair_chart(f, t, lang):
+    """График динамики курса пары (кросс-курс history[from]/history[to], выровненный по времени).
+    Тот же интерактивный компонент, что на страницах валют. Нет истории по одной из валют — не рисуем."""
+    hf, ht = HISTORY.get(f) or [], HISTORY.get(t) or []
+    if len(hf) < 2 or len(ht) < 2:
+        return ""
+    tmap = {d: v for d, v in ht}
+    pts = [[d, vf / tmap[d]] for d, vf in hf if tmap.get(d)]
+    if len(pts) < 2:
+        return ""
+    # заякорить серию на текущий лучший курс: последняя точка = курс из шапки, тренд сохраняется
+    r = rate_of(f, t)
+    if r and r.get("rate") and pts[-1][1]:
+        try:
+            k = float(r["rate"]) / pts[-1][1]
+            pts = [[d, v * k] for d, v in pts]
+        except (TypeError, ValueError):
+            pass
+    fT, tT = CUR[f]["ticker"], CUR[t]["ticker"]
+    data = pts[-2000:]
+    vals = [p[1] for p in data]
+    first, last = vals[0], vals[-1]
+    chg = (last - first) / first * 100 if first else 0
+    sign = "+" if chg >= 0 else ""
+    cls = "up" if chg >= 0 else "down"
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    if lang == "ru":
+        title = f"Динамика курса {fT} → {tT}"
+        ranges = [("24h", "24ч"), ("7d", "7д"), ("30d", "30д"), ("1y", "1г"),
+                  ("3y", "3г"), ("5y", "5л"), ("10y", "10л"), ("all", "Всё")]
+        note = (f"1 {fT} = <b>{fmt_rate(last)}</b> {tT} · за период: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Кросс-курс по данным BestChange, обновление ежечасно. '
+                "Наведите на график — покажет курс и время.")
+    else:
+        title = f"{fT} → {tT} rate trend"
+        ranges = [("24h", "24h"), ("7d", "7d"), ("30d", "30d"), ("1y", "1y"),
+                  ("3y", "3y"), ("5y", "5y"), ("10y", "10y"), ("all", "All")]
+        note = (f"1 {fT} = <b>{fmt_rate(last)}</b> {tT} · change: "
+                f'<b class="{cls}">{sign}{chg:.1f}%</b>. Cross-rate, BestChange data, hourly. '
+                "Hover the chart to see rate and time.")
+
+    def _pt(s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d %H:00")
+        except ValueError:
+            return datetime.strptime(s, "%Y-%m-%d")
+    span_days = (_pt(data[-1][0]) - _pt(data[0][0])).total_seconds() / 86400
+    DURD = {"24h": 1, "7d": 7, "30d": 30, "1y": 365, "3y": 3 * 365, "5y": 5 * 365, "10y": 10 * 365, "all": 0}
+    ranges = [(r, lbl) for r, lbl in ranges if r == "all" or span_days >= DURD[r]]
+    btns = ""
+    for r, lbl in ranges:
+        on = ' class="on"' if r == "all" else ""
+        btns += f'<button type="button" data-r="{r}"{on}>{lbl}</button>'
+    return (f'<h2 class="news" id="chart">{title}</h2>'
+            f'<div class="rschart-wrap" data-ticker="{fT}" data-unit="{tT}">'
+            f'<div class="rsrange">{btns}</div>'
+            f'<div class="rschart"><noscript>{svg_chart(pts[-90:])}</noscript></div>'
+            f'<div class="rsperiod"></div>'
+            f'<div class="rstip" hidden></div>'
+            f'<script type="application/json" class="rschart-data">{data_json}</script>'
+            f'</div>'
+            f'<p class="updnote">{note}</p>')
+
+
 def rate_of(frm, to):
     return RATES.get(f"{frm}>{to}")
 
@@ -1630,6 +1694,7 @@ def render_pair(f, t, lang):
       <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
     </div>
     {ctx_html}
+    {pair_chart(f, t, lang)}
     <h2 class="news">{h_how}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(h_how, steps)}
