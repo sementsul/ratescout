@@ -31,12 +31,12 @@ jobs:
         run: python3 article_intake.py
       - name: Commit new articles
         run: |
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add articles .intake_offset.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add articles .intake_offset.json
+          if ! git diff --cached --quiet; then
             git commit -m "chore(blog): приём статей через Telegram-бота [skip ci]"
             git push
           else
-            echo "новых статей нет"
+            echo "изменений нет"
           fi
