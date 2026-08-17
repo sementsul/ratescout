@@ -1,0 +1,42 @@
+name: Article intake
+
+# Без сервера: раз в ~30 минут опрашивает Telegram (getUpdates) и принимает статьи, присланные боту владельцем.
+# Создаёт articles/<slug>.md со следующей датой дрипа и коммитит. Ежечасный деплой подхватит.
+# Секреты: TELEGRAM_TOKEN (тот же бот), ALERT_CHAT_ID (chat_id владельца — принимаем только от него).
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"     # каждые 30 минут
+  workflow_dispatch:
+
+permissions:
+  contents: write              # для коммита новых статей + .intake_offset.json
+
+concurrency:
+  group: article-intake
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Receive articles from Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALLOWED_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+        run: python3 article_intake.py
+      - name: Commit new articles
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add articles .intake_offset.json
+            git commit -m "chore(blog): приём статей через Telegram-бота [skip ci]"
+            git push
+          else
+            echo "новых статей нет"
+          fi
