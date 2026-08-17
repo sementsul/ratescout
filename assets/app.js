@@ -112,7 +112,7 @@
 
   var presetFrom = conv.getAttribute("data-from") || "";
   var slugs = Object.keys(bySlug);
-  var defFrom = presetFrom || slugs[0];
+  var defFrom = presetFrom || (bySlug["zrx"] && "zrx") || slugs[0];   // без пресета «отдаю» = ZRX
   // получатель по умолчанию — популярный USDT TRC20, иначе первый отличный
   var defTo = (bySlug["tether-trc20"] && "tether-trc20") || slugs.find(function (s) { return s !== defFrom; });
   if (defTo === defFrom) defTo = slugs.find(function (s) { return s !== defFrom; });
