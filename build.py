@@ -777,6 +777,116 @@ def pair_chart(f, t, lang):
             f'<p class="updnote">{note}</p>')
 
 
+def _daily_closes(series):
+    """Дневные закрытия из ряда [[дата,цена],...] — последняя цена за календарный день."""
+    by_day = {}
+    for ds, v in series:
+        by_day[ds[:10]] = v
+    return [by_day[d] for d in sorted(by_day)]
+
+
+def _stdev(xs):
+    if len(xs) < 2:
+        return 0.0
+    m = sum(xs) / len(xs)
+    return (sum((x - m) ** 2 for x in xs) / (len(xs) - 1)) ** 0.5
+
+
+def _rsi(closes, period=14):
+    """RSI(14) по дневным закрытиям. None, пока истории мало (нужно ≥ period+1 точек, иначе значение крайнее/шумное)."""
+    if len(closes) < period + 1:
+        return None
+    gains = losses = 0.0
+    for i in range(len(closes) - period, len(closes)):
+        d = closes[i] - closes[i - 1]
+        gains += d if d > 0 else 0.0
+        losses += -d if d < 0 else 0.0
+    if losses == 0:
+        return 100.0
+    rs = (gains / period) / (losses / period)
+    return 100 - 100 / (1 + rs)
+
+
+def currency_metrics(slug):
+    """Технические показатели по ряду цен из HISTORY (все считаем сами, без внешних API). None — мало данных."""
+    pts = HISTORY.get(slug) or []
+    if len(pts) < 3:
+        return None
+    chg = CHG_BY.get(slug, {})
+    closes = _daily_closes(pts)
+    span = _span_days(pts)
+    m = {}
+    # показываем период, только если истории на него реально хватает (иначе 7д==30д при молодой истории)
+    for pk, need in (("24h", 0), ("7d", 5), ("30d", 20)):
+        if chg.get(pk) is not None and span >= need:
+            m[pk] = chg[pk]
+    # волатильность за 7д — стандартное отклонение доходностей (показываем при истории ≥ 5 дней)
+    if span >= 5:
+        win = _pwindow(pts, 7)
+        dc = _daily_closes(win)
+        seq = dc if len(dc) >= 3 else [v for _, v in win]
+        rets = [seq[i] / seq[i - 1] - 1 for i in range(1, len(seq)) if seq[i - 1]]
+        if rets:
+            m["vol"] = _stdev(rets) * 100
+    # диапазон макс–мin за доступную историю + позиция цены в нём
+    allv = [v for _, v in pts]
+    lo, hi, cur = min(allv), max(allv), allv[-1]
+    m["low"], m["high"] = lo, hi
+    if hi > lo:
+        m["pos"] = (cur - lo) / (hi - lo) * 100
+    # SMA(7) и тренд относительно неё
+    if len(closes) >= 3:
+        n = min(7, len(closes))
+        sma = sum(closes[-n:]) / n
+        m["sma"] = sma
+        m["trend"] = "up" if closes[-1] > sma * 1.005 else ("down" if closes[-1] < sma * 0.995 else "flat")
+    r = _rsi(closes)
+    if r is not None:
+        m["rsi"] = r
+    return m or None
+
+
+def currency_metrics_block(slug, info, lang):
+    """Блок «Технические показатели» на странице валюты — всё посчитано по нашим данным, справочно (не сигнал)."""
+    m = currency_metrics(slug)
+    if not m:
+        return ""
+    ru, t = lang == "ru", info["ticker"]
+
+    def pct(v):
+        return f'<span class="{"up" if v >= 0 else "down"}">{"+" if v >= 0 else ""}{v:.1f}%</span>'
+    rows = []
+    if "24h" in m:
+        rows.append(("Изменение за 24ч" if ru else "Change 24h", pct(m["24h"])))
+    if "7d" in m:
+        rows.append(("Изменение за 7д" if ru else "Change 7d", pct(m["7d"])))
+    if "30d" in m:
+        rows.append(("Изменение за 30д" if ru else "Change 30d", pct(m["30d"])))
+    if "vol" in m:
+        rows.append(("Волатильность (7д)" if ru else "Volatility (7d)", f'{m["vol"]:.1f}%'))
+    if "trend" in m:
+        lbl = {"up": ("Рост", "Uptrend"), "down": ("Снижение", "Downtrend"), "flat": ("Боковик", "Flat")}[m["trend"]]
+        rows.append(("Тренд (SMA)" if ru else "Trend (SMA)", lbl[0] if ru else lbl[1]))
+    if "rsi" in m:
+        z = ""
+        if m["rsi"] >= 70:
+            z = " · зона перекупленности" if ru else " · overbought zone"
+        elif m["rsi"] <= 30:
+            z = " · зона перепроданности" if ru else " · oversold zone"
+        rows.append(("RSI (14)", f'{m["rsi"]:.0f}{z}'))
+    if "low" in m and "high" in m:
+        rows.append(("Диапазон макс–мин" if ru else "Range (min–max)",
+                     f'{fmt_rate(m["low"])} – {fmt_rate(m["high"])} USDT'))
+    body = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in rows)
+    h = f"Технические показатели {t}" if ru else f"{t} technical metrics"
+    disc = ("Показатели рассчитаны по данным мониторинга BestChange, справочно. Не являются сигналом "
+            "или финансовой рекомендацией." if ru else
+            "Metrics computed from BestChange monitoring data, for reference. Not a signal or financial advice.")
+    return (f'<h2 class="news">{h}</h2>'
+            f'<div class="rtbl-wrap"><table class="rtbl"><tbody>{body}</tbody></table></div>'
+            f'<p class="updnote">{disc}</p>')
+
+
 def rate_of(frm, to):
     return RATES.get(f"{frm}>{to}")
 
@@ -1534,6 +1644,7 @@ def render_currency(slug, info, lang):
     {hub_cta}
     {about_currency(slug, info, lang)}
     {currency_chart(slug, info, lang)}
+    {currency_metrics_block(slug, info, lang)}
     {history_table(slug, lang)}
     {rate_table(slug, info, lang)}
     {popular_block(slug, lang)}
