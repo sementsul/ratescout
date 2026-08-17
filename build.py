@@ -380,6 +380,7 @@ def render_home(lang):
   <div id="sidebar">
     {converter_html(lang)}
     {search_box(lang)}
+    {wallet_cta(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
@@ -1349,8 +1350,10 @@ def search_box(lang):
 </div>"""
 
 
-_GEO_JS = r"""(function(){var el=document.getElementById('rsPartner');if(!el)return;
-function show(cc){if(cc&&cc!=='RU')el.hidden=false;}
+WALLET_URL = "https://telegram.me/wallet/start?startapp=ref-3-7ZelA1cR5QI"
+# Гео-гейт: раскрывает ВСЕ блоки .rs-partner-geo только при уверенном «не Россия»; РФ/неизвестно/сбой → скрыто.
+_GEO_JS = r"""(function(){var els=document.querySelectorAll('.rs-partner-geo');if(!els.length)return;
+function show(cc){if(cc&&cc!=='RU')for(var i=0;i<els.length;i++)els[i].hidden=false;}
 try{var c=localStorage.getItem('rs_cc'),t=+localStorage.getItem('rs_cc_t')||0;
 if(c&&(Date.now()-t)<86400000){show(c);return;}}catch(e){}
 fetch('https://get.geojs.io/v1/ip/country.json').then(function(r){return r.json();}).then(function(d){
@@ -1359,16 +1362,29 @@ show(cc);}).catch(function(){});})();"""
 
 
 def partner_block(lang):
-    """Партнёрская ссылка Telegram Wallet. Гео-гейт (клиент, fail-safe скрыто): показываем ТОЛЬКО при уверенном
-    «не Россия»; РФ/неизвестно/сбой → скрыто. Ссылка открытая, с пометкой «партнёрская» (не маскировка)."""
-    url = "https://telegram.me/wallet/start?startapp=ref-3-7ZelA1cR5QI"
+    """Партнёрская ссылка Telegram Wallet в футере + гео-JS (один на страницу). Скрыто по умолчанию, fail-safe."""
     if lang == "ru":
-        txt = (f'🅣 Кошелёк в Telegram — <a href="{url}" target="_blank" rel="sponsored nofollow noopener">открыть</a> '
+        txt = (f'🅣 Кошелёк в Telegram — <a href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">открыть</a> '
                '<span class="tk">· партнёрская ссылка</span>')
     else:
-        txt = (f'🅣 Telegram Wallet — <a href="{url}" target="_blank" rel="sponsored nofollow noopener">open</a> '
+        txt = (f'🅣 Telegram Wallet — <a href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">open</a> '
                '<span class="tk">· affiliate link</span>')
-    return f'<div id="rsPartner" class="links" hidden>{txt}</div><script>{_GEO_JS}</script>'
+    return f'<div class="rs-partner-geo links" hidden>{txt}</div><script>{_GEO_JS}</script>'
+
+
+def wallet_cta(lang):
+    """CTA «Создать кошелёк» (Telegram Wallet) под поиском. Тот же гео-гейт (класс .rs-partner-geo), скрыт по умолчанию.
+    Открытая партнёрская ссылка с пометкой — не маскировка."""
+    if lang == "ru":
+        title, sub, btn, mark = ("🅣 Кошелёк в Telegram", "Криптокошелёк прямо в Telegram — без установки приложений.",
+                                 "Создать кошелёк", "партнёрская ссылка")
+    else:
+        title, sub, btn, mark = ("🅣 Telegram Wallet", "A crypto wallet right inside Telegram — no app install.",
+                                 "Create a wallet", "affiliate link")
+    return (f'<div class="rs-partner-geo conv dosblue dosborder" hidden>'
+            f'<h3>{title}</h3><p class="updnote">{sub}</p>'
+            f'<a class="cta" href="{WALLET_URL}" target="_blank" rel="sponsored nofollow noopener">{btn}</a>'
+            f'<p class="updnote"><span class="tk">· {mark}</span></p></div>')
 
 
 def footer(lang):
@@ -1831,6 +1847,7 @@ def render_currency(slug, info, lang):
   <div id="sidebar">
     {converter_html(lang, slug, outgoing_rates(slug))}
     {search_box(lang)}
+    {wallet_cta(lang)}
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
