@@ -382,7 +382,7 @@ def render_home(lang):
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
     <div class="dosblue dosborder">{intro}</div>
     {trust_bar(lang)}
-    <div class="mktwidgets">{fng_widget(lang)}{halving_widget(lang)}</div>
+    <div class="mktwidgets">{halving_widget(lang)}</div>
     {pop}
     <h2 class="news">{tr(lang,'catalog')} <span class="cnt">{total}</span></h2>
     {cat_html}
@@ -394,6 +394,7 @@ def render_home(lang):
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
+      <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
@@ -1392,7 +1393,7 @@ def fmt_rate(s):
 TR = {
     "ru": {
         "nav_monitor": "Монитор", "nav_blog": "Блог", "nav_about": "Что такое BestChange",
-        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи", "nav_leaders": "Лидеры рынка",
+        "nav_aml": "AML-проверка", "nav_disc": "Раскрытие", "nav_faq": "Вопросы", "nav_glossary": "Словарь", "nav_widget": "Виджеты", "nav_charts": "Графики", "nav_rates": "Курсы", "nav_dirs": "Направления", "nav_reviews": "Обзоры", "nav_svodka": "Сводка", "nav_articles": "Статьи", "nav_leaders": "Лидеры рынка", "nav_mood": "Индекс страха",
         "search_ph": "Поиск: BTC, USDT, Sberbank…", "search_aria": "Поиск валюты",
         "monitor": "Монитор", "sections": "Разделы", "all_cur": "Все валюты",
         "catalog": "Каталог валют", "total": "всего", "popular": "Популярные направления",
@@ -1408,7 +1409,7 @@ TR = {
     },
     "en": {
         "nav_monitor": "Monitor", "nav_blog": "Blog", "nav_about": "What is BestChange",
-        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles", "nav_leaders": "Market leaders",
+        "nav_aml": "AML check", "nav_disc": "Disclosure", "nav_faq": "FAQ", "nav_glossary": "Glossary", "nav_widget": "Widgets", "nav_charts": "Charts", "nav_rates": "Rates", "nav_dirs": "Directions", "nav_reviews": "Reviews", "nav_svodka": "Summary", "nav_articles": "Articles", "nav_leaders": "Market leaders", "nav_mood": "Fear & Greed",
         "search_ph": "Search currency: BTC, USDT, Sberbank…", "search_aria": "Currency search",
         "monitor": "Monitor", "sections": "Sections", "all_cur": "All currencies",
         "catalog": "Currency catalog", "total": "total", "popular": "Popular directions",
@@ -2207,6 +2208,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
+      <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
