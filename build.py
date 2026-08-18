@@ -862,7 +862,8 @@ def render_halving(lang):
         exp = ("<h2 class=\"news\">Что такое халвинг</h2><p>Каждые 210 000 блоков награда майнерам за блок "
                "уменьшается вдвое. Это снижает эмиссию новых BTC. Исторически халвинги связывают с рыночными циклами, "
                "но прямой гарантии движения цены нет — это не прогноз.</p>"
-               "<p class=\"related\"><a href=\"/blog/halving-bitcoin/\">Подробнее о халвинге в блоге</a></p>")
+               + ("<p class=\"related\"><a href=\"/blog/halving-bitcoin/\">Подробнее о халвинге в блоге</a></p>"
+                  if "halving-bitcoin" in PUB_SLUGS["ru"] else ""))
         src = "Счётчик оценочный: считается по текущей высоте блока и среднему времени блока (~10 мин)."
     else:
         title = f"Bitcoin halving countdown — time left | {S['name']}"
@@ -1608,6 +1609,7 @@ GTAG = """<!-- Google tag (gtag.js) -->
 # на версию под язык браузера (ru → корень, иначе → /en/). Ручной выбор (клик по .langsw)
 # сохраняется в localStorage и отключает автоопределение. Ботов не трогаем (SEO).
 LANGREDIR = """<script>(function(){try{
+if(window.RS_NOTR)return;
 var ua=navigator.userAgent||"";if(/bot|crawl|spider|slurp|bing|yandex|google/i.test(ua))return;
 var p=location.pathname,isEn=p==="/en"||p.indexOf("/en/")===0,cur=isEn?"en":"ru";
 var s=localStorage.getItem("rs_lang"),want;
@@ -1619,16 +1621,25 @@ location.replace(t+location.search+location.hash);
 
 
 def hreflangs(path):
+    # Не рекламируем alternate на язык, для которого страницы нет (иначе GSC-ошибки + 404).
     tags = []
     for lg in LANGS:
+        if lg == "en" and path in NO_EN:
+            continue
+        if lg == "ru" and path in NO_RU:
+            continue
         tags.append(f'<link rel="alternate" hreflang="{LOCALE[lg]}" href="{BASE_URL}{PREF[lg]}{path}">')
-    tags.append(f'<link rel="alternate" hreflang="x-default" href="{BASE_URL}{path}">')
+    default = f"{BASE_URL}{PREF['en']}{path}" if path in NO_RU else f"{BASE_URL}{path}"
+    tags.append(f'<link rel="alternate" hreflang="x-default" href="{default}">')
     return "\n".join(tags)
 
 
 def head(lang, title, desc, path, extra="", og_image=None):
     canonical = f"{BASE_URL}{PREF[lang]}{path}"
     og = og_image or f"{BASE_URL}/assets/og-image.png"
+    # нет версии на другом языке → запрещаем авто-редирект (LANGREDIR) на несуществующую страницу
+    other_missing = (path in NO_EN) if lang == "ru" else (path in NO_RU)
+    langredir = ('<script>window.RS_NOTR=1;</script>' + LANGREDIR) if other_missing else LANGREDIR
     # автообнаружение RSS: RU — полная лента для Дзена/агрегаторов, EN — англоблоговый фид
     feed_href = f"{BASE_URL}/dzen.xml" if lang == "ru" else f"{BASE_URL}/en/blog/rss.xml"
     feed_title = f"{S['name']} — блог" if lang == "ru" else f"{S['name']} — Blog"
@@ -1637,7 +1648,7 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{LANGREDIR}
+{langredir}
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <link rel="canonical" href="{canonical}">
@@ -1678,7 +1689,9 @@ def head(lang, title, desc, path, extra="", og_image=None):
 
 def header(lang, path):
     other = "en" if lang == "ru" else "ru"
-    switch = f'<a class="langsw" data-lang="{other}" href="{PREF[other]}{path}">{"EN" if other == "en" else "RU"}</a>'
+    other_missing = (path in NO_EN) if lang == "ru" else (path in NO_RU)
+    switch = ("" if other_missing else
+              f'<a class="langsw" data-lang="{other}" href="{PREF[other]}{path}">{"EN" if other == "en" else "RU"}</a>')
     return f"""<div id="header">
   <h1 id="logotop"><a href="{PREF[lang]}/"><span class="logo">[⇄]</span> {S['name']}<span class="tld">.ru</span></a></h1>
   {switch}
@@ -1998,6 +2011,17 @@ def load_articles(lang):
 
 
 ARTS = {lg: load_articles(lg) for lg in LANGS}
+
+# Реестр путей БЕЗ версии на данном языке — чтобы не рекламировать/не редиректить на несуществующие
+# страницы. Асимметрия ровно в двух местах: направления (EN — только PAIR_PAGES; RU — ещё PAIR_PAGES_RU)
+# и статьи блога (наборы ARTS['ru'] / ARTS['en'] различаются, в т.ч. из-за дрип-релизов по датам).
+_ru_pair_paths = {f"/obmen/{p['from']}-{p['to']}/" for p in PAIR_PAGES + PAIR_PAGES_RU}
+_en_pair_paths = {f"/obmen/{p['from']}-{p['to']}/" for p in PAIR_PAGES}
+_ru_art_paths = {f"/blog/{a['slug']}/" for a in ARTS["ru"]}
+_en_art_paths = {f"/blog/{a['slug']}/" for a in ARTS["en"]}
+NO_EN = (_ru_pair_paths - _en_pair_paths) | (_ru_art_paths - _en_art_paths) | {"/404"}
+NO_RU = (_en_pair_paths - _ru_pair_paths) | (_en_art_paths - _ru_art_paths)
+PUB_SLUGS = {lg: {a["slug"] for a in ARTS[lg]} for lg in LANGS}
 
 
 def popular_involving(slug, n=8):
