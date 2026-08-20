@@ -4500,7 +4500,10 @@ def render_monitor(lang):
     </div>
     <aside class="mon-side dosborder">
       <div class="mon-side-h">{L('Валюты на графике','Currencies on chart')}</div>
-      <input id="monSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
+      <div class="mon-side-top">
+        <input id="monSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
+        <button id="monClear" type="button" class="mon-btn">{L('Очистить','Clear')}</button>
+      </div>
       <div id="monList" class="mon-list"></div>
     </aside>
   </div>

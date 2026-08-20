@@ -11,6 +11,7 @@
   var typeSel = document.getElementById("monType");
   var rangesEl = document.getElementById("monRanges");
   var searchEl = document.getElementById("monSearch");
+  var clearEl = document.getElementById("monClear");
   var legEl = document.getElementById("monLegend");
   var noteEl = document.getElementById("monNote");
   var DATA = null, checked = {}, base = "USD", type = "line", sel = 0;
@@ -90,6 +91,7 @@
   baseSel.addEventListener("change", function () { base = baseSel.value; buildRanges(); draw(); });
   typeSel.addEventListener("change", function () { type = typeSel.value; draw(); });
   searchEl.addEventListener("input", function () { buildList(searchEl.value); });
+  if (clearEl) clearEl.addEventListener("click", function () { checked = {}; buildList(searchEl.value); draw(); });
 
   function draw() {
     if (!DATA) return;
