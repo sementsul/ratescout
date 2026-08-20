@@ -29,9 +29,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -88,12 +88,12 @@ jobs:
         env:
           BESTCHANGE_API_KEY: ${{ secrets.BESTCHANGE_API_KEY }}
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       # Пинг IndexNow только при реальных изменениях (push/ручной запуск), НЕ на почасовом cron
       - name: Ping IndexNow (Яндекс/Bing)
