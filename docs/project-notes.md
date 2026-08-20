@@ -19,7 +19,9 @@
 | `assets/monitor.js` + `data/monitor.json` | страница `/monitor/` (RU+EN): SVG-терминал — много валют на одной шкале, выбор базы (умолч. доллар/USDT) и типа (линии/свечи), диапазоны, справа чекбоксы валют. Данные `monitor.json` кладёт `make_monitor_json()` в build.py. Детали — UC-107 |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → history.py → build → guard(ключ не в dist) → deploy на Pages → (push) IndexNow; коммит history.json обратно (`contents:write`, `[skip ci]`) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дн отключения cron — 🔴 пушит под PAT (секрет GH_PAT), т.к. бот-коммиты таймер НЕ сбрасывают (UC-106) |
-| `.github/workflows/watchdog.yml` | ежедневный сторож автономности: тянет `history.json` из raw (без checkout), возраст свежайшей точки > 8ч → воркфлоу ПАДАЕТ (Issues в репо off) → GitHub шлёт владельцу письмо о сбое. Ловит: заснувший крон (истёк PAT), сломанный BestChange, падение сборки (UC-108) |
+| `.github/workflows/watchdog.yml` | ежедневный сторож автономности: тянет `history.json` из raw (без checkout), возраст свежайшей точки > 8ч → оповещение в 2 канала: **Telegram** в личный чат (`TELEGRAM_TOKEN`+`ALERT_CHAT_ID`) + **падение прогона** → письмо от GitHub. Ловит: заснувший крон (истёк PAT), сломанный BestChange, падение сборки (UC-108) |
+| `.github/dependabot.yml` | еженедельно (пн) следит за версиями GitHub Actions, открывает сгруппированный PR при обновлении (UC-109) |
+| `.github/workflows/dependabot-automerge.yml` | safe авто-мёрж Dependabot-PR: minor/patch — авто (`gh pr merge --auto`), major — на ручной клик (UC-109) |
 
 ## Запуск / деплой
 ```bash
