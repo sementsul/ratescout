@@ -15,6 +15,11 @@ on:
   schedule:
     - cron: "37 5 * * *"     # ежедневно 05:37 UTC
   workflow_dispatch:
+    inputs:
+      stale_hours:
+        description: "Порог протухания в часах (для теста тревоги можно поставить 0)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -25,7 +30,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  STALE_H: "8"               # порог «протухания»: сбор ежечасный, 8ч = точно встал (с запасом на лаги планировщика)
+  # порог «протухания»: сбор ежечасный, 8ч = точно встал (с запасом на лаги планировщика).
+  # Ручной запуск может переопределить (для проверки ветки тревоги).
+  STALE_H: ${{ github.event.inputs.stale_hours || '8' }}
 
 jobs:
   check:
