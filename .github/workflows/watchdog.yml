@@ -2,14 +2,13 @@ name: Watchdog (свежесть данных)
 
 # Сторож автономности: раз в сутки проверяет, что ежечасный сбор курсов реально идёт.
 # Смотрит возраст САМОЙ СВЕЖЕЙ точки в history.json (не generated_at — он пишется всегда;
-# нам важно, что реально добавляются данные). Если > STALE_H часов без новых точек — значит
-# сбор встал (истёк GH_PAT и крон заснул / сломался BestChange / падает сборка). Тогда заводит
-# GitHub-issue (GitHub шлёт владельцу письмо). Когда данные снова свежие — закрывает issue.
+# важно, что реально добавляются точки). Если > STALE_H часов без новых данных — сбор встал
+# (истёк GH_PAT и крон заснул / сломался BestChange / падает сборка), и воркфлоу ПАДАЕТ.
+# Падение scheduled-воркфлоу → GitHub шлёт владельцу письмо (Issues в репо отключены, поэтому
+# канал оповещения — именно провал прогона, как и у keepalive).
 #
-# Почему это ловит проблему: deploy.yml коммитит history.json обратно каждый час. Если сбор
-# остановился, свежайшая точка «замирает» и стареет — watchdog это видит. Сам watchdog остаётся
-# включённым, пока keepalive (PAT-пуш) держит репозиторий активным; при истечении PAT самый ранний
-# сигнал — падение keepalive (GitHub и так шлёт письмо о сбое scheduled-воркфлоу).
+# history.json тянем напрямую из raw (репо публичный) — без actions/checkout, чтобы у сторожа было
+# минимум зависимостей, которые GitHub со временем депрекейтит (ради той самой автономности).
 
 on:
   schedule:
@@ -17,13 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       stale_hours:
-        description: "Порог протухания в часах (для теста тревоги можно поставить 0)"
+        description: "Порог протухания в часах (для теста тревоги поставь 0 — прогон должен упасть)"
         required: false
         default: ""
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: watchdog
@@ -38,20 +36,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Проверить свежесть history.json
-        id: check
         run: |
           python3 - <<'PY'
-          import json, os, datetime as dt
+          import json, os, urllib.request, datetime as dt
           STALE_H = float(os.environ.get("STALE_H", "8"))
+          URL = "https://raw.githubusercontent.com/sementsul/ratescout/main/history.json"
           try:
-              h = json.load(open("history.json"))
+              with urllib.request.urlopen(URL, timeout=30) as r:
+                  data = json.load(r)
           except Exception as e:
-              h = {"series": {}}
+              print("::error::Watchdog: не удалось получить history.json (%s). Возможно, репо/файл недоступен." % e)
+              raise SystemExit(1)
           newest = None
-          for pts in h.get("series", {}).values():
+          for pts in data.get("series", {}).values():
               if pts:
                   k = pts[-1][0]
                   if newest is None or k > newest:
@@ -65,54 +63,12 @@ jobs:
               return None
           now = dt.datetime.now(dt.timezone.utc)
           t = parse(newest) if newest else None
-          age_h = (now - t).total_seconds() / 3600 if t else 1e9
-          stale = age_h > STALE_H
-          with open(os.environ["GITHUB_OUTPUT"], "a") as o:
-              o.write("stale=%s\n" % ("yes" if stale else "no"))
-              o.write("newest=%s\n" % (newest or "нет данных"))
-              o.write("age_h=%.1f\n" % age_h)
-          print("новейшая точка: %s | возраст %.1f ч | порог %.0f ч | stale=%s"
-                % (newest, age_h, STALE_H, stale))
+          age = (now - t).total_seconds() / 3600 if t else 1e9
+          print("новейшая точка: %s | возраст %.1f ч | порог %.0f ч" % (newest, age, STALE_H))
+          if age > STALE_H:
+              print("::error::RateScout: автосбор данных ОСТАНОВИЛСЯ. Свежайшая точка %s (возраст %.1f ч > порога %.0f ч). "
+                    "Причины по частоте: (1) истёк секрет GH_PAT → крон заснул; (2) сломался источник BestChange; "
+                    "(3) падает сборка/деплой. Открой вкладку Actions." % (newest, age, STALE_H))
+              raise SystemExit(1)
+          print("OK: данные свежие — тревог нет")
           PY
-
-      - name: Открыть/обновить issue (сбор остановился)
-        if: steps.check.outputs.stale == 'yes'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh label create watchdog --color B60205 --description "Автосторож свежести данных" 2>/dev/null || true
-          BODY=$(cat <<EOF
-          🔴 Похоже, автосбор курсов RateScout остановился.
-
-          - Новейшая точка в \`history.json\`: **${{ steps.check.outputs.newest }}** (возраст ~**${{ steps.check.outputs.age_h }} ч**).
-          - Ожидается обновление каждый час (workflow *Build & Deploy* / deploy.yml).
-
-          **Что проверить (по частоте причин):**
-          1. Истёк секрет \`GH_PAT\` → keepalive не сбрасывает 60-дневный таймер → scheduled-кроны отключились. Пересоздать PAT, обновить секрет, вручную запустить крон.
-          2. Сломался источник BestChange (\`info.zip\` формат/доступ) — смотреть логи *fetch_rates*.
-          3. Падает сборка/деплой — вкладка **Actions**.
-
-          Это авто-сообщение сторожа (watchdog.yml). Когда данные снова пойдут — issue закроется автоматически.
-          EOF
-          )
-          EXISTING=$(gh issue list --label watchdog --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
-          if [ -n "$EXISTING" ]; then
-            gh issue comment "$EXISTING" --body "$BODY"
-            echo "обновил issue #$EXISTING"
-          else
-            gh issue create --title "⚠️ RateScout: автосбор данных остановился" --label watchdog --body "$BODY"
-            echo "создал новый issue"
-          fi
-
-      - name: Закрыть issue (данные снова свежие)
-        if: steps.check.outputs.stale == 'no'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          NUMS=$(gh issue list --label watchdog --state open --json number --jq '.[].number' 2>/dev/null || echo "")
-          for n in $NUMS; do
-            gh issue comment "$n" --body "✅ Данные снова свежие (новейшая точка ${{ steps.check.outputs.newest }}, возраст ${{ steps.check.outputs.age_h }} ч). Закрываю."
-            gh issue close "$n"
-            echo "закрыл issue #$n"
-          done
-          echo "данные свежие — тревог нет"
