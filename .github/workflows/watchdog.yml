@@ -1,41 +1,111 @@
-name: Watchdog
+name: Watchdog (свежесть данных)
 
-# Сторож проекта: раз в день проверяет здоровье живого сайта (главная/sitemap/RSS/свежесть курсов)
-# и запас статей в очереди. Если что-то не так — шлёт алерт владельцу в Telegram (если задан ALERT_CHAT_ID)
-# И падает (красный запуск) — тогда GitHub сам присылает письмо владельцу. Всё зелёное — тишина.
+# Сторож автономности: раз в сутки проверяет, что ежечасный сбор курсов реально идёт.
+# Смотрит возраст САМОЙ СВЕЖЕЙ точки в history.json (не generated_at — он пишется всегда;
+# нам важно, что реально добавляются данные). Если > STALE_H часов без новых точек — значит
+# сбор встал (истёк GH_PAT и крон заснул / сломался BestChange / падает сборка). Тогда заводит
+# GitHub-issue (GitHub шлёт владельцу письмо). Когда данные снова свежие — закрывает issue.
 #
-# Секреты (необязательные — без них работает алерт письмом от GitHub при падении):
-#   TELEGRAM_TOKEN — тот же бот, что у каналов
-#   ALERT_CHAT_ID  — id ЛИЧНОГО чата владельца с ботом (напиши боту, узнай chat_id, положи в Secrets)
+# Почему это ловит проблему: deploy.yml коммитит history.json обратно каждый час. Если сбор
+# остановился, свежайшая точка «замирает» и стареет — watchdog это видит. Сам watchdog остаётся
+# включённым, пока keepalive (PAT-пуш) держит репозиторий активным; при истечении PAT самый ранний
+# сигнал — падение keepalive (GitHub и так шлёт письмо о сбое scheduled-воркфлоу).
 
 on:
   schedule:
-    - cron: "45 6 * * *"      # ~09:45 МСК, до дневных дайджестов
+    - cron: "37 5 * * *"     # ежедневно 05:37 UTC
   workflow_dispatch:
-    inputs:
-      test:
-        description: "Отправить тестовый алерт в Telegram (проверка доставки)"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: watchdog
   cancel-in-progress: false
+
+env:
+  STALE_H: "8"               # порог «протухания»: сбор ежечасный, 8ч = точно встал (с запасом на лаги планировщика)
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Health check
+
+      - name: Проверить свежесть history.json
+        id: check
+        run: |
+          python3 - <<'PY'
+          import json, os, datetime as dt
+          STALE_H = float(os.environ.get("STALE_H", "8"))
+          try:
+              h = json.load(open("history.json"))
+          except Exception as e:
+              h = {"series": {}}
+          newest = None
+          for pts in h.get("series", {}).values():
+              if pts:
+                  k = pts[-1][0]
+                  if newest is None or k > newest:
+                      newest = k
+          def parse(k):
+              for f in ("%Y-%m-%d %H:00", "%Y-%m-%d"):
+                  try:
+                      return dt.datetime.strptime(k, f).replace(tzinfo=dt.timezone.utc)
+                  except ValueError:
+                      pass
+              return None
+          now = dt.datetime.now(dt.timezone.utc)
+          t = parse(newest) if newest else None
+          age_h = (now - t).total_seconds() / 3600 if t else 1e9
+          stale = age_h > STALE_H
+          with open(os.environ["GITHUB_OUTPUT"], "a") as o:
+              o.write("stale=%s\n" % ("yes" if stale else "no"))
+              o.write("newest=%s\n" % (newest or "нет данных"))
+              o.write("age_h=%.1f\n" % age_h)
+          print("новейшая точка: %s | возраст %.1f ч | порог %.0f ч | stale=%s"
+                % (newest, age_h, STALE_H, stale))
+          PY
+
+      - name: Открыть/обновить issue (сбор остановился)
+        if: steps.check.outputs.stale == 'yes'
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
-          WATCHDOG_TEST: ${{ inputs.test && '1' || '' }}
-        run: python3 watchdog.py
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create watchdog --color B60205 --description "Автосторож свежести данных" 2>/dev/null || true
+          BODY=$(cat <<EOF
+          🔴 Похоже, автосбор курсов RateScout остановился.
+
+          - Новейшая точка в \`history.json\`: **${{ steps.check.outputs.newest }}** (возраст ~**${{ steps.check.outputs.age_h }} ч**).
+          - Ожидается обновление каждый час (workflow *Build & Deploy* / deploy.yml).
+
+          **Что проверить (по частоте причин):**
+          1. Истёк секрет \`GH_PAT\` → keepalive не сбрасывает 60-дневный таймер → scheduled-кроны отключились. Пересоздать PAT, обновить секрет, вручную запустить крон.
+          2. Сломался источник BestChange (\`info.zip\` формат/доступ) — смотреть логи *fetch_rates*.
+          3. Падает сборка/деплой — вкладка **Actions**.
+
+          Это авто-сообщение сторожа (watchdog.yml). Когда данные снова пойдут — issue закроется автоматически.
+          EOF
+          )
+          EXISTING=$(gh issue list --label watchdog --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+            echo "обновил issue #$EXISTING"
+          else
+            gh issue create --title "⚠️ RateScout: автосбор данных остановился" --label watchdog --body "$BODY"
+            echo "создал новый issue"
+          fi
+
+      - name: Закрыть issue (данные снова свежие)
+        if: steps.check.outputs.stale == 'no'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NUMS=$(gh issue list --label watchdog --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+          for n in $NUMS; do
+            gh issue comment "$n" --body "✅ Данные снова свежие (новейшая точка ${{ steps.check.outputs.newest }}, возраст ${{ steps.check.outputs.age_h }} ч). Закрываю."
+            gh issue close "$n"
+            echo "закрыл issue #$n"
+          done
+          echo "данные свежие — тревог нет"
