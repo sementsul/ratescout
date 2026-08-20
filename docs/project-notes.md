@@ -17,7 +17,7 @@
 | `articles/` | RU markdown-статьи блога (frontmatter title/description/date/slug); `articles/en/` — EN-переводы с теми же слагами |
 | `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄), og-image.png (1200x630 баннер) |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → history.py → build → guard(ключ не в dist) → deploy на Pages → (push) IndexNow; коммит history.json обратно (`contents:write`, `[skip ci]`) |
-| `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дневного отключения cron |
+| `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дн отключения cron — 🔴 пушит под PAT (секрет GH_PAT), т.к. бот-коммиты таймер НЕ сбрасывают (UC-106) |
 
 ## Запуск / деплой
 ```bash
