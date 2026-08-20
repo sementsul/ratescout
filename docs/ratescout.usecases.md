@@ -1016,3 +1016,24 @@ lang-цикле, sitemap, nav); `assets/styles.css` (блок `.mon-*`). Не т
 **РАДИУС:** новый `.github/workflows/watchdog.yml`. Не трогает deploy/keepalive/сайт. Прав нужно только
 `contents:read` (raw публичный), секретов не требует.
 **Статус:** ✅ в проде (обе ветки проверены live).
+
+## UC-109 — Автономность инфраструктуры: апгрейд Actions (уход с Node20) + Dependabot + ротация PAT
+**Контекст:** цель — чтобы сайт+автосбор жили годами без ручного вмешательства. Закрываем «медленные» риски.
+**Сделано:**
+1. **PAT сделан бессрочным.** Старый classic-PAT истекал 2026-09-17; пользователь пересоздал с «No expiration».
+   Секрет обновлён в обоих проектах через API+SealedBox (PyNaCl): `GH_PAT` (ratescout) и `DEPLOY_TOKEN` (numstore).
+   Проверка: keepalive запушил heartbeat под новым токеном (автор sementsul) + feed_numbers/price_history success.
+2. **Апгрейд версий GitHub Actions** (уход с депрекейт-Node20 на Node24): `checkout@v4→v5`, `setup-python@v5→v6`,
+   `upload-artifact@v4→v5`, Pages-пара `deploy-pages@v4→v5` + `upload-pages-artifact@v3→v5` (ratescout;
+   numstore — только `checkout`). Выбор +1 мажора (первое Node24-поколение) = решает депрекейт с минимальным риском.
+   Проверка: Build&Deploy ratescout success на новых версиях; numstore feed_numbers success с checkout@v5.
+3. **Dependabot** (`.github/dependabot.yml`, оба репо): еженедельно (пн) следит за релизами всех actions и
+   открывает ОДИН сгруппированный PR при обновлении (письмо владельцу). Merge пока ручной (осознанно — мажор может
+   ломать). Опция авто-мёржа minor/patch — предложена, ждёт решения.
+**РАДИУС:** все `.github/workflows/*.yml` (строки `uses:`), новый `.github/dependabot.yml`, секреты `GH_PAT`/
+`DEPLOY_TOKEN`. СОСЕДИ/роли: не трогает код сайта/сборки, данные, сторонние токены (Blogger/Telegram). Ротация
+секретов — зона пользователя (auth), выполнена с его токеном по его просьбе.
+**Остаточные риски автономности (задокументировано, вне кода):** карта у регистратора домена (авто-оплата живёт,
+пока карта валидна), сторонние OAuth (Google refresh-token: 6 мес простоя / 7 дн если app в «Testing»), источник
+BestChange, 2FA/recovery аккаунта GitHub. Ядро сайта от них не падает — только авто-постинг.
+**Статус:** ✅ апгрейд+Dependabot+ротация PAT в проде и проверены live.
