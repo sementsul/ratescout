@@ -5,9 +5,7 @@ name: Yandex recrawl
 # Секреты: YANDEX_OAUTH_TOKEN, YANDEX_HOST (опц.), TELEGRAM_TOKEN+ALERT_CHAT_ID (опц., для сводки).
 
 on:
-  schedule:
-    - cron: "30 8 * * 1"      # понедельник ~11:30 МСК (после отчётов)
-  workflow_dispatch:
+  workflow_dispatch:           # ТОЛЬКО вручную/при ошибке обхода — авто-переобход по расписанию отключён
 
 permissions:
   contents: read
