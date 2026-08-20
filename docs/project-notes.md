@@ -22,6 +22,7 @@
 | `.github/workflows/watchdog.yml` | ежедневный сторож автономности: тянет `history.json` из raw (без checkout), возраст свежайшей точки > 8ч → оповещение в 2 канала: **Telegram** в личный чат (`TELEGRAM_TOKEN`+`ALERT_CHAT_ID`) + **падение прогона** → письмо от GitHub. Ловит: заснувший крон (истёк PAT), сломанный BestChange, падение сборки (UC-108) |
 | `.github/dependabot.yml` | еженедельно (пн) следит за версиями GitHub Actions, открывает сгруппированный PR при обновлении (UC-109) |
 | `.github/workflows/dependabot-automerge.yml` | safe авто-мёрж Dependabot-PR: minor/patch — авто (`gh pr merge --auto`), major — на ручной клик (UC-109) |
+| `.github/workflows/yandex-recrawl.yml` + `yandex_recrawl.py` | переобход ключевых URL в Яндекс.Вебмастере (`YANDEX_OAUTH_TOKEN`, суточная квота) + ТГ-сводка. 🔧 ТОЛЬКО `workflow_dispatch` (вручную/при ошибке обхода) — еженедельное расписание убрано (UC-110) |
 
 ## Запуск / деплой
 ```bash
