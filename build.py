@@ -1128,6 +1128,9 @@ def currency_chart(slug, info, lang):
     for r, lbl in ranges:
         on = ' class="on"' if r == "all" else ""
         btns += f'<button type="button" data-r="{r}"{on}>{lbl}</button>'
+    mon_lbl = (f"📊 Сравнить {info['ticker']} с другими валютами в мониторе →" if lang == "ru"
+               else f"📊 Compare {info['ticker']} with other currencies in the monitor →")
+    open_mon = (f'<p class="openmon-wrap"><a class="openmon" href="{PREF[lang]}/monitor/?cur={slug}">{mon_lbl}</a></p>')
     return (f'<h2 class="news" id="chart">{title}</h2>'
             f'<div class="rschart-wrap" data-ticker="{info["ticker"]}" data-unit="USDT">'
             f'<div class="rsrange">{btns}</div>'
@@ -1136,7 +1139,8 @@ def currency_chart(slug, info, lang):
             f'<div class="rstip" hidden></div>'
             f'<script type="application/json" class="rschart-data">{data_json}</script>'
             f'</div>'
-            f'<p class="updnote">{note}</p>')
+            f'<p class="updnote">{note}</p>'
+            f'{open_mon}')
 
 
 def pair_chart(f, t, lang):
@@ -1198,6 +1202,14 @@ def pair_chart(f, t, lang):
     for r, lbl in ranges:
         on = ' class="on"' if r == "all" else ""
         btns += f'<button type="button" data-r="{r}"{on}>{lbl}</button>'
+    # кнопка в монитор: обе валюты пары, но только те, что реально есть в истории/мониторе
+    mon_slugs = [s for s in dict.fromkeys((f, t)) if len(HISTORY.get(s) or []) >= 2]
+    open_mon = ""
+    if mon_slugs:
+        mlbl = (f"📊 Сравнить {fT} и {tT} в мониторе →" if lang == "ru"
+                else f"📊 Compare {fT} and {tT} in the monitor →")
+        open_mon = (f'<p class="openmon-wrap"><a class="openmon" '
+                    f'href="{PREF[lang]}/monitor/?cur={",".join(mon_slugs)}">{mlbl}</a></p>')
     return (f'<h2 class="news" id="chart">{title}</h2>'
             f'<div class="rschart-wrap" data-ticker="{fT}" data-unit="{tT}">'
             f'<div class="rsrange">{btns}</div>'
@@ -1206,7 +1218,8 @@ def pair_chart(f, t, lang):
             f'<div class="rstip" hidden></div>'
             f'<script type="application/json" class="rschart-data">{data_json}</script>'
             f'</div>'
-            f'<p class="updnote">{note}</p>')
+            f'<p class="updnote">{note}</p>'
+            f'{open_mon}')
 
 
 def _daily_closes(series):

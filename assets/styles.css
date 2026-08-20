@@ -124,6 +124,9 @@ option{color:#a8a8a8}
 .rtbl td.d .op{color:#ffff55;font-size:.8rem}
 .rtbl tbody tr:hover{background:#161616}
 .updnote{color:#777;font-size:.8rem;margin:4px 0 14px}
+.openmon-wrap{margin:2px 0 16px}
+.openmon{display:inline-block;font-size:.85rem;color:#7cf;border:1px solid #245;border-radius:4px;padding:6px 12px;text-decoration:none;background:#0a0f14}
+.openmon:hover{border-color:#4ad;color:#adf;background:#0d141c}
 .trustbar{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:.8rem;color:#9c9;margin:8px 0 14px;padding:6px 10px;border:1px solid #063;border-radius:4px;background:#020}
 .trustbar b{color:#7f7}
 .trustbar a{color:#ffff55}
