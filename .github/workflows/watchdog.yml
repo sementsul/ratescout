@@ -97,4 +97,5 @@ jobs:
 
       - name: Данные свежие
         if: steps.check.outputs.stale == 'no'
-        run: echo "OK: данные свежие (${{ steps.check.outputs.newest }}) — тревог нет."
+        run: |
+          echo "OK: данные свежие (${{ steps.check.outputs.newest }}) - тревог нет."
