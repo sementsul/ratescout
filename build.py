@@ -4475,13 +4475,20 @@ def make_monitor_json():
     if not HISTORY:
         print("⚠️  history пуст — monitor.json пропущен"); return
     cur = {}
+    present = set()
     for slug in HISTORY:
         info = CUR.get(slug) or {}
-        cur[slug] = {"n": info.get("name", slug), "t": info.get("ticker", ""), "c": info.get("category", "")}
+        c = info.get("category", "")
+        cs = CAT_SLUG.get(c, "prochee")
+        present.add(c)
+        cur[slug] = {"n": info.get("name", slug), "t": info.get("ticker", ""), "cs": cs}
+    # категории (в порядке CATS), только те, что реально есть среди валют монитора, с локализ. названиями
+    cats = [{"s": CAT_SLUG.get(c, "prochee"), "ru": cat_name(c, "ru"), "en": cat_name(c, "en")}
+            for c in CATS if c in present]
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
-        json.dump({"unit": "USDT", "cur": cur, "series": HISTORY}, f, ensure_ascii=False, separators=(",", ":"))
-    print("✅ data/monitor.json: %d валют" % len(cur))
+        json.dump({"unit": "USDT", "cur": cur, "cats": cats, "series": HISTORY}, f, ensure_ascii=False, separators=(",", ":"))
+    print("✅ data/monitor.json: %d валют, %d категорий" % (len(cur), len(cats)))
 
 
 def render_monitor(lang):
@@ -4519,6 +4526,8 @@ def render_monitor(lang):
     <aside class="mon-side dosborder">
       <div class="mon-side-h">{L('Валюты на графике','Currencies on chart')}</div>
       <div id="monPresets" class="mon-presets"></div>
+      <div id="monCats" class="rsrange mon-cats"></div>
+      <label class="mon-show-l">{L('Показывать','Show')}: <select id="monShow"><option value="all">{L('все','all')}</option><option value="sel">{L('выбранные','selected')}</option></select></label>
       <div class="mon-side-top">
         <input id="monSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
         <button id="monClear" type="button" class="mon-btn">{L('Очистить','Clear')}</button>

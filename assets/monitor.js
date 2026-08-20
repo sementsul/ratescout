@@ -24,11 +24,14 @@
   var csvBtn = document.getElementById("monCsv");
   var pngBtn = document.getElementById("monPng");
   var linkBtn = document.getElementById("monLink");
+  var catsEl = document.getElementById("monCats");
+  var showSel = document.getElementById("monShow");
 
   var EN = (document.documentElement.getAttribute("lang") || "ru").slice(0, 2) === "en";
   function T(ru, en) { return EN ? en : ru; }
 
   var DATA = null, checked = {}, base = "USD", type = "line", sel = 0, logScale = false, showCorr = false;
+  var catFilter = "", showMode = "all";
   var HOVER = null, tipEl = null, crossEl = null;
   var COLORS = ["#3399dd", "#33cc99", "#cc9944", "#cc5588", "#7a5cd0", "#5cc0d0", "#d05c8a", "#9ad04a",
                 "#d0a24a", "#4ad0a2", "#d04a4a", "#4a7ad0", "#cdd04a", "#d04acd"];
@@ -60,7 +63,7 @@
       if (!Object.keys(checked).length) slugs.slice(0, 4).forEach(function (s) { checked[s] = 1; });
     }
     baseSel.value = base; typeSel.value = type; logEl.checked = logScale; corrChk.checked = showCorr;
-    buildPresets(); buildList(""); buildRanges(); draw();
+    buildPresets(); buildCats(); buildList(""); buildRanges(); draw();
   }).catch(function () { if (noteEl) noteEl.textContent = T("Не удалось загрузить данные монитора.", "Failed to load monitor data."); });
 
   function byName(a, b) { return (DATA.cur[a] ? DATA.cur[a].n : a) > (DATA.cur[b] ? DATA.cur[b].n : b) ? 1 : -1; }
@@ -110,14 +113,33 @@
     });
   }
 
+  // ---------- фильтр по категориям (как на /svodka/) ----------
+  function buildCats() {
+    if (!catsEl || !DATA.cats) return;
+    var all = '<button type="button" data-c=""' + (catFilter ? "" : ' class="on"') + ">" + T("Все", "All") + "</button>";
+    catsEl.innerHTML = all + DATA.cats.map(function (c) {
+      return '<button type="button" data-c="' + c.s + '"' + (catFilter === c.s ? ' class="on"' : "") + ">" + esc(EN ? c.en : c.ru) + "</button>";
+    }).join("");
+    Array.prototype.forEach.call(catsEl.querySelectorAll("button"), function (b) {
+      b.addEventListener("click", function () {
+        catFilter = b.getAttribute("data-c");
+        Array.prototype.forEach.call(catsEl.querySelectorAll("button"), function (x) { x.classList.toggle("on", x.getAttribute("data-c") === catFilter); });
+        buildList(searchEl.value);
+      });
+    });
+  }
+
   // ---------- список валют (с % за период) ----------
   function buildList(q) {
     q = (q || "").toLowerCase().trim();
     var slugs = Object.keys(DATA.series).filter(function (s) {
+      if (showMode === "sel" && !checked[s]) return false;
+      if (catFilter && (DATA.cur[s] || {}).cs !== catFilter) return false;
       if (!q) return true;
       var c = DATA.cur[s] || {};
       return (s + " " + (c.n || "") + " " + (c.t || "")).toLowerCase().indexOf(q) >= 0;
     }).sort(byName);
+    if (!slugs.length) { listEl.innerHTML = '<p class="mon-empty">' + T("Ничего не найдено", "Nothing found") + "</p>"; return; }
     listEl.innerHTML = slugs.map(function (s) {
       var c = DATA.cur[s] || { n: s, t: "" }, pc = pctChange(s);
       var badge = pc == null ? "" : '<em class="mon-pc ' + (pc >= 0 ? "up" : "dn") + '">' + fmtPct(pc) + "</em>";
@@ -125,7 +147,7 @@
         '<span>' + esc(c.n) + ' <b>' + esc(c.t) + "</b></span>" + badge + "</label>";
     }).join("");
     Array.prototype.forEach.call(listEl.querySelectorAll("input"), function (inp) {
-      inp.addEventListener("change", function () { var s = inp.getAttribute("data-s"); if (inp.checked) checked[s] = 1; else delete checked[s]; buildRanges(); draw(); writeURL(); });
+      inp.addEventListener("change", function () { var s = inp.getAttribute("data-s"); if (inp.checked) checked[s] = 1; else delete checked[s]; buildRanges(); draw(); writeURL(); if (showMode === "sel") buildList(searchEl.value); });
     });
   }
 
@@ -181,6 +203,7 @@
   logEl.addEventListener("change", function () { logScale = logEl.checked; draw(); writeURL(); });
   corrChk.addEventListener("change", function () { showCorr = corrChk.checked; draw(); writeURL(); });
   searchEl.addEventListener("input", function () { buildList(searchEl.value); });
+  if (showSel) showSel.addEventListener("change", function () { showMode = showSel.value; buildList(searchEl.value); });
   if (clearEl) clearEl.addEventListener("click", function () { checked = {}; buildList(searchEl.value); draw(); writeURL(); });
   if (csvBtn) csvBtn.addEventListener("click", exportCSV);
   if (pngBtn) pngBtn.addEventListener("click", exportPNG);
