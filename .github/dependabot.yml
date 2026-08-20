@@ -1,0 +1,17 @@
+# Авто-слежение за версиями GitHub Actions (checkout, setup-python, deploy-pages и т.д.).
+# Dependabot раз в неделю проверяет новые релизы и, если вышли, открывает ОДИН сгруппированный
+# PR с апгрейдом — GitHub присылает письмо. Останется нажать Merge (после мержа push в main
+# подхватит новые версии). Так версии не устаревают молча.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      github-actions:
+        patterns: ["*"]        # все actions — в один PR, меньше шума
+    commit-message:
+      prefix: "chore(ci)"
+    labels: []                 # Issues/лейблы в репо могут быть off — не навешиваем
