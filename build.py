@@ -76,7 +76,7 @@ BLOG_PER_PAGE = 6            # статей на страницу блога (п
 # Версии ассетов для кеш-бастинга (хеш содержимого) — заполняется в main() до рендера.
 # Стабильный путь /assets/app.js кешируется браузером; ?v=<hash> меняется только при
 # изменении файла и заставляет подхватить новую версию (важно для ежечасных пересборок).
-VER = {"css": "", "js": "", "cat": ""}
+VER = {"css": "", "js": "", "cat": "", "mon": ""}
 
 
 def _h(s):
@@ -394,6 +394,7 @@ def render_home(lang):
     <div class="sblock"><h3>{tr(lang,'sections')}</h3><ul>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
+      <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
@@ -4301,6 +4302,7 @@ def static_files():
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
         items.append(u_entry(pr + "/obzor/sutki/", "hourly", "0.6"))
@@ -4455,6 +4457,58 @@ def copy_assets():
     shutil.copytree(os.path.join(ROOT, "assets"), dst)
 
 
+def make_monitor_json():
+    """Данные для профессионального монитора → dist/data/monitor.json (курсы в USDT + названия валют)."""
+    if not HISTORY:
+        print("⚠️  history пуст — monitor.json пропущен"); return
+    cur = {}
+    for slug in HISTORY:
+        info = CUR.get(slug) or {}
+        cur[slug] = {"n": info.get("name", slug), "t": info.get("ticker", ""), "c": info.get("category", "")}
+    os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
+    with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
+        json.dump({"unit": "USDT", "cur": cur, "series": HISTORY}, f, ensure_ascii=False, separators=(",", ":"))
+    print("✅ data/monitor.json: %d валют" % len(cur))
+
+
+def render_monitor(lang):
+    """Профессиональный монитор: графики многих валют на одной шкале + ре-база + линии/свечи + выбор галочками."""
+    if not HISTORY:
+        return
+    ru = lang == "ru"
+    L = lambda r, e: r if ru else e
+    title = L("Профессиональный монитор курсов — все валюты на одном графике",
+              "Professional rate monitor — all currencies on one chart")
+    desc = L("Монитор курсов: графики валют на одной шкале, выбор базовой валюты (по умолчанию доллар), линии или свечи, выбор валют галочками — RateScout.",
+             "Rate monitor: currency charts on one scale, base currency (USD by default), lines or candles, pick currencies with checkboxes — RateScout.")
+    h1 = L("Профессиональный монитор курсов", "Professional rate monitor")
+    lead = L("Графики валют на одной шкале. Выберите базовую валюту (по умолчанию доллар), тип отображения (линии или свечи) и отметьте нужные валюты справа.",
+             "Currency charts on one scale. Pick the base currency (USD by default), display type (lines or candles) and check currencies on the right.")
+    body = f"""
+  <h1>{h1}</h1>
+  <p class="lead">{lead}</p>
+  <div id="monitor" class="mon-wrap">
+    <div class="mon-main">
+      <div class="mon-ctl">
+        <label>{L('База','Base')}: <select id="monBase"></select></label>
+        <label>{L('Тип','Type')}: <select id="monType"><option value="line">{L('Линии','Lines')}</option><option value="candle">{L('Свечи','Candles')}</option></select></label>
+      </div>
+      <div id="monRanges" class="mon-ranges"></div>
+      <div id="monChart" class="mon-chart dosborder"><p class="mon-empty">{L('Загружаю…','Loading…')}</p></div>
+      <div id="monLegend" class="mon-legend"></div>
+      <p id="monNote" class="mon-note"></p>
+    </div>
+    <aside class="mon-side dosborder">
+      <div class="mon-side-h">{L('Валюты на графике','Currencies on chart')}</div>
+      <input id="monSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
+      <div id="monList" class="mon-list"></div>
+    </aside>
+  </div>
+  <script src="/assets/monitor.js?v={VER['mon']}"></script>
+"""
+    render_page(lang, "monitor", title, desc, body, h1)
+
+
 def main():
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
@@ -4464,6 +4518,7 @@ def main():
     VER["css"] = _h(open(os.path.join(ROOT, "assets", "styles.css"), encoding="utf-8").read())
     VER["js"] = _h(open(os.path.join(ROOT, "assets", "app.js"), encoding="utf-8").read())
     VER["cat"] = _h(catjs)
+    VER["mon"] = _h(open(os.path.join(ROOT, "assets", "monitor.js"), encoding="utf-8").read())
     for _s in CUR:
         _hh = HISTORY.get(_s, [])
         if len(_hh) >= 2:
@@ -4481,6 +4536,7 @@ def main():
         render_editorial(lang)
         render_glossary(lang)
         render_charts_overview(lang)
+        render_monitor(lang)
         render_relative(lang)
         render_directions(lang)
         for _sid, _d, _rw, _ew in REVIEWS:
@@ -4509,6 +4565,7 @@ def main():
     render_miniapp()
     static_files()
     copy_assets()
+    make_monitor_json()     # dist/data/monitor.json для монитора
     write_favicons()        # /favicon.ico + apple-touch (после copy_assets)
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)

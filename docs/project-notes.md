@@ -15,7 +15,8 @@
 | `currencies.json` | каталог валют (slug→{id,name,ticker,category[,num]}); в CI обновляется в раннере |
 | `data.json` | `site`: name/domain/ref/owner/owner_inn/owner_email/tagline |
 | `articles/` | RU markdown-статьи блога (frontmatter title/description/date/slug); `articles/en/` — EN-переводы с теми же слагами |
-| `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), favicon.svg (⇄), og-image.png (1200x630 баннер) |
+| `assets/` | styles.css (тема doshaven), app.js (конвертер+фильтр), catalog.js (генерится), monitor.js (про-монитор `/monitor/`), favicon.svg (⇄), og-image.png (1200x630 баннер) |
+| `assets/monitor.js` + `data/monitor.json` | страница `/monitor/` (RU+EN): SVG-терминал — много валют на одной шкале, выбор базы (умолч. доллар/USDT) и типа (линии/свечи), диапазоны, справа чекбоксы валют. Данные `monitor.json` кладёт `make_monitor_json()` в build.py. Детали — UC-107 |
 | `.github/workflows/deploy.yml` | ежечасный cron: fetch_rates → history.py → build → guard(ключ не в dist) → deploy на Pages → (push) IndexNow; коммит history.json обратно (`contents:write`, `[skip ci]`) |
 | `.github/workflows/keepalive.yml` | еженедельный heartbeat против 60-дн отключения cron — 🔴 пушит под PAT (секрет GH_PAT), т.к. бот-коммиты таймер НЕ сбрасывают (UC-106) |
 
