@@ -20,7 +20,7 @@ jobs:
   heartbeat:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Commit heartbeat (пуш под PAT — иначе таймер простоя НЕ сбрасывается)
         env:
           PAT: ${{ secrets.GH_PAT }}
