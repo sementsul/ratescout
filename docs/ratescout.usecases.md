@@ -1028,8 +1028,11 @@ lang-цикле, sitemap, nav); `assets/styles.css` (блок `.mon-*`). Не т
    numstore — только `checkout`). Выбор +1 мажора (первое Node24-поколение) = решает депрекейт с минимальным риском.
    Проверка: Build&Deploy ratescout success на новых версиях; numstore feed_numbers success с checkout@v5.
 3. **Dependabot** (`.github/dependabot.yml`, оба репо): еженедельно (пн) следит за релизами всех actions и
-   открывает ОДИН сгруппированный PR при обновлении (письмо владельцу). Merge пока ручной (осознанно — мажор может
-   ломать). Опция авто-мёржа minor/patch — предложена, ждёт решения.
+   открывает ОДИН сгруппированный PR при обновлении (письмо владельцу).
+4. **Safe авто-мёрж** (`.github/workflows/dependabot-automerge.yml`, оба репо): на PR от Dependabot `fetch-metadata@v3`
+   определяет тип; **minor/patch → авто-мёрж** (`gh pr merge --auto --squash`), **major → остаётся на ручной клик**
+   (мажор может ломать). Включён репо-флаг `allow_auto_merge`. Права токена `contents/pull-requests: write`.
+   Не тестировался live (нужен реальный Dependabot-PR); при сбое ничего не ломается — PR просто ждёт ручного мёржа.
 **РАДИУС:** все `.github/workflows/*.yml` (строки `uses:`), новый `.github/dependabot.yml`, секреты `GH_PAT`/
 `DEPLOY_TOKEN`. СОСЕДИ/роли: не трогает код сайта/сборки, данные, сторонние токены (Blogger/Telegram). Ротация
 секретов — зона пользователя (auth), выполнена с его токеном по его просьбе.
