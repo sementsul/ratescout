@@ -4491,15 +4491,21 @@ def render_monitor(lang):
     <div class="mon-main">
       <div class="mon-ctl">
         <label>{L('База','Base')}: <select id="monBase"></select></label>
-        <label>{L('Тип','Type')}: <select id="monType"><option value="line">{L('Линии','Lines')}</option><option value="candle">{L('Свечи','Candles')}</option></select></label>
+        <label>{L('Тип','Type')}: <select id="monType"><option value="line">{L('Линии','Lines')}</option><option value="candle">{L('Свечи','Candles')}</option><option value="ratio">{L('Пара A/B','Pair A/B')}</option></select></label>
+        <label class="mon-chk"><input id="monLog" type="checkbox"> {L('лог-шкала','log scale')}</label>
+        <label class="mon-chk"><input id="monCorrChk" type="checkbox"> {L('корреляция','correlation')}</label>
+        <span class="mon-exp"><button id="monCsv" type="button" class="mon-btn">CSV</button><button id="monPng" type="button" class="mon-btn">PNG</button><button id="monLink" type="button" class="mon-btn">{L('Ссылка','Link')}</button></span>
       </div>
       <div id="monRanges" class="mon-ranges"></div>
       <div id="monChart" class="mon-chart dosborder"><p class="mon-empty">{L('Загружаю…','Loading…')}</p></div>
       <div id="monLegend" class="mon-legend"></div>
       <p id="monNote" class="mon-note"></p>
+      <div id="monStats" class="mon-stats"></div>
+      <div id="monCorrBox" class="mon-corr"></div>
     </div>
     <aside class="mon-side dosborder">
       <div class="mon-side-h">{L('Валюты на графике','Currencies on chart')}</div>
+      <div id="monPresets" class="mon-presets"></div>
       <div class="mon-side-top">
         <input id="monSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
         <button id="monClear" type="button" class="mon-btn">{L('Очистить','Clear')}</button>
