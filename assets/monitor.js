@@ -15,6 +15,7 @@
   var legEl = document.getElementById("monLegend");
   var noteEl = document.getElementById("monNote");
   var DATA = null, checked = {}, base = "USD", type = "line", sel = 0;
+  var HOVER = null, tipEl = null, crossEl = null;
   var COLORS = ["#3399dd", "#33cc99", "#cc9944", "#cc5588", "#7a5cd0", "#5cc0d0", "#d05c8a", "#9ad04a",
                 "#d0a24a", "#4ad0a2", "#d04a4a", "#4a7ad0", "#cdd04a", "#d04acd"];
   var RANGES = [{ k: 7, l: "Неделя" }, { k: 30, l: "Месяц" }, { k: 90, l: "3 мес" }, { k: 180, l: "6 мес" },
@@ -97,7 +98,7 @@
     if (!DATA) return;
     var W = host.clientWidth || 700, H = 420, padL = 60, padR = 14, padT = 14, padB = 30, w = W - padL - padR, h = H - padT - padB;
     var sels = selected();
-    if (!sels.length) { host.innerHTML = '<p class="mon-empty">Отметьте валюты справа, чтобы построить график.</p>'; legEl.innerHTML = ""; if (noteEl) noteEl.textContent = ""; return; }
+    if (!sels.length) { host.innerHTML = '<p class="mon-empty">Отметьте валюты справа, чтобы построить график.</p>'; legEl.innerHTML = ""; if (noteEl) noteEl.textContent = ""; HOVER = null; hideTip(); return; }
 
     var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" height="' + H + '" class="mon-svg">';
     var baseName = base === "USD" ? "USDT" : (DATA.cur[base] ? DATA.cur[base].t : base);
@@ -126,6 +127,13 @@
       svg += "</svg>"; host.innerHTML = svg;
       legEl.innerHTML = '<span class="mon-lg"><i style="background:#33cc77"></i>' + esc((DATA.cur[slug] || {}).n || slug) + " · свечи (день)</span>";
       if (noteEl) noteEl.textContent = "Свечи — по одной валюте (" + ((DATA.cur[slug] || {}).n || slug) + "), цена в " + baseName + ". OHLC собран из точек дня." + (sels.length > 1 ? " Отмечено несколько — показана первая." : "");
+      HOVER = {
+        kind: "candle", W: W, padL: padL, w: w,
+        dates: ohlc.map(function (c) { return c.d; }),
+        Xi: function (i) { return padL + (ohlc.length === 1 ? w / 2 : i / (ohlc.length - 1) * w); },
+        ohlc: ohlc, name: (DATA.cur[slug] || {}).n || slug, baseName: baseName
+      };
+      mountHover();
       return;
     }
 
@@ -162,6 +170,20 @@
     if (noteEl) noteEl.textContent = single
       ? "Цена в " + baseName + " (одна валюта — реальный курс)."
       : "Индекс относительной динамики (старт = 100), база — " + baseName + ". Так разномасштабные валюты сравнимы на одной шкале.";
+
+    // данные для тултипа: реальная цена в базе на дату под курсором
+    var uni = {}; seriesData.forEach(function (o) { o.pts.forEach(function (p) { uni[p[0]] = 1; }); });
+    var udates = Object.keys(uni).sort();
+    HOVER = {
+      kind: "line", W: W, padL: padL, w: w, x0: x0, xs: xs,
+      dates: udates, dnums: udates.map(dnum),
+      Xd: function (d) { return X(d); },
+      names: seriesData.map(function (o) { return (DATA.cur[o.s] || {}).n || o.s; }),
+      cols: seriesData.map(function (o, i) { return COLORS[i % COLORS.length]; }),
+      maps: seriesData.map(function (o) { var m = {}; o.pts.forEach(function (p) { m[p[0]] = p[1]; }); return m; }),
+      baseName: baseName
+    };
+    mountHover();
   }
 
   function grid(mn, mx, W, padL, padR, padT, h, fmt) {
@@ -181,5 +203,60 @@
       return '<text x="' + x.toFixed(1) + '" y="' + (H - padB + 16) + '" text-anchor="middle" fill="#888" font-size="11">' + fmtDate(dates[k]) + "</text>";
     }).join("");
   }
+  // ---- Тултип (окошко состояния валют под курсором) ----
+  function mountHover() {
+    if (!tipEl) {
+      tipEl = document.createElement("div"); tipEl.className = "mon-tip"; tipEl.style.display = "none";
+      crossEl = document.createElement("div"); crossEl.className = "mon-cross"; crossEl.style.display = "none";
+    }
+    // host.innerHTML пересобрался — заново добавляем оверлеи
+    host.appendChild(crossEl); host.appendChild(tipEl);
+  }
+  function hideTip() { if (tipEl) tipEl.style.display = "none"; if (crossEl) crossEl.style.display = "none"; }
+
+  function onMove(e) {
+    if (!HOVER) { hideTip(); return; }
+    var svg = host.querySelector("svg"); if (!svg) { hideTip(); return; }
+    var rect = svg.getBoundingClientRect();
+    var scale = rect.width / HOVER.W;               // viewBox px → экранные px
+    var vbX = (e.clientX - rect.left) / scale;      // координата в системе viewBox
+    if (HOVER.kind === "candle") {
+      var n = HOVER.ohlc.length; if (!n) return;
+      var i = n === 1 ? 0 : Math.round((vbX - HOVER.padL) / HOVER.w * (n - 1));
+      i = Math.max(0, Math.min(n - 1, i));
+      var c = HOVER.ohlc[i], cx = HOVER.Xi(i) * scale;
+      var up = c.c >= c.o, col = up ? "#33cc77" : "#dd5555", bn = HOVER.baseName;
+      showTip(cx, rect,
+        '<div class="mon-tip-d">' + fmtDate(c.d) + "." + c.d.slice(0, 4) + '</div>' +
+        '<div class="mon-tip-r"><span><i style="background:' + col + '"></i>' + esc(HOVER.name) + "</span></div>" +
+        '<div class="mon-tip-o">O ' + fmtNum(c.o) + " · H " + fmtNum(c.h) + "<br>L " + fmtNum(c.l) + " · C " + fmtNum(c.c) + " " + esc(bn) + "</div>");
+      return;
+    }
+    // линии: ближайшая дата в общей шкале
+    var ds = HOVER.dnums; if (!ds.length) return;
+    var inv = HOVER.x0 + (vbX - HOVER.padL) / HOVER.w * HOVER.xs;   // dnum под курсором
+    var bi = 0, bd = Infinity;
+    for (var k = 0; k < ds.length; k++) { var dd = Math.abs(ds[k] - inv); if (dd < bd) { bd = dd; bi = k; } }
+    var date = HOVER.dates[bi], cx2 = HOVER.Xd(date) * scale;
+    var rows = HOVER.names.map(function (nm, j) {
+      var v = HOVER.maps[j][date];
+      return '<div class="mon-tip-r"><span><i style="background:' + HOVER.cols[j] + '"></i>' + esc(nm) +
+        "</span><b>" + (v == null ? "—" : fmtNum(v)) + "</b></div>";
+    }).join("");
+    showTip(cx2, rect,
+      '<div class="mon-tip-d">' + fmtDate(date) + "." + date.slice(0, 4) + '</div>' + rows +
+      '<div class="mon-tip-u">' + esc(HOVER.baseName) + "</div>");
+  }
+  function showTip(cxPx, rect, html) {
+    if (!tipEl) return;
+    crossEl.style.display = "block"; crossEl.style.left = cxPx.toFixed(1) + "px";
+    tipEl.innerHTML = html; tipEl.style.display = "block";
+    var tw = tipEl.offsetWidth || 150;
+    var left = cxPx + 14; if (left + tw > rect.width) left = cxPx - tw - 14; if (left < 2) left = 2;
+    tipEl.style.left = left.toFixed(1) + "px";
+  }
+  host.addEventListener("mousemove", onMove);
+  host.addEventListener("mouseleave", hideTip);
+
   window.addEventListener("resize", function () { if (DATA) draw(); });
 })();
