@@ -1,0 +1,22 @@
+name: Пинг бота оповещений (keepalive)
+
+# cron-job.org выключен → бота @RateScoutRUBot держим на самопинге + этом пинге из GitHub.
+# Раз в 30 минут дёргаем URL бота на Бегете (i964126i.beget.tech): если самоцепочка оборвалась —
+# заход перезапустит её. URL — в секрете BOT_PING_URL (Settings → Secrets → Actions).
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: bot-ping
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Дёрнуть бота
+        run: |
+          curl -s -m 10 -A "Mozilla/5.0 (keepalive)" "${{ secrets.BOT_PING_URL }}" -o /dev/null -w "ping: %{http_code}\n" || true

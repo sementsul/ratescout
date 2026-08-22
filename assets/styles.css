@@ -287,3 +287,15 @@ summary{cursor:pointer;color:#ffff55}
 .mon-tbl td:first-child,.mon-tbl th:first-child{text-align:left;color:#cde}
 .mon-heat td{text-align:center;color:#eee}
 @media(max-width:760px){.mon-wrap{flex-direction:column}.mon-side{flex:1 1 auto;width:100%;box-sizing:border-box}.mon-list{max-height:220px}.mon-exp{margin-left:0}}
+
+/* Оповещения о курсе пары (/alert/) */
+.alert-wrap{max-width:720px;margin:14px 0;padding:14px}
+.alert-row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+.alert-cur{flex:1 1 200px;display:block}
+.alert-cur select,#alertThr{width:100%;max-width:none;margin-top:4px;background:#111;color:#0f0;border:1px solid #0a5;padding:5px 6px;font:inherit}
+.alert-swap{align-self:flex-end;margin-bottom:3px}
+.alert-now{font-size:15px;margin:10px 0;color:#cde}
+.alert-sub{display:block;width:100%;margin-top:14px;padding:12px;font:inherit;font-weight:700;cursor:pointer;background:#0a5;color:#001;border:1px solid #0f0;border-radius:4px}
+.alert-sub:hover{background:#0f0}
+.alert-hint{color:#7a8;font-size:13px;margin-top:10px}
+#alertChart{margin-top:8px;min-height:200px}

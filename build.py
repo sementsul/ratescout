@@ -395,6 +395,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
+      <li><a href="{PREF[lang]}/alert/">{'Оповещения о курсе' if lang=='ru' else 'Rate alerts'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
@@ -4316,6 +4317,7 @@ def static_files():
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/alert/", "hourly", "0.6"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
         items.append(u_entry(pr + "/obzor/sutki/", "hourly", "0.6"))
@@ -4491,6 +4493,42 @@ def make_monitor_json():
     print("✅ data/monitor.json: %d валют, %d категорий" % (len(cur), len(cats)))
 
 
+def render_alert(lang):
+    """Оповещения о курсе пары A/B: выбор 2 валют, порог, направление, график пары, подписка в TG-бот."""
+    if not HISTORY:
+        return
+    ru = lang == "ru"
+    L = lambda r, e: r if ru else e
+    title = L("Оповещения о курсе пары валют — сигнал в Telegram",
+              "Currency pair rate alerts — Telegram signal")
+    desc = L("Подпишитесь на курс пары валют: пришлём сигнал в Telegram, когда «1 A ≥/≤ порог B». Выбор валют, график пары, бесплатно — RateScout.",
+             "Subscribe to a currency pair rate: get a Telegram signal when '1 A is above/below a threshold in B'. Pick currencies, pair chart, free — RateScout.")
+    h1 = L("Оповещения о курсе пары", "Currency pair alerts")
+    lead = L("Выберите две валюты и задайте порог: Telegram-бот пришлёт сигнал, когда 1 единица первой валюты станет выше или ниже заданного значения во второй. Единицу можно перевернуть кнопкой ⇄.",
+             "Pick two currencies and set a threshold: the Telegram bot sends a signal when 1 unit of the first goes above or below the set amount in the second. Swap the unit with ⇄.")
+    body = f"""
+  <h1>{h1}</h1>
+  <p class="lead">{lead}</p>
+  <div id="alert" class="alert-wrap dosborder">
+    <div class="alert-row">
+      <label class="alert-cur">{L('Валюта','Currency')} A<br><select id="alertA"></select></label>
+      <button id="alertSwap" type="button" class="mon-btn alert-swap" title="{L('Поменять местами','Swap')}">⇄</button>
+      <label class="alert-cur">{L('в валюте','in currency')} B<br><select id="alertB"></select></label>
+    </div>
+    <div class="alert-row">
+      <label class="alert-cur">{L('Условие','Condition')}<br><select id="alertDir"><option value="g">{L('1 A ≥ порога','1 A ≥ threshold')}</option><option value="l">{L('1 A ≤ порога','1 A ≤ threshold')}</option></select></label>
+      <label class="alert-cur">{L('Порог (в B)','Threshold (in B)')}<br><input id="alertThr" type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <p id="alertNow" class="alert-now"></p>
+    <div id="alertChart" class="mon-chart dosborder"><p class="mon-empty">{L('Загружаю…','Loading…')}</p></div>
+    <button id="alertSub" type="button" class="alert-sub">{L('🔔 Подписаться в Telegram','🔔 Subscribe in Telegram')}</button>
+    <p class="alert-hint">{L('Оповещение придёт в бот','Alert arrives in the bot')} <b>@RateScoutRUBot</b>. {L('Бесплатно. Отписаться — командой /myalerts.','Free. Unsubscribe with /myalerts.')}</p>
+  </div>
+  <script src="/assets/alert.js?v={VER['alert']}"></script>
+"""
+    render_page(lang, "alert", title, desc, body, h1)
+
+
 def render_monitor(lang):
     """Профессиональный монитор: графики многих валют на одной шкале + ре-база + линии/свечи + выбор галочками."""
     if not HISTORY:
@@ -4550,6 +4588,7 @@ def main():
     VER["js"] = _h(open(os.path.join(ROOT, "assets", "app.js"), encoding="utf-8").read())
     VER["cat"] = _h(catjs)
     VER["mon"] = _h(open(os.path.join(ROOT, "assets", "monitor.js"), encoding="utf-8").read())
+    VER["alert"] = _h(open(os.path.join(ROOT, "assets", "alert.js"), encoding="utf-8").read())
     for _s in CUR:
         _hh = HISTORY.get(_s, [])
         if len(_hh) >= 2:
@@ -4568,6 +4607,7 @@ def main():
         render_glossary(lang)
         render_charts_overview(lang)
         render_monitor(lang)
+        render_alert(lang)
         render_relative(lang)
         render_directions(lang)
         for _sid, _d, _rw, _ew in REVIEWS:
