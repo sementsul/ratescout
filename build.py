@@ -739,17 +739,17 @@ def render_compare(a, b, lang):
                         f'{g2["rsi"]:.0f}' if g2.get("rsi") is not None else "—"))
     rows = "".join(f'<tr><td>{m}</td><td>{va}</td><td>{vb}</td></tr>' for m, va, vb in metrics)
     if ru:
-        title = f"{ta} vs {tb} — сравнение: курс, капитализация, динамика | {S['name']}"
+        title = f"{ia['name']} vs {ib['name']} — сравнение курсов | {S['name']}"
         desc = (f"Сравнение {ia['name']} ({ta}) и {ib['name']} ({tb}): цена, изменение за 24ч/7д/30д, капитализация, "
                 f"объём торгов, ATH. Данные мониторинга BestChange и CoinGecko.")
-        h1, lead = f"{ta} vs {tb} — сравнение", (f"Сравнение {ia['name']} и {ib['name']} по ключевым показателям — "
+        h1, lead = f"{ia['name']} vs {ib['name']} — сравнение", (f"Сравнение {ia['name']} и {ib['name']} по ключевым показателям — "
             "цена, динамика, капитализация. Справочно, не рекомендация.")
         colh = ("Показатель", ta, tb)
     else:
-        title = f"{ta} vs {tb} — comparison: price, market cap, dynamics | {S['name']}"
+        title = f"{ia['name']} vs {ib['name']} — rate comparison | {S['name']}"
         desc = (f"Compare {ia['name']} ({ta}) and {ib['name']} ({tb}): price, 24h/7d/30d change, market cap, "
                 f"trading volume, ATH. BestChange monitoring and CoinGecko data.")
-        h1, lead = f"{ta} vs {tb} — comparison", (f"Comparing {ia['name']} and {ib['name']} on key metrics — "
+        h1, lead = f"{ia['name']} vs {ib['name']} — comparison", (f"Comparing {ia['name']} and {ib['name']} on key metrics — "
             "price, dynamics, market cap. For reference, not advice.")
         colh = ("Metric", ta, tb)
     table = (f'<div class="rtbl-wrap"><table class="rtbl"><thead><tr>{"".join(f"<th>{c}</th>" for c in colh)}'
@@ -2604,7 +2604,8 @@ def render_blog(lang):
 </div>
 {ld}
 {footer(lang)}"""
-        write(lang, path, head(lang, title, desc, path, ld) + body)
+        pdesc = desc if p == 1 else (desc + (f" Страница {p} из {pages}." if lang == "ru" else f" Page {p} of {pages}."))
+        write(lang, path, head(lang, title, pdesc, path, ld) + body)
 
 
 def render_rss(lang):
@@ -3706,10 +3707,10 @@ def render_glossary(lang):
     lidx = "".join(f'<li><a href="{PREF[lang]}/slovar/{t["slug"]}/">{_gterm(t, lang)}</a>'
                    f'<div class="apreview">{_gdef(t, lang)[:110]}…</div></li>' for t in terms)
     if lang == "ru":
-        it, idesc = "Словарь терминов обмена криптовалют и валют", "Понятные определения терминов обмена: курс, резерв, спред, сеть, комиссия, AML, KYC, стейблкоин, эскроу и другие."
+        it, idesc = "Словарь терминов обмена криптовалют — определения А–Я", "Понятные определения терминов обмена: курс, резерв, спред, сеть, комиссия, AML, KYC, стейблкоин, эскроу и другие."
         ih1, ilead = "Словарь терминов", "Короткие понятные определения терминов, которые встречаются при обмене криптовалют и валют."
     else:
-        it, idesc = "Glossary of crypto and currency exchange terms", "Clear definitions of exchange terms: rate, reserve, spread, network, fee, AML, KYC, stablecoin, escrow and more."
+        it, idesc = "Glossary of crypto exchange terms — definitions A–Z", "Clear definitions of exchange terms: rate, reserve, spread, network, fee, AML, KYC, stablecoin, escrow and more."
         ih1, ilead = "Glossary", "Short, clear definitions of the terms you meet when exchanging crypto and currencies."
     ild = jsonld({"@context": "https://schema.org", "@type": "DefinedTermSet", "name": ih1,
                   "url": f"{BASE_URL}{PREF[lang]}/slovar/"})

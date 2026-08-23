@@ -1066,3 +1066,15 @@ BestChange, 2FA/recovery аккаунта GitHub. Ядро сайта от ни�
 **РАДИУС:** новые `assets/alert.js`, `render_alert`+регистрация+sitemap+nav в build.py, `.alert-*` в styles.css, workflow bot_ping.yml. СОСЕДИ: монитор/kursy/остальные страницы не тронуты; данные — тот же monitor.json (только чтение). Бот — отдельный проект/хост, magzgold не затронут.
 **Проверка:** node --check alert.js OK; скобки bot.php 86/86,292/292,161/161; сборка ok (ru+en); прод `/alert/` и `/en/alert/`=200, в sitemap, alert.js с ботом, ссылка в сайдбаре главной; deep-link на реальных данных валиден (bitcoin_dogecoin_912625_l и т.п., ≤64). Пинг-воркфлоу completed success.
 **Статус:** сайт ✅ на проде; бот ⏳ — файлы у владельца залиты на i964126i.beget.tech; функц-тест (/start, подписка, /myalerts, срабатывание) — за владельцем.
+
+## UC-112. Устранение дублей title/description (Яндекс.Вебмастер) ✅
+**Репорт:** Яндекс — 112 дублей title, 2 дубля description.
+**Причина:** (1) страницы сравнения `/sravnenie/<a>-vs-<b>/` брали в title ТИКЕР, а у многих валют тикер один
+(tether-ton/usdt-near/tether-polygon → все «USDT»; ethereum-bep20/optimism → «ETH») → 55×«USDT vs USDT» и т.п.
+(2) страницы пагинации блога `/blog/`, `/page/2..4/` — одинаковый description. (3) `/slovar/`-индекс и блог-статья
+`/blog/slovar-terminov-obmena/` — одинаковый title.
+**Фикс (build.py):** compare title+h1 → по ИМЕНАМ валют (`ia['name']`, уникальны с сетью), а не тикерам;
+blog desc → +«Страница N из M» для p>1; `/slovar/`-индекс title уточнён «— определения А–Я».
+**РАДИУС:** `render_compare` (title/h1 RU+EN), `render_blog` (per-page desc), `render_glossary` (it RU+EN).
+СОСЕДИ: контент/данные страниц не тронуты; canonical/hreflang прежние.
+**Проверка:** скан всего dist — было 380 дублей title / 8 desc → стало **0/0**.
