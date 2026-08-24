@@ -21,7 +21,12 @@ WM = "https://api.webmaster.yandex.net/v4"
 
 # Курированный список важных страниц (по убыванию значимости). Квота ограничит фактическую отправку.
 KEY_PATHS = [
-    "/", "/napravleniya/", "/svodka/", "/grafiki/", "/kursy/", "/blog/",
+    "/",
+    # исправленные страницы (дубли title/desc) — в приоритет на переобход
+    "/sravnenie/", "/sravnenie/bitcoin-vs-ethereum/", "/sravnenie/bitcoin-vs-tether-trc20/",
+    "/sravnenie/ethereum-vs-tether-trc20/", "/sravnenie/tether-trc20-vs-tether-bep20/",
+    "/slovar/", "/blog/page/2/", "/blog/page/3/",
+    "/napravleniya/", "/svodka/", "/grafiki/", "/kursy/", "/blog/",
     "/valuta/bitcoin/", "/valuta/tether-trc20/", "/valuta/ethereum/",
     "/valuta/tether-bep20/", "/valuta/monero/", "/valuta/tron/",
     "/obmen/tether-trc20-sberbank/", "/obmen/tether-trc20-tinkoff/", "/obmen/tether-trc20-sbp/",
