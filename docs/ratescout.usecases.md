@@ -1093,3 +1093,14 @@ eval/document.write = 0), mixed-content (нет), санитизация вво�
 **Найдено (не критично):** боты на Бегете без `key`-guard (URL открыт для триггера поллинга) → рекомендовано задать `key` в config.php+пингере;
 gitignore trade-ratescout отсутствует (секретов там нет); нет CSP-заголовков (ограничение GitHub Pages).
 **Статус:** критичных уязвимостей нет; рекомендации зафиксированы.
+
+## UC-115. GEO — явные AI-краулеры в robots.txt ✅
+**Предусловие:** GEO-аудит показал, что `llms.txt` и JSON-LD (Organization/WebSite/Dataset/FAQPage) уже есть,
+но в `robots.txt` AI/answer-краулеры не прописаны явно (разрешены лишь неявно через `*: Allow /`).
+**Шаги/ожидаемо:** генерация `robots.txt` в build.py дополнена явными `User-agent: <bot>\nAllow: /` для 14 ботов
+(GPTBot/OAI-SearchBot/ChatGPT-User/ClaudeBot/Claude-Web/anthropic-ai/PerplexityBot/Perplexity-User/Google-Extended/
+Applebot-Extended/CCBot/Amazonbot/Bytespider/YandexAdditional) — сигнал намерения; блок `# LLM guidance` сохранён.
+**РАДИУС:** `build.py` — только сборка `robots.txt` (список `_ai_bots`). СОСЕДИ/роли: llms.txt (`write_llms`), sitemap,
+JSON-LD, страницы — не тронуты; `dist/` в .gitignore (деплой — GitHub Pages/крон/пользователь).
+**Проверка:** `python3 build.py` EXIT 0; `dist/robots.txt` содержит блок «# AI / answer engines» с 14 ботами. Прочитано глазами.
+**Статус:** ✅ локально; ⏳ деплой на прод (ratescout.ru) — за пользователем.
