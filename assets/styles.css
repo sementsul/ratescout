@@ -303,3 +303,9 @@ summary{cursor:pointer;color:#ffff55}
 /* GEO answer-first: ведущий датированный факт (первый экстрактируемый абзац для AI-движков) */
 .answer{color:#d8d8d8;border-left:3px solid #55ff55;padding:4px 0 4px 12px;margin:10px 0 14px}
 .answer b{color:#fff}
+
+/* SEO-перелинковка: раскрывающийся список всех направлений валюты (топ-30 сразу, остальное здесь) */
+.moredirs{margin:6px 0 14px}
+.moredirs>summary{cursor:pointer;color:#55ffff;padding:4px 0}
+.moredirs>summary:hover{background:#00aaaa;color:#111}
+.moredirs .dlist{margin-top:8px}

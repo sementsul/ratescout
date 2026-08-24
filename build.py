@@ -2072,11 +2072,20 @@ def currency_directions(slug, lang):
         ds = [d for d in ds if (d[0], d[1]) in PAIR_SET]
     if not ds:
         return ""
-    ds = sorted(ds, key=lambda d: d[2], reverse=True)[:30]
-    items = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in ds)
+    ds = sorted(ds, key=lambda d: d[2], reverse=True)
+    # SEO-перелинковка: линкуем ВСЕ направления валюты (иначе редкие пары — сироты без вх.ссылок).
+    # Топ-30 показываем сразу, остальное — в <details> (в DOM → краулится, страница не раздувается).
+    top, rest = ds[:30], ds[30:]
     h = (f"Направления обмена {CUR[slug]['ticker']}" if lang == "ru"
          else f"{CUR[slug]['ticker']} exchange directions")
-    return f'<h2 class="news">{h}</h2><ul class="dlist">{items}</ul>'
+    items = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in top)
+    out = f'<h2 class="news">{h}</h2><ul class="dlist">{items}</ul>'
+    if rest:
+        more = "".join(pair_link_li({"from": f, "to": t}, lang) for f, t, _ in rest)
+        lbl = (f"Показать все {len(ds)} направлений {CUR[slug]['ticker']}" if lang == "ru"
+               else f"Show all {len(ds)} {CUR[slug]['ticker']} directions")
+        out += f'<details class="moredirs"><summary>{lbl}</summary><ul class="dlist">{more}</ul></details>'
+    return out
 
 
 def popular_block(slug, lang):

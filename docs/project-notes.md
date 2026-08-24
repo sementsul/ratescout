@@ -67,3 +67,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-117: GEO answer-first (пары/главная/хабы + дата-FAQ).** `render_pair`/`render_home`/`render_category` ведут датированным data-абзацем `<p class="answer">` (лучший курс/резерв/число обменников · число валют+категорий · число направлений); `render_currency` +3-й дата-FAQ «сколько стоит сейчас» (FAQPage 2→3). CSS `.answer` в assets/styles.css. Инфостраницы/блог не тронуты.
 
 - **UC-118: SEO/AEO/GEO/LLMO/NEO добор.** `head()` robots +max-image-preview/max-snippet; Organization `sameAs` (TG/VK/Dzen); `speakable` (.answer) в WebPage валют и пар. SearchAction осознанно пропущен (поиск клиентский).
+
+- **UC-119: SEO — устранение сирот.** `currency_directions` линкует ВСЕ пары валюты (топ-30 + `<details class="moredirs">` с остальными) → пары получают вх.ссылки со страниц обеих валют. Сироты 11 346→1 (`/app/`). CSS `.moredirs`.
