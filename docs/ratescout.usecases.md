@@ -1078,3 +1078,18 @@ blog desc → +«Страница N из M» для p>1; `/slovar/`-индекс
 **РАДИУС:** `render_compare` (title/h1 RU+EN), `render_blog` (per-page desc), `render_glossary` (it RU+EN).
 СОСЕДИ: контент/данные страниц не тронуты; canonical/hreflang прежние.
 **Проверка:** скан всего dist — было 380 дублей title / 8 desc → стало **0/0**.
+
+## UC-113. Переобход исправленных страниц (Яндекс) ✅
+**Предусловие:** после фикса дублей title/desc (UC-112) нужно, чтобы Яндекс переиндексировал изменённые страницы.
+**Шаги/ожидаемо:** в `yandex_recrawl.py` в приоритет `KEY_PATHS` добавлены исправленные: `/sravnenie/` (индекс+топ-пары),
+`/slovar/`, `/blog/page/2..3/`. Запуск воркфлоу `yandex-recrawl.yml` (workflow_dispatch) → страницы уходят в очередь
+переобхода Яндекса через API Вебмастера (в рамках суточной квоты).
+**РАДИУС:** `yandex_recrawl.py` (KEY_PATHS). СОСЕДИ: сами страницы/сборка не тронуты; секрет `YANDEX_OAUTH_TOKEN` — в GitHub Secrets.
+**Статус:** ✅ воркфлоу отработал (completed success); остальные ~380 сравнений — естественным обходом.
+
+## UC-114. Security-ревью проектов (ratescout/magzgold/trade) 🔒✅
+**Проверка:** секреты в коде (нет — .gitignore/Secrets), XSS (esc() перед innerHTML в app.js/monitor.js/beauty.js/checker.js;
+eval/document.write = 0), mixed-content (нет), санитизация ввода ботов (маска=цифры/N; alert deep-link regex; callback int).
+**Найдено (не критично):** боты на Бегете без `key`-guard (URL открыт для триггера поллинга) → рекомендовано задать `key` в config.php+пингере;
+gitignore trade-ratescout отсутствует (секретов там нет); нет CSP-заголовков (ограничение GitHub Pages).
+**Статус:** критичных уязвимостей нет; рекомендации зафиксированы.
