@@ -2310,6 +2310,34 @@ def render_currency(slug, info, lang):
         _lbl = "Полный график ниже" if lang == "ru" else "Full chart below"
         getspark = (f'<a class="getspark" href="#chart" title="{_lbl}">{mini_spark(_h[-90:])}'
                     f'<span class="chgpill {_cls}">{_sign}{_chg:.1f}%</span></a>')
+    # GEO answer-first: первый экстрактируемый факт — датированный живой курс + число направлений.
+    # Данные из истории/каталога (не копирайтинг). AI-движок цитирует ведущий абзац дословно.
+    _dirs = DIRS_BY_CUR.get(slug, [])
+    if lang == "en":
+        _dirs = [d for d in _dirs if (d[0], d[1]) in PAIR_SET]
+    _ndir = len(_dirs)
+    _ld = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    _vv = [p[1] for p in _h]
+    _chgtxt = ""
+    if len(_vv) >= 2 and _vv[0]:
+        _c = (_vv[-1] - _vv[0]) / _vv[0] * 100
+        _chgtxt = (f", изменение за период {'+' if _c >= 0 else ''}{_c:.1f}%" if lang == "ru"
+                   else f", period change {'+' if _c >= 0 else ''}{_c:.1f}%")
+    if _vv and slug != "tether-trc20":
+        if lang == "ru":
+            lead = (f"На {_ld} курс <b>{name} ({ticker})</b> ≈ <b>{fmt_rate(_vv[-1])} USDT</b> "
+                    f"по мониторингу BestChange (обновление ежечасно){_chgtxt}. "
+                    f"Доступно {_ndir} направлений обмена {ticker}.")
+        else:
+            lead = (f"As of {_ld}, <b>{name} ({ticker})</b> ≈ <b>{fmt_rate(_vv[-1])} USDT</b> "
+                    f"per BestChange monitoring (hourly updates){_chgtxt}. "
+                    f"{_ndir} exchange directions for {ticker} available.")
+    else:
+        lead = (f"<b>{name} ({ticker})</b>: на {S['name']} собрано {_ndir} направлений обмена {ticker} "
+                f"по данным мониторинга BestChange (обновление ежечасно)."
+                if lang == "ru" else
+                f"<b>{name} ({ticker})</b>: {_ndir} {ticker} exchange directions on {S['name']} "
+                f"per BestChange monitoring (hourly updates).")
     hub_cta = ""
     if slug in BANK_HUB_SET:
         hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
@@ -2320,6 +2348,7 @@ def render_currency(slug, info, lang):
   <div id="content">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {name} <span class="tk">{ticker}</span></nav>
     <h1>{'Exchange' if lang=='en' else 'Обмен'} {name} <span class="tk">{ticker}</span></h1>
+    <p class="answer">{lead}</p>
     <p>{intro}</p>
     {trust_bar(lang)}
     <div class="getcta">{get_btn}{getspark}</div>

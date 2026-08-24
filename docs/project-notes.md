@@ -61,3 +61,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 Живой список сценариев/радиуса — `docs/ratescout.usecases.md`.
 
 - **UC-115: GEO (Generative Engine Optimization) — 2026-08-24.** `robots.txt` теперь содержит ЯВНЫЕ Allow-блоки для AI/answer-краулеров (GPTBot/OAI-SearchBot/ChatGPT-User/ClaudeBot/Claude-Web/anthropic-ai/PerplexityBot/Perplexity-User/Google-Extended/Applebot-Extended/CCBot/Amazonbot/Bytespider/YandexAdditional) — сигнал намерения для генеративных движков (раньше был только `*: Allow /`, разрешало неявно). `llms.txt` уже был (`write_llms()`), JSON-LD (Organization/WebSite/Dataset/FAQPage) на месте — заход был точечный. Проверено: `python3 build.py` EXIT 0, dist/robots.txt валиден.
+
+- **UC-116: GEO answer-first на страницах валют.** `render_currency` теперь ведёт датированным data-абзацем `<p class="answer">` (живой курс+изм.+число направлений из HISTORY/DIRS_BY_CUR) — первый экстрактируемый факт для AI-движков. Стейблы/без истории — фолбэк без курса; EN — свой счёт пар. Пары (`render_pair`) — следующий кандидат.
