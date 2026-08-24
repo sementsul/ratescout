@@ -65,3 +65,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-116: GEO answer-first на страницах валют.** `render_currency` теперь ведёт датированным data-абзацем `<p class="answer">` (живой курс+изм.+число направлений из HISTORY/DIRS_BY_CUR) — первый экстрактируемый факт для AI-движков. Стейблы/без истории — фолбэк без курса; EN — свой счёт пар. Пары (`render_pair`) — следующий кандидат.
 
 - **UC-117: GEO answer-first (пары/главная/хабы + дата-FAQ).** `render_pair`/`render_home`/`render_category` ведут датированным data-абзацем `<p class="answer">` (лучший курс/резерв/число обменников · число валют+категорий · число направлений); `render_currency` +3-й дата-FAQ «сколько стоит сейчас» (FAQPage 2→3). CSS `.answer` в assets/styles.css. Инфостраницы/блог не тронуты.
+
+- **UC-118: SEO/AEO/GEO/LLMO/NEO добор.** `head()` robots +max-image-preview/max-snippet; Organization `sameAs` (TG/VK/Dzen); `speakable` (.answer) в WebPage валют и пар. SearchAction осознанно пропущен (поиск клиентский).

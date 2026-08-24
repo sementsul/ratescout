@@ -1143,3 +1143,17 @@ tether-trc20 (фолбэк без курса, 477 напр.), monero (416.81), E
 категория крипто (96 напр.), пара BTC→USDT (63 709, 247 обменников, резерв), валюта bitcoin (дата-FAQ, FAQPage=3 Q),
 EN bitcoin (40 напр.). Превью-сервер отдаёт свежий контент (HTTP 200).
 **Статус:** ✅ локально, превью на :3000; ⏳ визуальная приёмка пользователя → коммит → деплой (крон освежает дату).
+
+## UC-118. SEO/AEO/GEO/LLMO/NEO — robots-preview, sameAs, Speakable ✅
+**Предусловие:** аудит dist показал пробелы: нет `max-image-preview`, нет `sameAs` (entity), нет Speakable (голос).
+**Шаги/ожидаемо:**
+1. SEO/AEO — `head()`: `<meta name="robots">` расширен `max-image-preview:large,max-snippet:-1,max-video-preview:-1`
+   (Google/AI показывают крупное превью и полный сниппет). Все страницы.
+2. GEO/LLMO/NEO — Organization `sameAs` (главная): TG `ratescout_kurs`, VK `ratescout`, Dzen `ratescout`
+   — привязка сущности к соцпрофилям (Knowledge Graph / нейро-движки).
+3. AEO — `speakable` (SpeakableSpecification, cssSelector `.answer`) в WebPage-схеме страниц ВАЛЮТ и ПАР.
+**Осознанный пропуск:** WebSite `SearchAction` — поиск на сайте клиентский (фильтр по catalog.js), выделенного
+URL результатов нет; фабриковать несуществующий endpoint нельзя. Blog author/Article уже были.
+**РАДИУС:** `build.py` — `head()` (robots, все страницы), `render_home` (org sameAs), `render_currency`/`render_pair`
+(speakable). СОСЕДИ: контент/вёрстка не тронуты. **Проверка:** build EXIT 0; robots-meta/ sameAs/ speakable в dist
+подтверждены; 106 671 JSON-LD блок — все валидны (0 ошибок). **Статус:** ✅ локально; ⏳ приёмка → коммит → пуш.

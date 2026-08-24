@@ -333,6 +333,9 @@ def render_home(lang):
     org = jsonld({"@context": "https://schema.org", "@type": "Organization", "name": S["name"],
                   "url": BASE_URL, "logo": f"{BASE_URL}/assets/og-image.png",
                   "email": S.get("owner_email", ""),
+                  # sameAs — привязка сущности к соцпрофилям (Knowledge Graph / entity для GEO/LLMO/NEO)
+                  "sameAs": ["https://t.me/ratescout_kurs", "https://vk.com/ratescout",
+                             "https://dzen.ru/ratescout"],
                   "contactPoint": {"@type": "ContactPoint", "contactType":
                                    ("customer support" if lang == "en" else "поддержка"),
                                    "email": S.get("owner_email", "")}})
@@ -1693,7 +1696,7 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
 <meta name="twitter:image" content="{og}">
-<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <meta name="yandex-verification" content="4b39ef5046fa7e8a">
 <meta name="zen-verification" content="AvXwV96CkkGrgi2Dn4bnu0c3gAx52ezYYqNU79rdSigVe2IAJhfqL8E512dfovL5">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -2306,6 +2309,8 @@ def render_currency(slug, info, lang):
     crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
                       "dateModified": modified_iso(), "lastReviewed": modified_iso(),
+                      # Speakable (AEO/голос): озвучиваемый фрагмент — ведущий факт-абзац
+                      "speakable": {"@type": "SpeakableSpecification", "cssSelector": [".answer"]},
                       "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
     # ExchangeRateSpecification: цена валюты в USDT (последняя точка истории)
     _hist = HISTORY.get(slug) or []
@@ -2536,6 +2541,7 @@ def render_pair(f, t, lang):
     crumbs += jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
                       "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
                       "dateModified": modified_iso(), "lastReviewed": modified_iso(),
+                      "speakable": {"@type": "SpeakableSpecification", "cssSelector": [".answer"]},
                       "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
     ers = exchange_rate_ld(fT, r["rate"], tT) if r else ""
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
