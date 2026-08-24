@@ -21,8 +21,8 @@ jobs:
   recommend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install deps
@@ -36,7 +36,7 @@ jobs:
         run: python3 seo_recommend.py
       - name: Upload recommendations
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: seo-recommendations
           path: seo-recommendations.md
