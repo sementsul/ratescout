@@ -372,6 +372,17 @@ def render_home(lang):
                  f'<a href="/en/o-servise/">What is BestChange →</a>')
     pop = (f'<h2 class="news">{tr(lang,"popular")}</h2><ul class="dlist">'
            + "".join(pair_link_li(p, lang) for p in TOP[:16]) + "</ul>") if TOP else ""
+    # GEO answer-first: датированный сводный факт (число валют/категорий + пример курса) для главной.
+    _ld = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    _btc = HISTORY.get("bitcoin") or []
+    if lang == "ru":
+        _ex = f" Например, 1 BTC ≈ {fmt_rate(_btc[-1][1])} USDT." if _btc else ""
+        home_lead = (f"На {_ld} {S['name']} отслеживает справочные курсы обмена <b>{total}</b> криптовалют и валют "
+                     f"в {len(CATS)} категориях по данным мониторинга BestChange (обновление ежечасно).{_ex}")
+    else:
+        _ex = f" For example, 1 BTC ≈ {fmt_rate(_btc[-1][1])} USDT." if _btc else ""
+        home_lead = (f"As of {_ld}, {S['name']} tracks reference exchange rates for <b>{total}</b> cryptocurrencies "
+                     f"and currencies across {len(CATS)} categories from BestChange monitoring (hourly updates).{_ex}")
     body = f"""{header(lang, "/")}
 <div id="main">
   <div id="content">
@@ -380,6 +391,7 @@ def render_home(lang):
  | |_) / _` | __/ _ \\\\___ \\ / __/ _ \\| | | | __|
  |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
+    <p class="answer">{home_lead}</p>
     <div class="dosblue dosborder">{intro}</div>
     {trust_bar(lang)}
     <div class="mktwidgets">{halving_widget(lang)}</div>
@@ -2338,6 +2350,20 @@ def render_currency(slug, info, lang):
                 if lang == "ru" else
                 f"<b>{name} ({ticker})</b>: {_ndir} {ticker} exchange directions on {S['name']} "
                 f"per BestChange monitoring (hourly updates).")
+    # GEO: 3-й дата-FAQ «сколько стоит сейчас» (когда есть курс) — расширяет FAQPage конкретным Q&A.
+    faq3 = ""
+    if _vv and slug != "tether-trc20":
+        if lang == "ru":
+            faq_q3 = f"Сколько стоит 1 {ticker} сейчас?"
+            faq_a3 = f"На {_ld} — примерно {fmt_rate(_vv[-1])} USDT по данным мониторинга BestChange (обновление ежечасно)."
+        else:
+            faq_q3 = f"How much is 1 {ticker} now?"
+            faq_a3 = f"As of {_ld} — about {fmt_rate(_vv[-1])} USDT per BestChange monitoring (hourly updates)."
+        faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": faq_q1, "acceptedAnswer": {"@type": "Answer", "text": faq_a1}},
+            {"@type": "Question", "name": faq_q2, "acceptedAnswer": {"@type": "Answer", "text": faq_a2}},
+            {"@type": "Question", "name": faq_q3, "acceptedAnswer": {"@type": "Answer", "text": faq_a3}}]})
+        faq3 = f"<details><summary>{faq_q3}</summary><p>{faq_a3}</p></details>"
     hub_cta = ""
     if slug in BANK_HUB_SET:
         hub_cta = (f'<p class="related"><a href="{PREF[lang]}/na/{slug}/">'
@@ -2366,6 +2392,7 @@ def render_currency(slug, info, lang):
     <h2 class="news">{tr(lang,'faq')}</h2>
     <details><summary>{faq_q1}</summary><p>{faq_a1}</p></details>
     <details><summary>{faq_q2}</summary><p>{faq_a2}</p></details>
+    {faq3}
     {related_currencies(slug, info, lang)}
   </div>
   <div id="sidebar">
@@ -2512,11 +2539,28 @@ def render_pair(f, t, lang):
                       "reviewedBy": {"@type": "Organization", "name": S["name"], "url": BASE_URL}})
     ers = exchange_rate_ld(fT, r["rate"], tT) if r else ""
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
+    # GEO answer-first: датированное предложение с лучшим курсом направления (из данных мониторинга).
+    _ld = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    if r and lang == "ru":
+        lead = (f"На {_ld} лучший курс обмена <b>{fN} ({fT})</b> на <b>{tN} ({tT})</b> ≈ "
+                f"<b>{fmt_rate(r['rate'])} {tT}</b> за 1 {fT} по данным {r['count']} обменников из мониторинга "
+                f"BestChange (резерв {fmt_rate(r['reserve'])} {tT}). Значение справочное, меняется.")
+    elif r:
+        lead = (f"As of {_ld}, the best {fN} ({fT}) → {tN} ({tT}) rate ≈ "
+                f"<b>{fmt_rate(r['rate'])} {tT}</b> per 1 {fT} across {r['count']} exchangers in BestChange "
+                f"monitoring (reserve {fmt_rate(r['reserve'])} {tT}). Reference value, changes over time.")
+    elif lang == "ru":
+        lead = (f"Курс обмена <b>{fN} ({fT})</b> на <b>{tN} ({tT})</b> уточняется в мониторинге BestChange; "
+                f"обмен проходит на сайте выбранного обменника.")
+    else:
+        lead = (f"The <b>{fN} ({fT})</b> → <b>{tN} ({tT})</b> rate is confirmed in the BestChange monitor; "
+                f"the exchange happens on the chosen exchanger's site.")
     body = f"""{header(lang, path)}
 <div id="main">
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {fT} → {tT}</nav>
     <h1>{h1}</h1>
+    <p class="answer">{lead}</p>
     {trust_bar(lang)}
     <div class="rate-box">
       {rate_line}
@@ -3602,6 +3646,12 @@ def render_category(cat, lang):
         h1 = f"Exchange: {cname}"
         q1, a1 = f"How many {cname.lower()} are available to exchange?", f"The catalog has {len(curs)} directions in the “{cname}” category. Each page lists rates for all exchange directions."
         listh = f"All directions in “{cname}”"
+    _ld = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    cat_lead = (f"На {_ld} в категории «<b>{cname}</b>» — <b>{len(curs)}</b> направлений обмена по данным мониторинга "
+                f"BestChange (обновление ежечасно). На странице каждой валюты — курсы всех её направлений."
+                if lang == "ru" else
+                f"As of {_ld}, the “<b>{cname}</b>” category has <b>{len(curs)}</b> exchange directions per BestChange "
+                f"monitoring (hourly updates). Each currency page lists rates for all its directions.")
     faq_ld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
         {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}}]})
     crumbs = jsonld({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
@@ -3612,6 +3662,7 @@ def render_category(cat, lang):
   <div id="content" style="float:none;width:100%">
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / {cname}</nav>
     <h1>{h1} <span class="cnt">{len(curs)}</span></h1>
+    <p class="answer">{cat_lead}</p>
     <div class="dosblue dosborder">{intro}</div>
     <h2 class="news">{listh}</h2>
     <ul class="dlist">{items}</ul>

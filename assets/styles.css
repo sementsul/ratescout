@@ -299,3 +299,7 @@ summary{cursor:pointer;color:#ffff55}
 .alert-sub:hover{background:#0f0}
 .alert-hint{color:#7a8;font-size:13px;margin-top:10px}
 #alertChart{margin-top:8px;min-height:200px}
+
+/* GEO answer-first: ведущий датированный факт (первый экстрактируемый абзац для AI-движков) */
+.answer{color:#d8d8d8;border-left:3px solid #55ff55;padding:4px 0 4px 12px;margin:10px 0 14px}
+.answer b{color:#fff}
