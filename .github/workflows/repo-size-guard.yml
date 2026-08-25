@@ -18,7 +18,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
-          THRESHOLD_MB: "400"
+          THRESHOLD_MB: "1"
         run: |
           SIZE_KB=$(curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}" | grep -m1 '"size"' | grep -oE '[0-9]+')
