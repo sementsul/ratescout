@@ -69,3 +69,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-118: SEO/AEO/GEO/LLMO/NEO добор.** `head()` robots +max-image-preview/max-snippet; Organization `sameAs` (TG/VK/Dzen); `speakable` (.answer) в WebPage валют и пар. SearchAction осознанно пропущен (поиск клиентский).
 
 - **UC-119: SEO — устранение сирот.** `currency_directions` линкует ВСЕ пары валюты (топ-30 + `<details class="moredirs">` с остальными) → пары получают вх.ссылки со страниц обеих валют. Сироты 11 346→1 (`/app/`). CSS `.moredirs`.
+
+- **UC-120: предохранитель размера репо.** `repo-size-guard.yml` — еженедельно читает size репо (GitHub API) и при ≥400 МБ шлёт алерт в TG (секреты watchdog). Read-only, без force-push. Squash — вручную (процедура ниже). GitHub видит репо как ~3 МБ (server-gc) → запас годы.

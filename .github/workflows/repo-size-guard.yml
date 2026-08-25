@@ -1,0 +1,38 @@
+# Предохранитель размера репозитория: раз в неделю читает размер репо через GitHub API
+# и, ТОЛЬКО если он >= порога, шлёт оповещение в Telegram (тот же бот, что watchdog).
+# Ничего не переписывает и не пушит — только чтение + уведомление. Squash делается ВРУЧНУЮ
+# (см. docs/project-notes.md), когда придёт алерт. Лимит GitHub Pages/репо ~1 ГБ.
+name: repo-size-guard
+on:
+  schedule:
+    - cron: "0 6 * * 1"      # еженедельно, понедельник 06:00 UTC
+  workflow_dispatch:          # можно запустить вручную для проверки
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check repo size and alert if above threshold
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+          THRESHOLD_MB: "400"
+        run: |
+          SIZE_KB=$(curl -s -H "Authorization: Bearer ${GH_TOKEN}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}" | grep -m1 '"size"' | grep -oE '[0-9]+')
+          [ -z "$SIZE_KB" ] && { echo "не смог прочитать size — выход"; exit 0; }
+          SIZE_MB=$((SIZE_KB / 1024))
+          echo "repo ${GITHUB_REPOSITORY}: ${SIZE_MB} MB (порог ${THRESHOLD_MB} MB)"
+          if [ "$SIZE_MB" -lt "$THRESHOLD_MB" ]; then
+            echo "ниже порога — ок, оповещение не нужно"; exit 0
+          fi
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "TG не настроен (нет TELEGRAM_TOKEN/ALERT_CHAT_ID) — пропускаю"; exit 0
+          fi
+          MSG="⚠️ Репозиторий ${GITHUB_REPOSITORY}: ${SIZE_MB} МБ (порог ${THRESHOLD_MB} МБ). Память в репо растёт — пора сделать ручной squash истории (см. docs/project-notes.md). Мягкий лимит GitHub ~1 ГБ."
+          curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "text=${MSG}" \
+            -o /dev/null -w "telegram sendMessage: %{http_code}\n"
