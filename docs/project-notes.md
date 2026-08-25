@@ -71,3 +71,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-119: SEO — устранение сирот.** `currency_directions` линкует ВСЕ пары валюты (топ-30 + `<details class="moredirs">` с остальными) → пары получают вх.ссылки со страниц обеих валют. Сироты 11 346→1 (`/app/`). CSS `.moredirs`.
 
 - **UC-120: предохранитель размера репо.** `repo-size-guard.yml` — еженедельно читает size репо (GitHub API) и при ≥400 МБ шлёт алерт в TG (секреты watchdog). Read-only, без force-push. Squash — вручную (процедура ниже). GitHub видит репо как ~3 МБ (server-gc) → запас годы.
+
+- **Защита ветки `main` (вкл. 2026-08-25).** GitHub branch protection: 🔒 force-push запрещён, 🔒 удаление запрещено, enforce_admins=ON; require PR/checks — ВЫКЛ (иначе умрёт прямой PAT keep-alive пуш кронов). Для ручного squash временно снять «Block force pushes» (см. docs/how-to/repo-size-alert.md).
