@@ -44,3 +44,20 @@ git push -f origin main                   # переписывает истор�
   (Settings → Secrets and variables → Actions).
 - **Как узнать свой `ALERT_CHAT_ID`:** напиши боту любое сообщение, затем открой
   `https://api.telegram.org/bot<TELEGRAM_TOKEN>/getUpdates` — там будет `chat.id`.
+
+## Защита ветки main и keep-alive кронов
+Рекомендуемая защита `main` (Settings → Branches / Rules):
+- ✅ **Block deletions** — от случайного сноса ветки.
+- ✅ **Block force pushes** — от случайного `push -f`.
+- ❌ **Require pull request / status checks** — НЕ включать: заблокирует прямые пуши.
+
+**Почему нельзя require PR/checks:** кроны деплоя/данных пушат прямо в `main`, а keep-alive
+(GitHub гасит scheduled-кроны после 60 дней «без активности»; коммиты `GITHUB_TOKEN` активностью
+НЕ считаются) держится на **PAT-пуше** (`DEPLOY_TOKEN`). Require-PR/checks убьёт прямой PAT-пуш →
+кроны уснут.
+
+**Совместимость:** keep-alive PAT-пуш — обычный fast-forward, «Block force pushes» ему НЕ мешает.
+Force-push нужен только для ручного squash → перед ним временно снять «Block force pushes»:
+1. Settings → снять **Block force pushes**.
+2. Squash (см. выше) → `git push -f origin main`.
+3. Вернуть **Block force pushes**.
