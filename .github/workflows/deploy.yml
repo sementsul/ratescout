@@ -88,6 +88,9 @@ jobs:
         env:
           BESTCHANGE_API_KEY: ${{ secrets.BESTCHANGE_API_KEY }}
 
+      - name: Smoke-verify built site (отменяет деплой, если сборка логически битая)
+        run: python3 verify_build.py
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

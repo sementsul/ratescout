@@ -73,3 +73,5 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-120: предохранитель размера репо.** `repo-size-guard.yml` — еженедельно читает size репо (GitHub API) и при ≥400 МБ шлёт алерт в TG (секреты watchdog). Read-only, без force-push. Squash — вручную (процедура ниже). GitHub видит репо как ~3 МБ (server-gc) → запас годы.
 
 - **Защита ветки `main` (вкл. 2026-08-25).** GitHub branch protection: 🔒 force-push запрещён, 🔒 удаление запрещено, enforce_admins=ON; require PR/checks — ВЫКЛ (иначе умрёт прямой PAT keep-alive пуш кронов). Для ручного squash временно снять «Block force pushes» (см. docs/how-to/repo-size-alert.md).
+
+- **UC-121: CI-гейт smoke-проверки.** `verify_build.py` в deploy.yml (между guard-ключа и публикацией) — проверяет dist (файлы/маркеры/JSON-LD/число страниц); при провале deploy-pages не выполняется, остаётся прошлая версия. keep-alive не страдает (push выше по порядку).
