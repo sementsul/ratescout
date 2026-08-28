@@ -9,6 +9,7 @@ name: Build & Deploy RateScout
 on:
   schedule:
     - cron: "17 * * * *"      # каждый час — свежие курсы
+    - cron: "47 * * * *"      # дубль в час: GitHub часто пропускает schedule — больше шансов
   push:
     branches: [ main ]
   workflow_dispatch:
