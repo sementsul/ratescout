@@ -42,13 +42,62 @@ def _linkify(text):
     return re.sub(r'(https?://[^\s<]+)', r'<a href="\1">\1</a>', text)
 
 
+def _change_color(chg):
+    c = chg.strip()
+    if c.startswith("+"):
+        return "#0a8a0a"   # рост — зелёный
+    if c.startswith("-"):
+        return "#c0392b"   # падение — красный
+    return "#555"          # без изменения — серый
+
+
+def render_full_list_table(fl):
+    """Нижний блок «все валюты» из строк 'ТИКЕР: цена · изм% · обменников' → HTML-таблица.
+    Стили только инлайновые (Blogger вырезает <style>). Неразобранные строки пропускаем."""
+    heading = "Все валюты — цена USDT · изм. 24ч · обменников"
+    rows = []
+    for ln in fl.split("\n"):
+        s = ln.strip()
+        if not s:
+            continue
+        if s.startswith("📋"):                       # строка-заголовок с количеством
+            heading = s.lstrip("📋").strip().rstrip(":")
+            continue
+        if ": " not in s:
+            continue
+        tick, rest = s.split(": ", 1)
+        cells = [p.strip() for p in rest.split(" · ")]
+        if len(cells) != 3:                          # не наш формат — пропускаем
+            continue
+        price, chg, exch = cells
+        bg = "#ffffff" if len(rows) % 2 == 0 else "#f7f7f7"
+        rows.append(
+            f'<tr style="background:{bg}">'
+            f'<td style="padding:6px 10px;font-weight:600;white-space:nowrap">{html.escape(tick)}</td>'
+            f'<td style="padding:6px 10px;text-align:right;white-space:nowrap">{html.escape(price)}</td>'
+            f'<td style="padding:6px 10px;text-align:right;white-space:nowrap;color:{_change_color(chg)}">{html.escape(chg)}</td>'
+            f'<td style="padding:6px 10px;text-align:right;white-space:nowrap;color:#777">{html.escape(exch)}</td>'
+            f'</tr>')
+    if not rows:
+        return ""
+    thead = ('<tr style="background:#eee">'
+             '<th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ccc">Валюта</th>'
+             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Цена, USDT</th>'
+             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Изм. 24ч</th>'
+             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Обменников</th>'
+             '</tr>')
+    return (f'<h3>{html.escape(heading)}</h3>'
+            '<div style="overflow-x:auto">'
+            '<table style="border-collapse:collapse;width:100%;font-size:14px;border:1px solid #ddd">'
+            f'<thead>{thead}</thead><tbody>{"".join(rows)}</tbody></table></div>')
+
+
 def build_html(d):
     cap = _linkify(html.escape(d.get("caption", "")).replace("\n", "<br>"))
     img = f'<p><img src="{html.escape(d["image"])}" alt="Крипторынок за сутки" /></p>' if d.get("image") else ""
     parts = [img, f"<p>{cap}</p>"]
     if d.get("full_list"):
-        fl = html.escape(d["full_list"]).replace("\n", "<br>")
-        parts.append(f"<h3>Все валюты — цена USDT · изм.24ч · обменников</h3><p>{fl}</p>")
+        parts.append(render_full_list_table(d["full_list"]))
     return "".join(parts)
 
 
