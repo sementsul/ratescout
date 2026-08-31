@@ -24,7 +24,7 @@ CAPTION = (
     "📰 Мы также в Дзене: https://dzen.ru/ratescout\n"
     "🅥 И во ВКонтакте: https://vk.com/ratescout\n"
     "🐘 Mastodon: https://mastodon.social/@ratescout_ru\n"
-    "📝 Blog: https://ratescout-ru.blogspot.com/\n\n"
+    "📝 Blog: https://blogger.ratescout.ru/\n\n"
     "ℹ️ Справочный сервис (мониторинг курсов), не обменный пункт. Не является финансовой рекомендацией."
 )
 BUTTONS = [

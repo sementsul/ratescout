@@ -1878,7 +1878,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
-                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Блог на Teletype</a> · <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
+                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Блог на Teletype</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span>")
@@ -1887,7 +1887,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
-                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Blog on Teletype</a> · <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
+                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">Blog on Teletype</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -3263,7 +3263,7 @@ def _digest_weekly(now_dt, out, fl=""):
     lines.append("🏆 Ликвидность (обменников к USDT):")
     lines += [f"• {CUR[s]['ticker']} — {lq}" for s, _p, lq, _c in liq]
     lines += ["", f"📊 Полная таблица всех {len(CUR)} валют (поиск/сортировка) → {BASE_URL}/svodka/",
-              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://ratescout-ru.blogspot.com/", "", "#крипта #курсы #сводка"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://blogger.ratescout.ru/", "", "#крипта #курсы #сводка"]
     short = (f"🧭 Сводка крипторынка {now}\n{idx_line}\n"
              f"Полная сводка → {BASE_URL}/svodka/\n#крипта #курсы")[:490]
     json.dump({"has_data": True, "caption": "\n".join(lines), "image": img_url,
@@ -3355,7 +3355,7 @@ def write_daily_digest():
     lines += ["", "📉 Топ падения:"]
     lines += [f"• {CUR[s]['ticker']} {p:.1f}%" for s, p in losers]
     lines += ["", f"Полный обзор и графики → {BASE_URL}/obzor/sutki/",
-              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://ratescout-ru.blogspot.com/", "", "#крипта #курсы #обзор"]
+              "", "📢 Наши каналы: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · ВК https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · Blogger https://blogger.ratescout.ru/", "", "#крипта #курсы #обзор"]
     short = (f"📊 Крипторынок за сутки {now}\n📈 "
              + " · ".join(f"{CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers[:3])
              + "\n📉 " + " · ".join(f"{CUR[s]['ticker']} {p:.1f}%" for s, p in losers[:3])
@@ -3377,7 +3377,7 @@ def write_daily_digest_en():
     now = now_dt.strftime("%d.%m.%Y")
     chans = ("📢 Our channels: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · "
              "VK https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · "
-             "Blogger https://ratescout-ru.blogspot.com/")
+             "Blogger https://blogger.ratescout.ru/")
     if now_dt.weekday() == 6:                     # воскресенье — сводка
         rows = _svodka_rows()
         withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
@@ -3478,7 +3478,7 @@ def render_dzen_rss():
                 'Telegram <a href="https://t.me/ratescout_kurs">t.me/ratescout_kurs</a> · '
                 'ВКонтакте <a href="https://vk.com/ratescout">vk.com/ratescout</a> · '
                 'Mastodon <a href="https://mastodon.social/@ratescout_ru">@ratescout_ru</a> · '
-                'Blogger <a href="https://ratescout-ru.blogspot.com/">ratescout-ru.blogspot.com</a></p>')
+                'Blogger <a href="https://blogger.ratescout.ru/">blogger.ratescout.ru</a></p>')
     items = ""
     for a in arts:
         og = cover_url(a["slug"], "ru")
@@ -4118,7 +4118,7 @@ def compliance_pages(lang):
    обменным пунктом и не проводит операции. Контакт: {S.get('owner_email','')}.</p>
 <h2>Официальные ресурсы</h2>
 <p>Официальные блоги сервиса: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>
-   и <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.
+   и <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">blogger.ratescout.ru</a>.
    Telegram-канал: <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">t.me/ratescout_kurs</a>,
    ВКонтакте: <a href="https://vk.com/ratescout" target="_blank" rel="noopener me">vk.com/ratescout</a>,
    Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>"""
@@ -4176,7 +4176,7 @@ def compliance_pages(lang):
    office and does not process transactions. Contact: {S.get('owner_email','')}.</p>
 <h2>Official resources</h2>
 <p>Official service blogs: <a href="https://teletype.in/@ratescout.ru" target="_blank" rel="noopener me">teletype.in/@ratescout.ru</a>
-   and <a href="https://ratescout-ru.blogspot.com/" target="_blank" rel="noopener me">ratescout-ru.blogspot.com</a>.
+   and <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">blogger.ratescout.ru</a>.
    Telegram channel: <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">t.me/ratescout_kurs</a>,
    VK: <a href="https://vk.com/ratescout" target="_blank" rel="noopener me">vk.com/ratescout</a>,
    Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>"""
