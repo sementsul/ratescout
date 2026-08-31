@@ -30,4 +30,7 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          # Пусто на первом запуске → скрипт создаст пост и напечатает id для этого секрета.
+          # Задан → PATCH одного поста (обновление на месте, без новых статей).
+          BLOGGER_POST_ID: ${{ secrets.BLOGGER_POST_ID }}
         run: python3 blogger_daily.py
