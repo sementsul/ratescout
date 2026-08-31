@@ -80,15 +80,16 @@ def render_full_list_table(fl):
             f'</tr>')
     if not rows:
         return ""
-    thead = ('<tr style="background:#eee">'
-             '<th style="padding:8px 10px;text-align:left;border-bottom:2px solid #ccc">Валюта</th>'
-             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Цена, USDT</th>'
-             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Изм. 24ч</th>'
-             '<th style="padding:8px 10px;text-align:right;border-bottom:2px solid #ccc">Обменников</th>'
+    thead = ('<tr style="background:#eeeeee">'
+             '<th style="padding:8px 10px;text-align:left;color:#222222;border-bottom:2px solid #cccccc">Валюта</th>'
+             '<th style="padding:8px 10px;text-align:right;color:#222222;border-bottom:2px solid #cccccc">Цена, USDT</th>'
+             '<th style="padding:8px 10px;text-align:right;color:#222222;border-bottom:2px solid #cccccc">Изм. 24ч</th>'
+             '<th style="padding:8px 10px;text-align:right;color:#222222;border-bottom:2px solid #cccccc">Обменников</th>'
              '</tr>')
     return (f'<h3>{html.escape(heading)}</h3>'
             '<div style="overflow-x:auto">'
-            '<table style="border-collapse:collapse;width:100%;font-size:14px;border:1px solid #ddd">'
+            '<table style="border-collapse:collapse;width:100%;font-size:14px;'
+            'color:#222222;background:#ffffff;border:1px solid #dddddd">'
             f'<thead>{thead}</thead><tbody>{"".join(rows)}</tbody></table></div>')
 
 
