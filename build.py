@@ -4060,11 +4060,11 @@ def aml_checker(lang):
     }
     disc = ((f"Базовая проверка: формат адреса, санкционный список OFAC ({cnt} адресов, обновляется автоматически) "
              "и базовые ончейн-данные. Это НЕ полноценный AML-скоринг — миксеры, скам и даркнет не проверяются. "
-             'Для <a href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">полной AML-проверки</a> '
+             'Для <a id="amlFull" href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">полной AML-проверки</a> '
              'воспользуйтесь специализированными сервисами. Результат справочный.') if ru else
             (f"Basic check: address format, OFAC sanctions list ({cnt} addresses, auto-updated) and basic on-chain "
              "data. This is NOT a full AML score — mixers, scams and darknet are not checked. "
-             'For a <a href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">'
+             'For a <a id="amlFull" href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">'
              'full AML check</a> use specialized services. For reference only.'))
     h = "Проверить адрес" if ru else "Check an address"
     form = (f'<h2 id="check">{h}</h2>'
@@ -4076,7 +4076,22 @@ def aml_checker(lang):
             f'color:#fff;border:1px solid #55ffff;cursor:pointer;font-family:inherit">{i18n["btn"]}</button>'
             '<div id="amlResult" style="margin-top:12px"></div>'
             f'<p class="updnote">{disc}</p></div>')
-    return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>"
+    # Гео-переключение реф-метки: HTML-ссылка нейтральная (комплаенс-safe по умолчанию);
+    # только для УВЕРЕННО не-российского часового пояса JS повышает её до партнёрской (?p=REF + sponsored).
+    # РФ-пояс / неизвестно / JS off / бот → остаётся нейтральной.
+    geo_js = (
+        '<script>(function(){try{'
+        'var R=["Europe/Kaliningrad","Europe/Moscow","Europe/Simferopol","Europe/Kirov","Europe/Volgograd",'
+        '"Europe/Astrakhan","Europe/Saratov","Europe/Ulyanovsk","Europe/Samara","Asia/Yekaterinburg","Asia/Omsk",'
+        '"Asia/Novosibirsk","Asia/Barnaul","Asia/Tomsk","Asia/Novokuznetsk","Asia/Krasnoyarsk","Asia/Irkutsk",'
+        '"Asia/Chita","Asia/Yakutsk","Asia/Khandyga","Asia/Vladivostok","Asia/Ust-Nera","Asia/Magadan",'
+        '"Asia/Sakhalin","Asia/Srednekolymsk","Asia/Kamchatka","Asia/Anadyr"];'
+        'var tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"";'
+        'var a=document.getElementById("amlFull");'
+        'if(a&&tz&&R.indexOf(tz)===-1){a.href="https://www.bestchange.ru/report/?p=' + str(REF) + '";'
+        'a.rel="nofollow noopener sponsored";}'
+        '}catch(e){}})();</script>')
+    return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>" + geo_js
 
 
 def compliance_pages(lang):
