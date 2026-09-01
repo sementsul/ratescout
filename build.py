@@ -1887,6 +1887,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
+                 f'<a href="/en/earn/">Earn with BestChange</a> · '
                  f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
@@ -2051,7 +2052,7 @@ _en_pair_paths = {f"/obmen/{p['from']}-{p['to']}/" for p in PAIR_PAGES}
 _ru_art_paths = {f"/blog/{a['slug']}/" for a in ARTS["ru"]}
 _en_art_paths = {f"/blog/{a['slug']}/" for a in ARTS["en"]}
 NO_EN = (_ru_pair_paths - _en_pair_paths) | (_ru_art_paths - _en_art_paths) | {"/404"}
-NO_RU = (_en_pair_paths - _ru_pair_paths) | (_en_art_paths - _ru_art_paths)
+NO_RU = (_en_pair_paths - _ru_pair_paths) | (_en_art_paths - _ru_art_paths) | {"/earn/"}  # /earn/ — только EN (партнёрка для не-РФ)
 PUB_SLUGS = {lg: {a["slug"] for a in ARTS[lg]} for lg in LANGS}
 
 
@@ -4034,6 +4035,23 @@ input.addEventListener('keydown',function(e){if(e.key==='Enter')check();});
 """
 
 
+def geo_ref_script(elem_id, base):
+    """Инлайн-скрипт (без внешних API): ссылке elem_id добавляет реф-метку ?p=REF (+rel sponsored)
+    ТОЛЬКО для уверенно НЕ-российского часового пояса. РФ / неизвестно / JS off / бот → остаётся
+    нейтральной (комплаенс-safe по умолчанию — рос. пользователи реф-ссылку не видят)."""
+    return (
+        '<script>(function(){try{'
+        'var R=["Europe/Kaliningrad","Europe/Moscow","Europe/Simferopol","Europe/Kirov","Europe/Volgograd",'
+        '"Europe/Astrakhan","Europe/Saratov","Europe/Ulyanovsk","Europe/Samara","Asia/Yekaterinburg","Asia/Omsk",'
+        '"Asia/Novosibirsk","Asia/Barnaul","Asia/Tomsk","Asia/Novokuznetsk","Asia/Krasnoyarsk","Asia/Irkutsk",'
+        '"Asia/Chita","Asia/Yakutsk","Asia/Khandyga","Asia/Vladivostok","Asia/Ust-Nera","Asia/Magadan",'
+        '"Asia/Sakhalin","Asia/Srednekolymsk","Asia/Kamchatka","Asia/Anadyr"];'
+        'var tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"";'
+        'var a=document.getElementById("' + elem_id + '");'
+        'if(a&&tz&&R.indexOf(tz)===-1){a.href="' + base + '?p=' + str(REF) + '";a.rel="nofollow noopener sponsored";}'
+        '}catch(e){}})();</script>')
+
+
 def aml_checker(lang):
     """Клиентский AML-чек: валидация формата + санкционный список OFAC + базовые ончейн-данные. Честно, без скоринга."""
     ru = lang == "ru"
@@ -4076,21 +4094,8 @@ def aml_checker(lang):
             f'color:#fff;border:1px solid #55ffff;cursor:pointer;font-family:inherit">{i18n["btn"]}</button>'
             '<div id="amlResult" style="margin-top:12px"></div>'
             f'<p class="updnote">{disc}</p></div>')
-    # Гео-переключение реф-метки: HTML-ссылка нейтральная (комплаенс-safe по умолчанию);
-    # только для УВЕРЕННО не-российского часового пояса JS повышает её до партнёрской (?p=REF + sponsored).
-    # РФ-пояс / неизвестно / JS off / бот → остаётся нейтральной.
-    geo_js = (
-        '<script>(function(){try{'
-        'var R=["Europe/Kaliningrad","Europe/Moscow","Europe/Simferopol","Europe/Kirov","Europe/Volgograd",'
-        '"Europe/Astrakhan","Europe/Saratov","Europe/Ulyanovsk","Europe/Samara","Asia/Yekaterinburg","Asia/Omsk",'
-        '"Asia/Novosibirsk","Asia/Barnaul","Asia/Tomsk","Asia/Novokuznetsk","Asia/Krasnoyarsk","Asia/Irkutsk",'
-        '"Asia/Chita","Asia/Yakutsk","Asia/Khandyga","Asia/Vladivostok","Asia/Ust-Nera","Asia/Magadan",'
-        '"Asia/Sakhalin","Asia/Srednekolymsk","Asia/Kamchatka","Asia/Anadyr"];'
-        'var tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"";'
-        'var a=document.getElementById("amlFull");'
-        'if(a&&tz&&R.indexOf(tz)===-1){a.href="https://www.bestchange.ru/report/?p=' + str(REF) + '";'
-        'a.rel="nofollow noopener sponsored";}'
-        '}catch(e){}})();</script>')
+    # Гео-переключение реф-метки: HTML-ссылка нейтральная по умолчанию, ?p= только для не-РФ пояса.
+    geo_js = geo_ref_script("amlFull", "https://www.bestchange.ru/report/")
     return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>" + geo_js
 
 
@@ -4166,6 +4171,27 @@ def compliance_pages(lang):
 <p>Exchangers with ratings and reserves are listed. RateScout is an independent information service that helps you
    navigate and leads to the BestChange exchanger list. We do not process exchanges ourselves.</p>""",
                     "What is BestChange")
+        render_page(lang, "earn", "Earn with BestChange — affiliate program for webmasters",
+                    "Monetize crypto and finance traffic with the BestChange affiliate program: commission from "
+                    "exchanges plus a share from referred webmasters. How to join.",
+                    """<h1>Earn with BestChange</h1>
+<p class="answer">BestChange runs an affiliate program: you earn a commission from every exchange made by users who
+   follow your links, plus a share of the earnings of webmasters you refer (two-tier). Payouts in crypto and e-currencies.</p>
+<h2>How it works</h2>
+<ol class="steps"><li>Register in the BestChange affiliate program.</li>
+<li>Place BestChange links or widgets on your site, blog or channel.</li>
+<li>Earn a commission from every exchange made through your links.</li>
+<li>Invite other webmasters and get a share of their earnings too.</li></ol>
+<h2>Who it suits</h2>
+<ul><li>owners of finance and crypto sites, blogs and Telegram channels;</li>
+<li>traffic and arbitrage specialists;</li>
+<li>anyone with an audience interested in crypto and currency exchange.</li></ul>
+<h2>Join the program</h2>
+<p><a id="bcPartner" class="cta" href="https://www.bestchange.ru/partner/" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
+<p class="updnote">RateScout is an independent information service and a BestChange affiliate. The button leads to the
+   official BestChange affiliate program. For reference only; not a job offer or financial advice.</p>"""
+                    + geo_ref_script("bcPartner", "https://www.bestchange.ru/partner/"),
+                    "Earn with BestChange")
         render_page(lang, "aml", "Crypto address AML check — why and how",
                     "AML check: how to verify a crypto address for links to fraud and sanctions before exchanging.",
                     """<h1>Crypto address AML check</h1>
@@ -4448,6 +4474,8 @@ def static_files():
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
         items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "redakciya")]
+        if lg == "en":
+            items.append(u_entry(pr + "/earn/", "monthly", "0.5"))  # EN-only: партнёрка BestChange для не-РФ
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         + "\n".join(items) + "\n</urlset>")
