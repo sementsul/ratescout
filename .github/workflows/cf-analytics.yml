@@ -1,0 +1,28 @@
+name: Cloudflare analytics digest → Telegram (my-many.ru)
+
+# Раз в день шлёт сводку Cloudflare-аналитики по my-many.ru в админ-чат Telegram.
+# Секреты: CF_ANALYTICS_TOKEN (CF Analytics Read), TELEGRAM_TOKEN, ALERT_CHAT_ID (уже есть в репо).
+
+on:
+  schedule:
+    - cron: "30 6 * * *"      # ~09:30 МСК ежедневно
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Send Cloudflare analytics digest
+        env:
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+          CF_ZONE: "5d667f50b12ae3337cc9533f185a34f9"
+        run: python3 cf_analytics_tg.py
