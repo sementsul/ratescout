@@ -4060,10 +4060,12 @@ def aml_checker(lang):
     }
     disc = ((f"Базовая проверка: формат адреса, санкционный список OFAC ({cnt} адресов, обновляется автоматически) "
              "и базовые ончейн-данные. Это НЕ полноценный AML-скоринг — миксеры, скам и даркнет не проверяются. "
-             "Для полной проверки используйте специализированные AML-сервисы. Результат справочный.") if ru else
+             'Для <a href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">полной AML-проверки</a> '
+             'воспользуйтесь специализированными сервисами. Результат справочный.') if ru else
             (f"Basic check: address format, OFAC sanctions list ({cnt} addresses, auto-updated) and basic on-chain "
-             "data. This is NOT a full AML score — mixers, scams and darknet are not checked. For a full check use "
-             "specialized AML services. For reference only."))
+             "data. This is NOT a full AML score — mixers, scams and darknet are not checked. "
+             'For a <a href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">'
+             'full AML check</a> use specialized services. For reference only.'))
     h = "Проверить адрес" if ru else "Check an address"
     form = (f'<h2 id="check">{h}</h2>'
             '<div class="amlbox" style="border:2px solid #55ffff;padding:14px;margin:10px 0;background:#001a1a">'
