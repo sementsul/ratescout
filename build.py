@@ -754,17 +754,22 @@ def render_compare(a, b, lang):
         metrics.append(("RSI (14)", f'{g1["rsi"]:.0f}' if g1.get("rsi") is not None else "—",
                         f'{g2["rsi"]:.0f}' if g2.get("rsi") is not None else "—"))
     rows = "".join(f'<tr><td>{m}</td><td>{va}</td><td>{vb}</td></tr>' for m, va, vb in metrics)
+    _pa = fmt_rate(_px(a)) if _px(a) else ""
+    _pb = fmt_rate(_px(b)) if _px(b) else ""
+    _cdh = ".".join(reversed(datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d").split("-"))) if RATES_GENERATED else ""
+    _pref_ru = (f"{ia['name']} {_pa} USDT vs {ib['name']} {_pb} USDT" + (f" на {_cdh}" if _cdh else "") + ". ") if (_pa and _pb) else ""
+    _pref_en = (f"{ia['name']} {_pa} USDT vs {ib['name']} {_pb} USDT. ") if (_pa and _pb) else ""
     if ru:
-        title = f"{ia['name']} vs {ib['name']} — сравнение курсов | {S['name']}"
-        desc = (f"Сравнение {ia['name']} ({ta}) и {ib['name']} ({tb}): цена, изменение за 24ч/7д/30д, капитализация, "
-                f"объём торгов, ATH. Данные мониторинга BestChange и CoinGecko.")
+        title = f"{ia['name']} ({ta}) vs {ib['name']} ({tb}) — курсы и сравнение сегодня | {S['name']}"
+        desc = (f"{_pref_ru}Сравнение {ia['name']} ({ta}) и {ib['name']} ({tb}): цена, изменение за 24ч/7д/30д, "
+                f"капитализация, объём, ATH. Данные BestChange и CoinGecko.")
         h1, lead = f"{ia['name']} vs {ib['name']} — сравнение", (f"Сравнение {ia['name']} и {ib['name']} по ключевым показателям — "
             "цена, динамика, капитализация. Справочно, не рекомендация.")
         colh = ("Показатель", ta, tb)
     else:
-        title = f"{ia['name']} vs {ib['name']} — rate comparison | {S['name']}"
-        desc = (f"Compare {ia['name']} ({ta}) and {ib['name']} ({tb}): price, 24h/7d/30d change, market cap, "
-                f"trading volume, ATH. BestChange monitoring and CoinGecko data.")
+        title = f"{ia['name']} ({ta}) vs {ib['name']} ({tb}) — rates and comparison today | {S['name']}"
+        desc = (f"{_pref_en}Compare {ia['name']} ({ta}) and {ib['name']} ({tb}): price, 24h/7d/30d change, market cap, "
+                f"volume, ATH. BestChange and CoinGecko data.")
         h1, lead = f"{ia['name']} vs {ib['name']} — comparison", (f"Comparing {ia['name']} and {ib['name']} on key metrics — "
             "price, dynamics, market cap. For reference, not advice.")
         colh = ("Metric", ta, tb)
@@ -2227,10 +2232,20 @@ def render_buy(slug, info, lang):
     name, ticker = info["name"], info["ticker"]
     path = f"/kupit/{slug}/"
     get_src = "bitcoin" if slug == "tether-trc20" else "tether-trc20"
+    # CTR: живой курс + дата в сниппет
+    _hc = HISTORY.get(slug, [])
+    _ldc = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    _dhc = ".".join(reversed(_ldc.split("-"))) if _ldc else ""
+    _prc = fmt_rate(_hc[-1][1]) if (_hc and slug != "tether-trc20") else ""
     if lang == "ru":
-        title = f"Купить {name} ({ticker}) — где и как получить, курсы | {S['name']}"
-        desc = (f"Как купить {name} ({ticker}): все направления обмена на {ticker} с курсами из мониторинга "
-                f"BestChange. Получить {ticker} за USDT, рубли, другую крипту.")
+        if _prc:
+            title = f"Купить {name} ({ticker}) — курс {_prc} USDT сегодня | {S['name']}"
+            desc = (f"Как купить {name} ({ticker}): курс {_prc} USDT на {_dhc}, все направления обмена на {ticker} "
+                    f"из USDT, рублей и другой крипты по мониторингу BestChange. Обновление ежечасно.")
+        else:
+            title = f"Купить {name} ({ticker}) — направления и курсы сегодня | {S['name']}"
+            desc = (f"Как купить {name} ({ticker}): все направления обмена на {ticker} с курсами из мониторинга "
+                    f"BestChange, обновление ежечасно. За USDT, рубли, другую крипту.")
         h1 = f"Купить {name}"
         intro = (f"Справочник направлений, где можно <b>получить {name} ({ticker})</b>: обмен из других валют "
                  f"с курсами из мониторинга <b>BestChange</b>. Выберите, чем платите, ниже.")
@@ -2245,9 +2260,14 @@ def render_buy(slug, info, lang):
         back = f'<a href="{cpage(lang, slug)}">Обмен {name} (продать/все направления) →</a>'
         note = "Лучший курс среди обменников; резерв — суммарный. " + updated_str(lang)
     else:
-        title = f"Buy {name} ({ticker}) — where and how to get it, rates | {S['name']}"
-        desc = (f"How to buy {name} ({ticker}): all exchange directions to {ticker} with rates from BestChange "
-                f"monitoring. Get {ticker} for USDT, rubles or other crypto.")
+        if _prc:
+            title = f"Buy {name} ({ticker}) — {_prc} USDT rate today | {S['name']}"
+            desc = (f"How to buy {name} ({ticker}): {_prc} USDT as of {_ldc}, all exchange directions to {ticker} "
+                    f"from USDT, rubles or other crypto per BestChange monitoring. Hourly updates.")
+        else:
+            title = f"Buy {name} ({ticker}) — directions and rates today | {S['name']}"
+            desc = (f"How to buy {name} ({ticker}): all exchange directions to {ticker} with rates from BestChange "
+                    f"monitoring, hourly updates. For USDT, rubles or other crypto.")
         h1 = f"Buy {name}"
         intro = (f"A directory of directions where you can <b>get {name} ({ticker})</b>: exchange from other "
                  f"currencies with rates from the <b>BestChange</b> monitor. Choose what you pay with below.")
