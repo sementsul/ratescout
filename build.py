@@ -4486,8 +4486,14 @@ def render_404():
 def static_files():
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+    # lastmod: курсовые (hourly) страницы получают ТОЧНЫЙ момент обновления курсов (W3C datetime) —
+    # честный сигнал свежести, меняется при смене данных; статике — дата (без ежечасной «болтанки»).
+    lm_live = (datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+               if RATES_GENERATED else today)
+
     def u_entry(loc, freq, pri):
-        return (f"  <url><loc>{BASE_URL}{loc}</loc><lastmod>{today}</lastmod>"
+        lm = lm_live if freq == "hourly" else today
+        return (f"  <url><loc>{BASE_URL}{loc}</loc><lastmod>{lm}</lastmod>"
                 f"<changefreq>{freq}</changefreq><priority>{pri}</priority></url>")
 
     items = []
