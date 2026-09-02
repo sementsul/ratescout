@@ -1635,6 +1635,19 @@ GTAG = """<!-- Google tag (gtag.js) -->
 </script>
 <!-- /Google tag -->"""
 
+GTM_HEAD = """<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-N328Z8XP');</script>
+<!-- End Google Tag Manager -->"""
+
+GTM_BODY = """<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N328Z8XP"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->"""
+
 
 # Ранний выбор языка: если пользователь НЕ выбирал вручную (нет rs_lang) — редирект
 # на версию под язык браузера (ru → корень, иначе → /en/). Ручной выбор (клик по .langsw)
@@ -1679,6 +1692,7 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+{GTM_HEAD}
 {langredir}
 <title>{title}</title>
 <meta name="description" content="{desc}">
@@ -1715,6 +1729,7 @@ def head(lang, title, desc, path, extra="", og_image=None):
 {GTAG}
 </head>
 <body>
+{GTM_BODY}
 <div id="wrapper">"""
 
 
