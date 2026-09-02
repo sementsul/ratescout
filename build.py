@@ -2302,10 +2302,24 @@ def render_buy(slug, info, lang):
 def render_currency(slug, info, lang):
     name, ticker = info["name"], info["ticker"]
     path = f"/valuta/{slug}/"
+    # CTR: живой курс + дата + число направлений → кликабельный сниппет (title/description).
+    _hc = HISTORY.get(slug, [])
+    _ldc = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d") if RATES_GENERATED else ""
+    _dhc = ".".join(reversed(_ldc.split("-"))) if _ldc else ""
+    _dc = DIRS_BY_CUR.get(slug, [])
+    if lang == "en":
+        _dc = [d for d in _dc if (d[0], d[1]) in PAIR_SET]
+    _ndc = len(_dc)
+    _prc = fmt_rate(_hc[-1][1]) if (_hc and slug != "tether-trc20") else ""
     if lang == "ru":
-        title = f"Обмен {name} ({ticker}) — курсы и все направления | {S['name']}"
-        desc = (f"Обмен {name} ({ticker}): справочная сводка курсов в обменниках из мониторинга BestChange. "
-                f"Все направления обмена {ticker}. AML-проверка адресов.")
+        if _prc:
+            title = f"Курс {name} ({ticker}) сегодня — {_prc} USDT · обмен | {S['name']}"
+            desc = (f"{name} ({ticker}) — {_prc} USDT на {_dhc}. Сравните курсы обмена в пунктах мониторинга "
+                    f"BestChange по {_ndc} направлениям {ticker}. AML-проверка адреса, обновление ежечасно.")
+        else:
+            title = f"Обмен {name} ({ticker}) — {_ndc} направлений, курсы сегодня | {S['name']}"
+            desc = (f"Обмен {name} ({ticker}): {_ndc} направлений обмена, курсы обменников из мониторинга "
+                    f"BestChange, обновление ежечасно. AML-проверка адреса.")
         intro = (f"Справочная сводка курсов обмена <b>{name} ({ticker})</b> в обменниках из мониторинга "
                  f"<b>BestChange</b>. Выберите направление ниже; обмен совершается на сайте обменника.")
         steps = [f"Выберите направление обмена {ticker} выше.",
@@ -2315,9 +2329,14 @@ def render_currency(slug, info, lang):
         faq_q1, faq_a1 = f"Как обменять {name} ({ticker})?", "Через мониторинг BestChange — он показывает курсы обменных пунктов."
         faq_q2, faq_a2 = f"Как проверить чистоту {ticker}?", "Обмен идёт в пунктах из мониторинга BestChange. Для крипто можно сделать AML-проверку адреса."
     else:
-        title = f"Exchange {name} ({ticker}) — rates and all directions | {S['name']}"
-        desc = (f"Exchange {name} ({ticker}): reference summary of rates in exchange offices from BestChange "
-                f"monitoring. All {ticker} directions. Address AML check.")
+        if _prc:
+            title = f"{name} ({ticker}) price today — {_prc} USDT · exchange | {S['name']}"
+            desc = (f"{name} ({ticker}) — {_prc} USDT as of {_ldc}. Compare exchange rates across BestChange "
+                    f"offices for {_ndc} {ticker} directions. Address AML check, hourly updates.")
+        else:
+            title = f"Exchange {name} ({ticker}) — {_ndc} directions, rates today | {S['name']}"
+            desc = (f"Exchange {name} ({ticker}): {_ndc} directions, exchanger rates from BestChange monitoring, "
+                    f"hourly updates. Address AML check.")
         intro = (f"Reference summary of <b>{name} ({ticker})</b> exchange rates in offices from the "
                  f"<b>BestChange</b> monitor. Pick a direction below; the exchange happens on the office's site.")
         steps = [f"Choose an exchange direction for {ticker} above.",
