@@ -129,6 +129,11 @@ def send_telegram(text):
 
 
 def main():
+    if SA:                       # печатаем email SA (НЕ секрет) — его и надо добавить в GA4 как Viewer
+        try:
+            print("СЕРВИС-АККАУНТ (добавь его в GA4 → Viewer):", json.loads(SA).get("client_email"))
+        except Exception:        # noqa: BLE001
+            print("не смог прочитать client_email из SA-JSON")
     if not PROP or not SA:
         print("GA4_PROPERTY_ID или GA_SA_JSON/GSC_SA_JSON не заданы — сухой прогон.")
         print(f"PROPERTY_ID: {PROP or '(нет)'} · сервис-аккаунт: {'есть' if SA else 'нет'}")
