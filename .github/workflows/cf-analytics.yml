@@ -4,9 +4,6 @@ name: Cloudflare analytics digest → Telegram (my-many.ru)
 # Секреты: CF_ANALYTICS_TOKEN (CF Analytics Read), TELEGRAM_TOKEN, ALERT_CHAT_ID (уже есть в репо).
 
 on:
-  push:
-    branches: [main]
-    paths: ['cf_analytics_tg.py']   # временно: разовый запуск
   schedule:
     - cron: "30 6 * * *"      # ~09:30 МСК ежедневно
   workflow_dispatch:
