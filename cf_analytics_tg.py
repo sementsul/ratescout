@@ -8,8 +8,9 @@
   CF_ZONE             — Zone ID (по умолчанию — my-many.ru)
 Без CF-токена — стоп. Без TG-секретов — сухой прогон (печатает сводку, не шлёт).
 
-Базовая сводка: httpRequests1dGroups (запросы/уники/страны). Детализация ботов: httpRequestsAdaptiveGroups
-(топ User-Agent / путей / сетей-ASN / кодов ответа) — данные сэмплированные (оценка), best-effort.
+Всё из httpRequests1dGroups (доступно на бесплатном плане): запросы/уники/страны + classification трафика
+Cloudflare (`ipClassMap`: поисковики/сканеры/мониторинг/обычные/вредоносные) + коды ответов (`responseStatusMap`).
+Платные наборы (httpRequestsAdaptiveGroups: UA/пути/ASN) на free-плане недоступны, поэтому не используются.
 """
 import json
 import os
@@ -23,12 +24,12 @@ TG_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TG_CHAT = os.environ.get("ALERT_CHAT_ID")
 GQL = "https://api.cloudflare.com/client/v4/graphql"
 
-# Известные дата-центровые/бот-сети (для читаемости ASN)
-ASN_NAMES = {
-    13335: "Cloudflare", 16509: "AWS", 14618: "AWS", 15169: "Google", 396982: "Google Cloud",
-    16276: "OVH", 24940: "Hetzner", 14061: "DigitalOcean", 20473: "Vultr", 63949: "Linode",
-    45102: "Alibaba", 132203: "Tencent", 8075: "Microsoft", 51167: "Contabo", 39572: "AdvancedHosting",
-    212238: "Datacamp", 9009: "M247", 60068: "Datacamp", 208046: "HZ-Hosting", 210644: "AEZA",
+# Как Cloudflare классифицирует источник запроса (поле ipClassMap.ipType) — по-русски
+IPTYPE = {
+    "clean": "обычные (не помечены)", "searchEngine": "поисковики", "whitelist": "доверенные боты",
+    "greylist": "подозрительные", "monitoringService": "мониторинг", "securityScanner": "сканеры безопасности",
+    "noRecord": "без репутации", "scan": "сканеры", "badHost": "вредоносные", "mobile": "мобильные",
+    "tor": "Tor", "crawler": "краулеры",
 }
 
 
@@ -60,49 +61,20 @@ def basic_query(since, until):
             '  httpRequests1dGroups(limit: 3, filter: {date_geq: "%s", date_leq: "%s"}, orderBy: [date_DESC]) {'
             '    dimensions { date } uniq { uniques }'
             '    sum { requests pageViews cachedRequests bytes threats'
-            '          countryMap { clientCountryName requests } }'
+            '          countryMap { clientCountryName requests }'
+            '          ipClassMap { ipType requests }'
+            '          responseStatusMap { edgeResponseStatus requests } }'
             '  } } } }') % (ZONE, since, until)
 
 
-def detail_query(since_dt, until_dt):
-    flt = 'filter: {datetime_geq: "%s", datetime_leq: "%s"}' % (since_dt, until_dt)
-
-    def blk(alias, dims):
-        return (f'{alias}: httpRequestsAdaptiveGroups(limit: 6, {flt}, orderBy: [count_DESC]) '
-                f'{{ count dimensions {{ {dims} }} }}')
-
-    return ('{ viewer { zones(filter: {zoneTag: "%s"}) { '
-            + blk("ua", "userAgent")
-            + blk("paths", "clientRequestPath")
-            + blk("asn", "clientAsn")
-            + blk("status", "edgeResponseStatus")
-            + ' } } }') % ZONE
-
-
-def asn_label(n):
-    return f"AS{n} ({ASN_NAMES[n]})" if n in ASN_NAMES else f"AS{n}"
-
-
-def clip(s, n):
-    s = (s or "").replace("\n", " ").strip()
-    return s[:n] + "…" if len(s) > n else s
-
-
-def build_detail_text(since_dt, until_dt):
-    """Возвращает блок детализации ботов или '' при недоступности (best-effort)."""
-    try:
-        d = gql(detail_query(since_dt, until_dt))
-        if d.get("errors"):
-            return f"\n🤖 Детализация недоступна: {clip(json.dumps(d['errors'], ensure_ascii=False), 120)}"
-        z = d["data"]["viewer"]["zones"][0]
-        ua = "; ".join(f"{clip(g['dimensions']['userAgent'], 32)}×{g['count']}" for g in z["ua"][:4]) or "—"
-        paths = "; ".join(f"{clip(g['dimensions']['clientRequestPath'], 24)}×{g['count']}" for g in z["paths"][:5]) or "—"
-        asn = "; ".join(f"{asn_label(g['dimensions']['clientAsn'])}×{g['count']}" for g in z["asn"][:4]) or "—"
-        status = " ".join(f"{g['dimensions']['edgeResponseStatus']}:{g['count']}" for g in z["status"][:6]) or "—"
-        return (f"\n🤖 Кто ходит (24ч, оценка):\n"
-                f"• UA: {ua}\n• Пути: {paths}\n• Сети: {asn}\n• Ответы: {status}")
-    except Exception as e:                       # noqa: BLE001
-        return f"\n🤖 Детализация недоступна: {clip(str(e), 120)}"
+def build_detail_text(s, total):
+    """Блок 'кто ходит' из ipClassMap (классификация CF) + responseStatusMap — всё из бесплатного набора."""
+    klass = sorted(s.get("ipClassMap", []), key=lambda x: x["requests"], reverse=True)[:6]
+    kl = " · ".join(f"{IPTYPE.get(c['ipType'], c['ipType'])} {round(100 * c['requests'] / total)}%"
+                    for c in klass) or "—"
+    codes = sorted(s.get("responseStatusMap", []), key=lambda x: x["requests"], reverse=True)[:6]
+    cd = " ".join(f"{c['edgeResponseStatus']}:{c['requests']}" for c in codes) or "—"
+    return f"\n🤖 Тип трафика (CF): {kl}\n📟 Коды ответов: {cd}"
 
 
 def main():
@@ -132,10 +104,7 @@ def main():
             f"📈 Запросов: {s['requests']} · просмотров: {s['pageViews']}\n"
             f"🌍 Топ страны: {ctry}\n"
             f"🛡 Угроз: {s['threats']} · трафик: {human_bytes(s['bytes'])}")
-    # детализация ботов за последние 24 часа
-    now = datetime.now(timezone.utc)
-    text += build_detail_text((now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                              now.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    text += build_detail_text(s, total)         # классификация трафика + коды ответов
     print(text)
     if not (TG_TOKEN and TG_CHAT):
         print("\n(TELEGRAM_TOKEN/ALERT_CHAT_ID не заданы — сухой прогон, не отправляю)")
