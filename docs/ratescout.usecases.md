@@ -1255,3 +1255,13 @@ zone.analytics.read`). 🧭 Отладка без доступа к Actions-ло
 **Ожидаемо:** GTM грузится на всех страницах; noscript-фолбэк присутствует.
 **РАДИУС:** `build.py` (`head()` — все страницы). СОСЕДИ: Метрика/GA остаются; вёрстка/данные не тронуты.
 **Проверка:** build EXIT 0; на index/valuta/en/404 по 2 вхождения GTM-N328Z8XP (скрипт+noscript), noscript сразу после `<body>`. **Статус:** ✅ в проде.
+
+## UC-125. Отчёт Google Analytics (GA4) за 28 дней в Telegram 🟡
+**Предусловие:** есть GA4 (тег G-PPN27D6JXS уже на сайте). Нужен доступ к GA4 Data API.
+**Шаги:** `ga_report_tg.py` (батч GA4 Data API: totals + топ страниц/каналов/стран за 28 дней) → Telegram (ALERT_CHAT_ID);
+воркфлоу `ga-report.yml` (еженедельно пн + workflow_dispatch, pip google-auth requests).
+**Ожидаемо:** раз в неделю в админ-чат: пользователи/сеансы/просмотры/вовлечённость/ср.сеанс + топ-10 страниц + каналы + топ-5 стран.
+**РАДИУС:** новые `ga_report_tg.py` + `.github/workflows/ga-report.yml`. Переиспользует TELEGRAM_TOKEN/ALERT_CHAT_ID и (опц.) GSC_SA_JSON.
+🔴 Требует: секрет `GA4_PROPERTY_ID` (числовой ID ресурса GA4) + доступ сервис-аккаунта к GA4 (его client_email добавить
+в GA4 → Property Access Management как Viewer), либо отдельный `GA_SA_JSON`.
+**Проверка:** py_compile OK, сухой прогон без секретов корректен. **Статус:** 🟡 код готов; ⏳ ждёт GA4_PROPERTY_ID + доступ SA от владельца.
