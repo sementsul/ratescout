@@ -1289,3 +1289,6 @@ zone.analytics.read`). 🧭 Отладка без доступа к Actions-ло
 `dateModified` в WebPage-schema и `ExchangeRateSpecification` на валютах/парах — на месте.
 **РАДИУС:** `static_files()` (sitemap). СОСЕДИ: страницы/данные/деплой не тронуты. **Проверка:** build EXIT 0; в sitemap 2 набора
 lastmod — datetime у hourly, дата у прочих; dateModified подтверждён на валюте. **Статус:** ✅ в проде (в проде datetime = текущий крон).
+🧭 Добор «все страницы»: `dateModified` добавлен и недостающим типам (sravnenie/kategoriya/faq/инфо/slovar) через хелпер
+`webpage_ld` (лёгкая WebPage без дубля на rich-страницах). ExchangeRateSpecification — только курсовые (по смыслу).
+Last-Modified/ETag — отдаёт GitHub Pages сам (все страницы). Итог: 4 сигнала свежести покрывают все страницы, где применимы.

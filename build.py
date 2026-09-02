@@ -186,6 +186,13 @@ def modified_iso():
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
+def webpage_ld(title, path, lang):
+    """Лёгкая WebPage-разметка с dateModified — сигнал свежести для страниц без своей WebPage-схемы."""
+    return jsonld({"@context": "https://schema.org", "@type": "WebPage", "name": title,
+                   "url": BASE_URL + PREF[lang] + path, "inLanguage": LOCALE[lang],
+                   "dateModified": modified_iso(), "lastReviewed": modified_iso()})
+
+
 GLOSSARY = []
 _gp = os.path.join(ROOT, "glossary.json")
 if os.path.exists(_gp):
@@ -718,7 +725,7 @@ def render_compare_index(lang):
 {crumbs}
 <script>{js}</script>
 {footer(lang)}"""
-    write(lang, path, head(lang, title, desc, path) + bodyhtml)
+    write(lang, path, head(lang, title, desc, path, webpage_ld(title, path, lang)) + bodyhtml)
 
 
 def render_compare(a, b, lang):
@@ -793,7 +800,7 @@ def render_compare(a, b, lang):
 </div>
 {crumbs}
 {footer(lang)}"""
-    write(lang, path, head(lang, title, desc, path) + bodyhtml)
+    write(lang, path, head(lang, title, desc, path, webpage_ld(title, path, lang)) + bodyhtml)
 
 
 FNG_CLASS_RU = {"Extreme Fear": "Крайний страх", "Fear": "Страх", "Neutral": "Нейтрально",
@@ -2668,7 +2675,7 @@ def render_page(lang, slug, title, desc, body_html, crumb_title):
   </div>
 </div>
 {footer(lang)}"""
-    write(lang, path, head(lang, f"{title} | {S['name']}", desc, path) + body)
+    write(lang, path, head(lang, f"{title} | {S['name']}", desc, path, webpage_ld(title, path, lang)) + body)
 
 
 def blog_page_path(lang, p):
@@ -3693,7 +3700,7 @@ def render_faq(lang):
 </div>
 {faq_ld}
 {footer(lang)}"""
-    write(lang, path, head(lang, title, desc, path, faq_ld) + body)
+    write(lang, path, head(lang, title, desc, path, faq_ld + webpage_ld(title, path, lang)) + body)
 
 
 def render_category(cat, lang):
@@ -3744,7 +3751,7 @@ def render_category(cat, lang):
 </div>
 {faq_ld}{crumbs}{itemlist_ld([(i["name"], BASE_URL + cpage(lang, s)) for s, i in curs])}
 {footer(lang)}"""
-    write(lang, path, head(lang, title, desc, path) + body)
+    write(lang, path, head(lang, title, desc, path, webpage_ld(title, path, lang)) + body)
 
 
 def _gterm(t, lang):
@@ -3876,7 +3883,7 @@ def render_glossary(lang):
 </div>
 {ild}
 {footer(lang)}"""
-    write(lang, "/slovar/", head(lang, f"{it} | {S['name']}", idesc, "/slovar/", ild) + ibody)
+    write(lang, "/slovar/", head(lang, f"{it} | {S['name']}", idesc, "/slovar/", ild + webpage_ld(it, "/slovar/", lang)) + ibody)
     # страницы терминов
     for t in GLOSSARY:
         term, dfn, path = _gterm(t, lang), _gdef(t, lang), f"/slovar/{t['slug']}/"
@@ -3905,7 +3912,7 @@ def render_glossary(lang):
 </div>
 {dt_ld}{crumbs}
 {footer(lang)}"""
-        write(lang, path, head(lang, title, desc, path) + body)
+        write(lang, path, head(lang, title, desc, path, webpage_ld(title, path, lang)) + body)
 
 
 def render_editorial(lang):
