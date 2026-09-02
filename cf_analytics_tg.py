@@ -39,8 +39,13 @@ def cf_query(since, until):
     req = urllib.request.Request(GQL, data=body, method="POST",
                                  headers={"Authorization": f"Bearer {CF_TOKEN}",
                                           "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=40) as r:
-        return json.load(r)
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:          # тело ответа CF содержит детали ошибки
+        detail = e.read().decode("utf-8", "replace")[:800]
+        print(f"HTTP {e.code} от Cloudflare API. Тело ответа:\n{detail}")
+        raise
 
 
 def human_bytes(n):
@@ -66,7 +71,9 @@ def main():
     zones = (data.get("data") or {}).get("viewer", {}).get("zones", [])
     groups = zones[0]["httpRequests1dGroups"] if zones else []
     if not groups:
-        print("Нет данных по зоне за период (проверь Zone ID и права токена).")
+        print("Нет данных по зоне за период. Возможные причины: неверный Zone ID, у токена нет Analytics·Read "
+              "на эту зону, либо DNS домена НЕ проксируется (серое облако) → CF не видит запросы.")
+        print("Сырой ответ CF:", json.dumps(data, ensure_ascii=False)[:800])
         return 0
     # берём вчерашний ПОЛНЫЙ день (сегодня частичный); если вчера нет — самый свежий
     yday = (today - timedelta(days=1)).isoformat()
@@ -93,6 +100,9 @@ def main():
         urllib.request.urlopen(req, timeout=30)
         print("\n✅ отправлено в Telegram")
         return 0
+    except urllib.error.HTTPError as e:
+        print(f"\nTG HTTP {e.code}: {e.read().decode('utf-8','replace')[:400]}")
+        return 1
     except Exception as e:                      # noqa: BLE001
         print(f"\nошибка отправки в TG: {e}")
         return 1
