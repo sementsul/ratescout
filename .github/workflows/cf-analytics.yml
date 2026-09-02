@@ -2,7 +2,7 @@ name: Cloudflare analytics digest to Telegram (my-many.ru)
 
 # Раз в день шлёт сводку Cloudflare-аналитики по my-many.ru в админ-чат Telegram.
 # Секреты: CF_ANALYTICS_TOKEN (CF Analytics Read), TELEGRAM_TOKEN, ALERT_CHAT_ID (уже есть в репо).
-# Вывод прогона пишется в cf-analytics-last.log и коммитится — чтобы результат был виден прямо в репозитории.
+# rerun3 Вывод прогона пишется в cf-analytics-last.log и коммитится — чтобы результат был виден прямо в репозитории.
 
 on:
   push:
