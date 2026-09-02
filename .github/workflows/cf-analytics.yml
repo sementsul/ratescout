@@ -1,19 +1,15 @@
 name: Cloudflare analytics digest to Telegram (my-many.ru)
 
 # Раз в день шлёт сводку Cloudflare-аналитики по my-many.ru в админ-чат Telegram.
-# Секреты: CF_ANALYTICS_TOKEN (CF Analytics Read), TELEGRAM_TOKEN, ALERT_CHAT_ID (уже есть в репо).
-# rerun3 Вывод прогона пишется в cf-analytics-last.log и коммитится — чтобы результат был виден прямо в репозитории.
+# Секреты: CF_ANALYTICS_TOKEN (CF Zone Analytics · Read), TELEGRAM_TOKEN, ALERT_CHAT_ID (уже есть в репо).
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/cf-analytics.yml']   # временно: разовый запуск пушем
   schedule:
     - cron: "30 6 * * *"      # ~09:30 МСК ежедневно
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   digest:
@@ -23,19 +19,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Run digest (capture log)
-        continue-on-error: true
+      - name: Send Cloudflare analytics digest
         env:
           CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
           CF_ZONE: "5d667f50b12ae3337cc9533f185a34f9"
-        run: python3 cf_analytics_tg.py 2>&1 | tee cf-analytics-last.log
-      - name: Commit log
-        run: |
-          git config user.name "cf-analytics-bot"
-          git config user.email "cf-analytics-bot@users.noreply.github.com"
-          git add cf-analytics-last.log
-          git commit -m "chore(cf-analytics): лог последнего прогона [skip ci]" || echo "no change"
-          git pull --rebase --autostash || true
-          git push || true
+        run: python3 cf_analytics_tg.py
