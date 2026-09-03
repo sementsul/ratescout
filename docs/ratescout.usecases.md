@@ -1312,3 +1312,4 @@ Last-Modified/ETag — отдаёт GitHub Pages сам (все страницы
 **РАДИУС:** `build.py` (`render_book`, `copy_assets`, sitemap, main-loop) + `book/*.docx`. СОСЕДИ: прочие страницы не тронуты;
 обе языковые версии есть (NO_RU/NO_EN не нужны). **Проверка:** build EXIT 0; `dist/kniga/` и `dist/en/kniga/` есть, DOCX в dist/book,
 ссылки корректны, sitemap ×2, заголовок с одним брендом. **Статус:** ✅ в проде.
+- 🧭 Ссылка «📖 Книга» добавлена в меню «Разделы» (оба sblock, RU+EN). Кросс-язык-ссылки (English/Русская версия) со страниц книги убраны по запросу.
