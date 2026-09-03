@@ -229,6 +229,9 @@ summary{cursor:pointer;color:#ffff55}
 #footer .links{margin:10px 0}
 #footer a{color:#ffff55}
 #footer .erid{color:#666}
+#footer .counters{margin:14px 0 2px;text-align:center}
+#footer .counters img{opacity:.45;transition:opacity .2s ease;border:1px solid #333;background:#111;padding:2px;border-radius:3px}
+#footer .counters img:hover{opacity:.95}
 
 /* ---- Профессиональный монитор (/monitor/) ---- */
 .mon-wrap{display:flex;gap:14px;align-items:flex-start;margin-top:12px}
