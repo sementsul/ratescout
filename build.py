@@ -1660,6 +1660,17 @@ GTM_BODY = """<!-- Google Tag Manager (noscript) -->
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->"""
 
+LIVEINTERNET = """<!--LiveInternet counter--><a href="https://www.liveinternet.ru/click"
+target="_blank"><img id="licnt737E" width="88" height="31" style="border:0"
+title="LiveInternet: показано число просмотров и посетителей за 24 часа"
+src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAEALAAAAAABAAEAAAIBTAA7"
+alt=""/></a><script>(function(d,s){d.getElementById("licnt737E").src=
+"https://counter.yadro.ru/hit?t52.6;r"+escape(d.referrer)+
+((typeof(s)=="undefined")?"":";s"+s.width+"*"+s.height+"*"+
+(s.colorDepth?s.colorDepth:s.pixelDepth))+";u"+escape(d.URL)+
+";h"+escape(d.title.substring(0,150))+";"+Math.random()})
+(document,screen)</script><!--/LiveInternet-->"""
+
 
 # Ранний выбор языка: если пользователь НЕ выбирал вручную (нет rs_lang) — редирект
 # на версию под язык браузера (ru → корень, иначе → /en/). Ручной выбор (клик по .langsw)
@@ -1924,6 +1935,7 @@ def footer(lang):
   <div class="links">{links}</div>
   {partner_block(lang)}
   <div class="fine">{fine}</div>
+  <div class="counters">{LIVEINTERNET}</div>
 </div>
 </div>
 <script src="/assets/catalog.js?v={VER['cat']}"></script>
