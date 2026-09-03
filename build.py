@@ -4532,6 +4532,7 @@ def static_files():
         items += [u_entry(pr + f"/kategoriya/{CAT_SLUG[c]}/", "weekly", "0.7") for c in CATS]
         items += [u_entry(pr + f"/na/{b}/", "hourly", "0.8") for b in BANK_HUBS]
         items.append(u_entry(pr + "/faq/", "monthly", "0.6"))
+        items.append(u_entry(pr + "/kniga/", "monthly", "0.5"))
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
@@ -4696,6 +4697,13 @@ def copy_assets():
     if os.path.isdir(dst):
         shutil.rmtree(dst)
     shutil.copytree(os.path.join(ROOT, "assets"), dst)
+    # файлы книги (DOCX) — для страниц /kniga/ и /en/kniga/
+    _bk = os.path.join(ROOT, "book")
+    if os.path.isdir(_bk):
+        _bd = os.path.join(DIST, "book")
+        if os.path.isdir(_bd):
+            shutil.rmtree(_bd)
+        shutil.copytree(_bk, _bd)
 
 
 def make_monitor_json():
@@ -4804,6 +4812,42 @@ def render_monitor(lang):
     render_page(lang, "monitor", title, desc, body, h1)
 
 
+def render_book(lang):
+    """Страница книги: описание + скачивание DOCX. Позже DOCX-ссылку заменим на ссылки магазинов."""
+    if lang == "ru":
+        title = f"Обмен криптовалюты без потерь — книга (скачать)"
+        desc = ("Практический гид «Обмен криптовалюты без потерь»: как менять криптовалюту и деньги через "
+                "мониторинг обменников выгодно и безопасно. Скачать книгу.")
+        h1 = "Обмен криптовалюты без потерь"
+        sub = "Практический гид по обмену через мониторинг обменников · Автор: Семенцул Максим"
+        lead = ("<p>Книга о том, как менять криптовалюту и деньги через мониторинг обменников — выгодно и без потерь. "
+                "Как читать курс, резерв и рейтинг, выбирать надёжный обменник и не попасть на мошенников, не ошибиться "
+                "с сетью (TRC20/ERC20/BEP20/TON), разобраться со стейблкоинами и AML-проверкой. Пошаговый чек-лист первого "
+                "безопасного обмена, словарь терминов и типичные ошибки новичков. Без хайпа и инвест-советов — только практика. 18+.</p>")
+        dl = '<p><a class="cta" href="/book/obmen-kriptovalyuty-RU.docx" download>Скачать книгу (DOCX) →</a></p>'
+        stores = ('<p class="updnote">Книга готовится к публикации в магазинах (Ridero, OZON, Bookmate, Яндекс Книги, '
+                  'Wildberries и др.) — ссылки появятся здесь.</p>')
+        other = '<p class="related"><a href="/en/kniga/">English version →</a></p>'
+        crumb = "Книга"
+    else:
+        title = f"Crypto Exchange Without Losses — book (download)"
+        desc = ("A practical guide, Crypto Exchange Without Losses: how to exchange crypto and money via monitors "
+                "profitably and safely. Download the book.")
+        h1 = "Crypto Exchange Without Losses"
+        sub = "A practical guide to exchanging via monitors · Author: Maxim Sementsul"
+        lead = ("<p>A book on how to exchange crypto and money through exchange monitors — profitably and without losses. "
+                "How to read the rate, reserve and rating, pick a reliable exchanger and avoid scammers, get the network "
+                "right (TRC20/ERC20/BEP20/TON), and understand stablecoins and AML checks. A step-by-step checklist for a "
+                "safe first exchange, a glossary and common beginner mistakes. No hype, no investment advice — just practice. 18+.</p>")
+        dl = '<p><a class="cta" href="/book/crypto-exchange-EN.docx" download>Download the book (DOCX) →</a></p>'
+        stores = ('<p class="updnote">The book is being prepared for publication in stores (Ridero, Amazon, Bookmate '
+                  'and others) — links will appear here.</p>')
+        other = '<p class="related"><a href="/kniga/">Русская версия →</a></p>'
+        crumb = "Book"
+    body = f'<h1>{h1}</h1><p class="sub">{sub}</p>{lead}{dl}{stores}{other}'
+    render_page(lang, "kniga", title, desc, body, crumb)
+
+
 def main():
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
@@ -4848,6 +4892,7 @@ def main():
         for _ca, _cb in compare_pairs():
             render_compare(_ca, _cb, lang)
         render_widget_page(lang)
+        render_book(lang)
         render_faq(lang)
         render_blog(lang)
         render_rss(lang)
