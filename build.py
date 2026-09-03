@@ -4829,7 +4829,7 @@ def render_book(lang):
         dl = '<p><a class="cta" href="/book/obmen-kriptovalyuty-RU.docx" download>Скачать книгу (DOCX) →</a></p>'
         stores = ('<p class="updnote">Книга готовится к публикации в магазинах (Ridero, OZON, Bookmate, Яндекс Книги, '
                   'Wildberries и др.) — ссылки появятся здесь.</p>')
-        other = '<p class="related"><a href="/en/kniga/">English version →</a></p>'
+        other = ""
         crumb = "Книга"
     else:
         title = f"Crypto Exchange Without Losses — book (download)"
@@ -4844,7 +4844,7 @@ def render_book(lang):
         dl = '<p><a class="cta" href="/book/crypto-exchange-EN.docx" download>Download the book (DOCX) →</a></p>'
         stores = ('<p class="updnote">The book is being prepared for publication in stores (Ridero, Amazon, Bookmate '
                   'and others) — links will appear here.</p>')
-        other = '<p class="related"><a href="/kniga/">Русская версия →</a></p>'
+        other = ""
         crumb = "Book"
     body = f'<h1>{h1}</h1><p class="sub">{sub}</p>{lead}{dl}{stores}{other}'
     render_page(lang, "kniga", title, desc, body, crumb)
