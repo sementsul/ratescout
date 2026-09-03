@@ -423,6 +423,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
+      <li><a href="{PREF[lang]}/kniga/">{'📖 Книга' if lang=='ru' else '📖 Book'}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
       <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
     </ul></div>
@@ -2496,6 +2497,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
+      <li><a href="{PREF[lang]}/kniga/">{'📖 Книга' if lang=='ru' else '📖 Book'}</a></li>
       <li><a href="{PREF[lang]}/o-servise/">{tr(lang,'nav_about')}</a></li>
       <li><a href="{PREF[lang]}/vidzhet/">{tr(lang,'nav_widget')}</a></li>
     </ul></div>
