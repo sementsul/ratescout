@@ -395,12 +395,12 @@ def render_home(lang):
                      f"and currencies across {len(CATS)} categories from BestChange monitoring (hourly updates).{_ex}")
     body = f"""{header(lang, "/")}
 <div id="main">
-  <div id="content">
-    <pre class="ascii">  ____       _        ____                  _
+  <pre class="ascii">  ____       _        ____                  _
  |  _ \\ __ _| |_ ___ / ___|  ___ ___  _   _| |_
  | |_) / _` | __/ _ \\\\___ \\ / __/ _ \\| | | | __|
  |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
+  <div id="content">
     <p class="answer">{home_lead}</p>
     <div class="dosblue dosborder">{intro}</div>
     {trust_bar(lang)}
@@ -1757,6 +1757,47 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <div id="wrapper">"""
 
 
+def mobile_drawer(lang):
+    """Мобильная шторка: вся навигация, сгруппированная по смыслу; каждая ссылка — отдельной строкой-кнопкой."""
+    ru = lang == "ru"
+    P = PREF[lang]
+
+    def grp(title, items):
+        links = "".join(f'<a href="{href}">{txt}</a>' for href, txt in items)
+        return f'<div class="dgrp"><h4>{title}</h4>{links}</div>'
+
+    groups = [
+        grp("Курсы и обмен" if ru else "Rates & exchange", [
+            (f"{P}/", tr(lang, 'nav_monitor')),
+            (f"{P}/kursy/", tr(lang, 'nav_rates')),
+            (f"{P}/napravleniya/", tr(lang, 'nav_dirs')),
+            (f"{P}/sravnenie/", tr(lang, 'nav_compare')),
+            (f"{P}/monitor/", "Про-монитор" if ru else "Pro monitor"),
+            (f"{P}/alert/", "Оповещения о курсе" if ru else "Rate alerts")]),
+        grp("Аналитика рынка" if ru else "Market analytics", [
+            (f"{P}/svodka/", tr(lang, 'nav_svodka')),
+            (f"{P}/obzor/sutki/", tr(lang, 'nav_reviews')),
+            (f"{P}/lidery-rynka/", tr(lang, 'nav_leaders')),
+            (f"{P}/nastroeniya/", tr(lang, 'nav_mood')),
+            (f"{P}/grafiki/", tr(lang, 'nav_charts')),
+            (f"{P}/halving/", "Халвинг Bitcoin" if ru else "Bitcoin halving")]),
+        grp("Инструменты" if ru else "Tools", [
+            (f"{P}/aml/", tr(lang, 'nav_aml')),
+            (f"{P}/vidzhet/", tr(lang, 'nav_widget')),
+            ("https://app.ratescout.ru", "📱 Приложение" if ru else "📱 App")]),
+        grp("Знания" if ru else "Learn", [
+            (f"{P}/blog/", tr(lang, 'nav_blog')),
+            (f"{P}/faq/", tr(lang, 'nav_faq')),
+            (f"{P}/slovar/", tr(lang, 'nav_glossary')),
+            (f"{P}/o-servise/", tr(lang, 'nav_about')),
+            (f"{P}/kniga/", "📖 Книга" if ru else "📖 Book")]),
+        grp("О сервисе" if ru else "About", [
+            (f"{P}/raskrytie/", tr(lang, 'nav_disc')),
+            (f"{P}/politika/", "Политика конфиденциальности" if ru else "Privacy policy")]),
+    ]
+    return f'<nav id="drawer">{"".join(groups)}</nav>'
+
+
 def header(lang, path):
     other = "en" if lang == "ru" else "ru"
     other_missing = (path in NO_EN) if lang == "ru" else (path in NO_RU)
@@ -1768,6 +1809,7 @@ def header(lang, path):
 </div>
 <input type="checkbox" id="navtgl" class="navcb" aria-hidden="true">
 <label for="navtgl" class="navtgl-btn doscyan dosborder">☰ {tr(lang,'sections')}</label>
+{mobile_drawer(lang)}
 <div id="topnav" class="doscyan dosborder">
   <ul id="menu-top">
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>

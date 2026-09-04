@@ -59,21 +59,30 @@ img{border:none;max-width:100%}
 #main{overflow:hidden}
 #content{float:right;width:71%;padding:0 0 20px;min-height:400px}
 #sidebar{float:left;width:26%;padding:0 0 20px}
-/* мобильное меню-тоггл (checkbox-хак, без JS): на десктопе скрыто */
+/* мобильное меню-тоггл (checkbox-хак, без JS): шторка/кнопка на десктопе скрыты */
 .navcb{position:absolute;left:-9999px}
 .navtgl-btn{display:none}
+#drawer{display:none}
 @media(max-width:760px){
   #main{display:flex;flex-direction:column}
   #content,#sidebar{float:none;width:100%}
   #sidebar{order:-1}          /* калькулятор+поиск наверх, не под каталогом */
-  /* сворачиваемое верхнее меню — экономит первый экран */
-  .navtgl-btn{display:block;cursor:pointer;padding:.55rem 1rem;margin:6px 0;text-align:center;font:inherit}
+  .ascii{order:-2;text-align:center;font-size:8px;line-height:1.1;margin:4px 0 6px;overflow-x:auto}  /* лого-баннер наверх */
+  /* десктоп-меню прячем, всю навигацию даёт шторка ☰ */
   #topnav{display:none}
-  #navtgl:checked ~ #topnav{display:block}
-  #menu-top li{display:block;margin:0}
-  #menu-top li a{display:block;padding:11px 8px}   /* крупные тап-цели ≥44px */
-  /* удобнее тапать по спискам разделов/валют/направлений (маркер ■ и текст в одной строке) */
-  .sblock li,.dlist li,.bloglist li{padding:4px 0;line-height:1.45}
+  .navtgl-btn{display:block;cursor:pointer;padding:.6rem 1rem;margin:6px 0;text-align:center;font:inherit}
+  #navtgl:checked ~ #drawer{display:block}
+  #drawer{padding:.4rem .6rem 1rem}
+  #drawer .dgrp{margin:0 0 12px}
+  #drawer .dgrp h4{margin:12px 4px 6px;color:#ffff55;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase}
+  #drawer a{display:block;margin:6px 0;padding:11px 14px;border:1px solid #55ffff;border-radius:4px;
+    background:#001a2a;color:#55ffff}
+  #drawer a:hover{background:#00aaaa;color:#111}
+  /* убраны на мобиле по просьбе: блок «Разделы» и блок халвинга */
+  .sblock{display:none}
+  #halvingBox{display:none}
+  /* удобнее тапать по спискам (маркер ■ и текст в одной строке) */
+  .dlist li,.bloglist li{padding:4px 0;line-height:1.45}
 }
 .clearboth{clear:both}
 
