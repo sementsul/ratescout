@@ -195,6 +195,7 @@
         "</select></label>" +
       "</div>" +
       '<div class="tb-grp tb-right">' +
+        '<button class="tb-btn" id="tbFull">⛶ ' + T("Во весь экран", "Fullscreen") + "</button>" +
         '<button class="tb-btn" id="tbShare">' + T("Ссылка", "Link") + "</button>" +
         '<button class="tb-btn" id="tbReset">' + T("Сброс", "Reset") + "</button>" +
       "</div>";
@@ -211,13 +212,38 @@
       STATE.panels = ws.panels.map(function (p) { p.id = STATE.seq++; return p; });
       setTheme(STATE.theme); renderAll(); saveWS();
     });
+    var fb = bar.querySelector("#tbFull");
+    if (fb) { fb.addEventListener("click", toggleFull); fb.textContent = (isFull() ? "⤢ " + T("Свернуть", "Exit") : "⛶ " + T("Во весь экран", "Fullscreen")); }
     bar.querySelector("#tbShare").addEventListener("click", function (e) {
       saveWS(); var btn = e.target, old = btn.textContent;
       var done = function () { btn.textContent = T("скопировано ✓", "copied ✓"); setTimeout(function () { btn.textContent = old; }, 1400); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(done, done); else done();
     });
   }
-  function setTheme(t) { STATE.theme = t; root.className = "term th-" + t + (isMobile() ? " term-mobile" : ""); var s = bar.querySelector("#tbTheme"); if (s) s.value = t; renderAll(); }
+  function setTheme(t) { STATE.theme = t; root.className = "term th-" + t + (isMobile() ? " term-mobile" : "") + (isFull() ? " term-full" : ""); var s = bar.querySelector("#tbTheme"); if (s) s.value = t; renderAll(); }
+
+  // ---------------- полноэкранный режим рабочей области ----------------
+  function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function isFull() { return fsEl() === root; }
+  function reqFull() {
+    var f = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (f) try { f.call(root); } catch (e) {}
+  }
+  function exitFull() {
+    var f = document.exitFullscreen || document.webkitExitFullscreen;
+    if (f) try { f.call(document); } catch (e) {}
+  }
+  function toggleFull() { if (isFull()) exitFull(); else reqFull(); }
+  function onFullChange() {
+    var b = bar.querySelector("#tbFull");
+    if (b) b.textContent = (isFull() ? "⤢ " + T("Свернуть", "Exit") : "⛶ " + T("Во весь экран", "Fullscreen"));
+    root.classList.toggle("term-full", isFull());
+    renderAll();
+  }
+  document.addEventListener("fullscreenchange", onFullChange);
+  document.addEventListener("webkitfullscreenchange", onFullChange);
+  // доступная высота канвы: в фулскрине — вся высота экрана минус тулбар, иначе базовые 560px
+  function availH() { return isFull() ? Math.max(400, (window.innerHeight || 800) - (bar.offsetHeight || 44) - 20) : 560; }
 
   // ---------------- панели ----------------
   var PTITLE = { chart: T("График", "Chart"), watch: "Watchlist", movers: T("Муверы", "Movers"), heat: T("Тепловая карта", "Heatmap"), screen: T("Скринер", "Screener") };
@@ -250,7 +276,7 @@
       if (!isMobile()) maxB = Math.max(maxB, p.g[1] + p.g[3]);
       drawBody(p, el.querySelector(".win-body"));
     });
-    if (!isMobile()) canvas.style.height = Math.max(560, maxB + 24) + "px";
+    if (!isMobile()) canvas.style.height = Math.max(availH(), maxB + 24) + "px";
     else canvas.style.height = "auto";
   }
 
@@ -375,7 +401,7 @@
   function syncHeight() {
     if (isMobile()) return;
     var maxB = 0; STATE.panels.forEach(function (p) { maxB = Math.max(maxB, p.g[1] + p.g[3]); });
-    canvas.style.height = Math.max(560, maxB + 24) + "px";
+    canvas.style.height = Math.max(availH(), maxB + 24) + "px";
   }
 
   // ---------------- отрисовка тела панели ----------------

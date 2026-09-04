@@ -475,3 +475,8 @@ summary{cursor:pointer;color:#ffff55}
 .term-menu button{display:block;width:100%;text-align:left;font:inherit;font-size:.8rem;cursor:pointer;background:transparent;border:none;color:#cfe;padding:6px 10px;border-radius:3px}
 .term-menu button:hover{background:#1b2733}
 .term-menu .tm-sep{height:1px;background:#26323f;margin:4px 6px}
+/* --- полноэкранный режим рабочей области --- */
+.term-full{overflow:auto;padding:10px;background:#050608}
+.th-dos.term-full{background:#050a0a}
+.th-dark.term-full{background:#0b0d10}
+.term-full .term-bar{position:sticky;top:0;z-index:50;margin-top:0}
