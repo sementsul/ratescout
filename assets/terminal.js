@@ -974,8 +974,14 @@
   var mqMobile = window.matchMedia("(max-width:760px)");
   function onModeChange() { root.className = "term th-" + STATE.theme + (isMobile() ? " term-mobile" : ""); renderAll(); }
   if (mqMobile.addEventListener) mqMobile.addEventListener("change", onModeChange); else if (mqMobile.addListener) mqMobile.addListener(onModeChange);
-  var rzTimer = null;
-  window.addEventListener("resize", function () { clearTimeout(rzTimer); rzTimer = setTimeout(function () { renderAll(); }, 150); });
+  var rzTimer = null, lastW = window.innerWidth;
+  window.addEventListener("resize", function () {
+    // на мобиле показ/скрытие адресной строки меняет ТОЛЬКО высоту и шлёт resize —
+    // перерисовывать не надо (иначе пересборка DOM прыгает страницу наверх). Реагируем лишь на смену ширины.
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    clearTimeout(rzTimer); rzTimer = setTimeout(function () { renderAll(); }, 200);
+  });
 
   // если стартуем в классическом виде — покажем его сразу, терминал подгрузим лениво
   if (initialView() === "classic") { root.className = "th-bloomberg"; if (classicEl) classicEl.style.display = ""; if (btnClassic) btnClassic.classList.add("on"); if (btnTerm) btnTerm.classList.remove("on"); }
