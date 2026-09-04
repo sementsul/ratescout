@@ -401,8 +401,6 @@ def render_home(lang):
  |  _ < (_| | ||  __/ ___) | (_| (_) | |_| | |_
  |_| \\_\\__,_|\\__\\___|____/ \\___\\___/ \\__,_|\\__|</pre>
   <div id="content">
-    <p class="answer">{home_lead}</p>
-    <div class="dosblue dosborder">{intro}</div>
     {trust_bar(lang)}
     <div class="mktwidgets">{halving_widget(lang)}</div>
     {pop}
