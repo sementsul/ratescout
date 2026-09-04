@@ -72,8 +72,8 @@ img{border:none;max-width:100%}
   #navtgl:checked ~ #topnav{display:block}
   #menu-top li{display:block;margin:0}
   #menu-top li a{display:block;padding:11px 8px}   /* крупные тап-цели ≥44px */
-  /* удобнее тапать по спискам разделов/валют/направлений */
-  .sblock li a,.dlist li a,.bloglist li a{display:block;padding:7px 4px}
+  /* удобнее тапать по спискам разделов/валют/направлений (маркер ■ и текст в одной строке) */
+  .sblock li,.dlist li,.bloglist li{padding:4px 0;line-height:1.45}
 }
 .clearboth{clear:both}
 
