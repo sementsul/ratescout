@@ -1,0 +1,71 @@
+# Ручная очистка истории git: сплющивает всю историю main в ОДИН коммит (сохраняя текущее
+# состояние файлов) и делает force-push. Перед этим ставит тег-бэкап на старый HEAD, так что
+# полную историю всегда можно восстановить. Запускается вручную (кнопка «Run workflow» или
+# кнопка «🧹 Очистить историю» из алерта repo-size-guard). Требует подтверждения словом SQUASH.
+#
+# Безопасность:
+#  · concurrency group: pages — тот же, что у часового deploy.yml → они НЕ пересекаются (очередь).
+#  · тег backup/pre-squash-* пушится ДО force-push → откат: git reset --hard <tag> (или восстановить main из тега).
+#  · на живой сайт не влияет (Pages отдаёт собранный dist).
+name: history-squash
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Впишите SQUASH. ВАЖНО: сначала снять защиту ветки (Settings→Branches→main→Block force pushes OFF), иначе push отклонится. После — включить обратно.'
+        required: true
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: history-squash
+  cancel-in-progress: false
+jobs:
+  squash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — требуется подтверждение
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "SQUASH" ]; then
+            echo "::error::Не подтверждено. Впишите SQUASH в поле confirm."; exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Squash истории в один коммит (+ тег-бэкап)
+        run: |
+          set -e
+          git config user.name "ratescout-bot"
+          git config user.email "ratescout-bot@users.noreply.github.com"
+          TAG="backup/pre-squash-$(date -u +%Y%m%d-%H%M)"
+          OLD=$(git rev-parse HEAD)
+          BEFORE=$(git rev-list --count HEAD)
+          echo "коммитов до: $BEFORE, HEAD=$OLD, бэкап-тег=$TAG"
+          # 1) сохранить старую историю в теге и запушить его ПЕРВЫМ
+          git tag "$TAG" "$OLD"
+          git push origin "refs/tags/$TAG"
+          # 2) сплющить: новый корень с текущим деревом
+          git checkout --orphan squashed
+          git add -A
+          git commit -q -m "chore(history): squash до $(date -u +%F) — история свёрнута в 1 коммит (бэкап: $TAG) [skip ci]"
+          # force-with-lease: если main успел сдвинуться (часовой deploy) — push отклонится, история НЕ переписана
+          git push --force-with-lease=main:"$OLD" origin squashed:main
+          echo "готово. Было $BEFORE коммитов → стало 1. Бэкап: $TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "BEFORE=$BEFORE" >> "$GITHUB_ENV"
+      - name: Уведомить в Telegram
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+        run: |
+          [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ] && { echo "TG не настроен — пропуск"; exit 0; }
+          if [ "${{ job.status }}" = "success" ]; then
+            MSG="🧹 История ${GITHUB_REPOSITORY} очищена: было ${BEFORE} коммитов → 1. Бэкап-тег: ${TAG} (откат возможен)."
+          else
+            MSG="⚠️ Очистка истории ${GITHUB_REPOSITORY} НЕ выполнена (см. Actions). Частая причина — включена защита ветки (Block force pushes) или main сдвинулся. История НЕ тронута; при необходимости откат: git reset --hard <backup-тег>."
+          fi
+          curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "text=${MSG}" \
+            -o /dev/null -w "telegram: %{http_code}\n" || true
