@@ -178,7 +178,7 @@
   }
 
   // ---------------- состояние воркспейса ----------------
-  var STATE = { theme: "bloomberg", panels: [], seq: 1 };
+  var STATE = { theme: "bloomberg", panels: [], seq: 1, tiled: false, split: { x: 0.5, y: 0.5 } };
   var zTop = 10;
   var activeId = null; // id активного графика — с ним взаимодействуют остальные окна
   var LS_KEY = "rs_term_ws";
@@ -198,7 +198,7 @@
   function isMobile() { return window.matchMedia("(max-width:760px)").matches; }
 
   function saveWS() {
-    var ws = { theme: STATE.theme, panels: STATE.panels.map(function (p) { return { t: p.t, cfg: p.cfg, g: p.g }; }) };
+    var ws = { theme: STATE.theme, tiled: STATE.tiled, split: STATE.split, panels: STATE.panels.map(function (p) { return { t: p.t, cfg: p.cfg, g: p.g }; }) };
     try { localStorage.setItem(LS_KEY, JSON.stringify(ws)); } catch (e) {}
     writeURL(ws);
   }
@@ -218,6 +218,8 @@
     if (!ws) { try { var raw = localStorage.getItem(LS_KEY); if (raw) ws = JSON.parse(raw); } catch (e2) { ws = null; } }
     if (!ws || !ws.panels || !ws.panels.length) ws = defaultWorkspace();
     STATE.theme = ws.theme || "bloomberg";
+    STATE.tiled = !!ws.tiled;
+    STATE.split = (ws.split && typeof ws.split.x === "number") ? ws.split : { x: 0.5, y: 0.5 };
     STATE.panels = ws.panels.map(function (p) { p.id = STATE.seq++; return p; });
   }
 
@@ -246,6 +248,7 @@
         "</select></label>" +
       "</div>" +
       '<div class="tb-grp tb-right">' +
+        '<button class="tb-btn' + (STATE.tiled ? " on" : "") + '" id="tbTile">⊞ ' + T("Сетка", "Tile") + "</button>" +
         '<button class="tb-btn" id="tbFull">⛶ ' + T("Во весь экран", "Fullscreen") + "</button>" +
         '<button class="tb-btn" id="tbShare">' + T("Ссылка", "Link") + "</button>" +
         '<button class="tb-btn" id="tbReset">' + T("Сброс", "Reset") + "</button>" +
@@ -256,6 +259,7 @@
     var themeSel = bar.querySelector("#tbTheme"); themeSel.value = STATE.theme;
     themeSel.addEventListener("change", function () { setTheme(themeSel.value); saveWS(); });
     bar.querySelector("#tbLayout").addEventListener("change", function () { if (this.value) { applyLayout(this.value); this.value = ""; } });
+    bar.querySelector("#tbTile").addEventListener("click", function () { STATE.tiled = !STATE.tiled; this.classList.toggle("on", STATE.tiled); renderAll(); saveWS(); });
     bar.querySelector("#tbReset").addEventListener("click", function () {
       if (!confirm(T("Сбросить раскладку к стандартной?", "Reset layout to default?"))) return;
       try { localStorage.removeItem(LS_KEY); } catch (e) {}
@@ -332,17 +336,87 @@
   function closePanel(id) { STATE.panels = STATE.panels.filter(function (p) { return p.id !== id; }); renderAll(); saveWS(); }
 
   function renderAll() {
-    canvas.innerHTML = "";
+    canvas.innerHTML = ""; crossEl = null;
+    var tiled = STATE.tiled && !isMobile();
+    root.classList.toggle("tiled", tiled);
     var maxB = 0;
     STATE.panels.forEach(function (p) {
       var el = renderPanel(p);
       canvas.appendChild(el);
-      if (!isMobile()) maxB = Math.max(maxB, p.g[1] + p.g[3]);
-      drawBody(p, el.querySelector(".win-body"));
+      if (!tiled) { if (!isMobile()) maxB = Math.max(maxB, p.g[1] + p.g[3]); drawBody(p, el.querySelector(".win-body")); }
     });
-    if (!isMobile()) canvas.style.height = Math.max(availH(), maxB + 24) + "px";
+    if (tiled) { buildTileCross(); layoutTiles(); redrawTiles(); }
+    else if (!isMobile()) canvas.style.height = Math.max(availH(), maxB + 24) + "px";
     else canvas.style.height = "auto";
     markActive();
+  }
+
+  // ---------- тайл-режим: плитка (2×2 супер-сетка) + центральная крестовина ----------
+  var tileRaf = null, crossEl = null, crossHasV = false, crossHasH = false;
+  function tileGeom() {
+    var W = canvas.clientWidth || 960, H = Math.max(availH(), 420), gap = 6;
+    var q = [[], [], [], []];
+    STATE.panels.forEach(function (p, i) { q[i % 4].push(p); });
+    var hasTop = q[0].length || q[1].length, hasBot = q[2].length || q[3].length;
+    var fx = Math.min(0.88, Math.max(0.12, STATE.split.x)), fy = Math.min(0.88, Math.max(0.12, STATE.split.y));
+    var topH, botH, topY = 0, botY = 0;
+    if (hasTop && hasBot) { topH = Math.round((H - gap) * fy); botH = H - gap - topH; botY = topH + gap; }
+    else if (hasTop) { topH = H; botH = 0; } else { topH = 0; botH = H; }
+    var leftW = Math.round((W - gap) * fx), rightW = W - gap - leftW, rightX = leftW + gap;
+    var rects = {};
+    function place(list, x, y, w, h) {
+      if (!list.length || w <= 0 || h <= 0) return;
+      var g2 = 6, each = (h - g2 * (list.length - 1)) / list.length;
+      list.forEach(function (p, i) { rects[p.id] = [x, Math.round(y + i * (each + g2)), w, Math.round(each)]; });
+    }
+    if (hasTop) {
+      if (q[0].length && q[1].length) { place(q[0], 0, topY, leftW, topH); place(q[1], rightX, topY, rightW, topH); }
+      else place(q[0].length ? q[0] : q[1], 0, topY, W, topH);
+    }
+    if (hasBot) {
+      if (q[2].length && q[3].length) { place(q[2], 0, botY, leftW, botH); place(q[3], rightX, botY, rightW, botH); }
+      else place(q[2].length ? q[2] : q[3], 0, botY, W, botH);
+    }
+    var hasV = (q[0].length || q[2].length) && (q[1].length || q[3].length);
+    return { W: W, H: H, gap: gap, rects: rects, leftW: leftW, topH: topH, hasV: hasV, hasH: !!(hasTop && hasBot) };
+  }
+  function layoutTiles() {
+    var G = tileGeom();
+    canvas.style.height = G.H + "px";
+    STATE.panels.forEach(function (p) {
+      var r = G.rects[p.id], el = canvas.querySelector('[data-id="' + p.id + '"]'); if (!el || !r) return;
+      el.style.left = r[0] + "px"; el.style.top = r[1] + "px"; el.style.width = r[2] + "px"; el.style.height = r[3] + "px";
+    });
+    crossHasV = G.hasV; crossHasH = G.hasH;
+    if (crossEl) {
+      crossEl.style.left = (G.hasV ? G.leftW + G.gap / 2 : G.W / 2) + "px";
+      crossEl.style.top = (G.hasH ? G.topH + G.gap / 2 : G.H / 2) + "px";
+      crossEl.style.display = (G.hasV || G.hasH) ? "block" : "none";
+      crossEl.className = "tile-cross" + (G.hasV && G.hasH ? " xy" : G.hasV ? " ax" : " ay");
+    }
+  }
+  function buildTileCross() {
+    crossEl = document.createElement("div"); crossEl.className = "tile-cross"; crossEl.title = T("Тяните — размеры окон", "Drag to resize windows");
+    canvas.appendChild(crossEl);
+    crossEl.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      if (crossEl.setPointerCapture) try { crossEl.setPointerCapture(e.pointerId); } catch (er) {}
+      function mv(ev) {
+        var r = canvas.getBoundingClientRect();
+        if (crossHasV) STATE.split.x = Math.min(0.88, Math.max(0.12, (ev.clientX - r.left) / r.width));
+        if (crossHasH) STATE.split.y = Math.min(0.88, Math.max(0.12, (ev.clientY - r.top) / r.height));
+        layoutTiles(); scheduleTileDraw();
+      }
+      function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); redrawTiles(); saveWS(); }
+      document.addEventListener("pointermove", mv); document.addEventListener("pointerup", up);
+    });
+  }
+  function scheduleTileDraw() {
+    if (tileRaf) return;
+    tileRaf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 16); })(function () { tileRaf = null; redrawTiles(); });
+  }
+  function redrawTiles() {
+    STATE.panels.forEach(function (p) { var el = canvas.querySelector('[data-id="' + p.id + '"]'); if (el) drawBody(p, el.querySelector(".win-body")); });
   }
 
   function renderPanel(p) {
@@ -443,10 +517,28 @@
         e.preventDefault(); openChartMenu(p, e.clientX, e.clientY);
       });
     }
-    if (!isMobile()) enableDrag(p, el);
+    if (!isMobile() && !STATE.tiled) enableDrag(p, el);
   }
 
-  // ---------------- перетаскивание / ресайз ----------------
+  // ---------------- перетаскивание / ресайз + прилипание (стык-в-стык) ----------------
+  var SNAP = 8; // порог прилипания, px
+  function edgesX(p) { var a = [0, canvas.clientWidth]; STATE.panels.forEach(function (o) { if (o.id !== p.id) { a.push(o.g[0], o.g[0] + o.g[2]); } }); return a; }
+  function edgesY(p) { var a = [0, canvas.clientHeight]; STATE.panels.forEach(function (o) { if (o.id !== p.id) { a.push(o.g[1], o.g[1] + o.g[3]); } }); return a; }
+  function nearest(edges, vals) { // vals — точки окна (лев/прав или верх/низ); вернуть лучшую поправку в пределах SNAP
+    var best = SNAP + 1;
+    edges.forEach(function (E) { vals.forEach(function (v) { var d = E - v; if (Math.abs(d) < Math.abs(best)) best = d; }); });
+    return Math.abs(best) <= SNAP ? best : 0;
+  }
+  function snapPos(p, nx, ny) {
+    nx += nearest(edgesX(p), [nx, nx + p.g[2]]);
+    ny += nearest(edgesY(p), [ny, ny + p.g[3]]);
+    return [Math.max(0, nx), Math.max(0, ny)];
+  }
+  function snapSize(p, nw, nh) {
+    nw += nearest(edgesX(p), [p.g[0] + nw]);
+    nh += nearest(edgesY(p), [p.g[1] + nh]);
+    return [Math.max(240, nw), Math.max(160, nh)];
+  }
   function focusWin(el) { el.style.zIndex = ++zTop; }
   function enableDrag(p, el) {
     var h = el.querySelector(".win-h"), rz = el.querySelector(".win-rz");
@@ -456,7 +548,8 @@
       e.preventDefault(); focusWin(el);
       var sx = e.clientX, sy = e.clientY, ox = p.g[0], oy = p.g[1];
       function mv(ev) {
-        p.g[0] = Math.max(0, ox + (ev.clientX - sx)); p.g[1] = Math.max(0, oy + (ev.clientY - sy));
+        var s = snapPos(p, Math.max(0, ox + (ev.clientX - sx)), Math.max(0, oy + (ev.clientY - sy)));
+        p.g[0] = s[0]; p.g[1] = s[1];
         el.style.left = p.g[0] + "px"; el.style.top = p.g[1] + "px";
       }
       function up() { document.removeEventListener("pointermove", mv); document.removeEventListener("pointerup", up); saveWS(); syncHeight(); }
@@ -466,7 +559,8 @@
       e.preventDefault(); e.stopPropagation(); focusWin(el);
       var sx = e.clientX, sy = e.clientY, ow = p.g[2], oh = p.g[3];
       function mv(ev) {
-        p.g[2] = Math.max(240, ow + (ev.clientX - sx)); p.g[3] = Math.max(160, oh + (ev.clientY - sy));
+        var s = snapSize(p, Math.max(240, ow + (ev.clientX - sx)), Math.max(160, oh + (ev.clientY - sy)));
+        p.g[2] = s[0]; p.g[3] = s[1];
         el.style.width = p.g[2] + "px"; el.style.height = p.g[3] + "px";
         drawBody(p, el.querySelector(".win-body"));
       }

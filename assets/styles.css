@@ -509,3 +509,12 @@ summary{cursor:pointer;color:#ffff55}
 .term-win.win-active{box-shadow:0 0 0 2px #ffb000,0 4px 18px rgba(0,0,0,.55)}
 .th-dos .term-win.win-active{box-shadow:0 0 0 2px #0ff,0 4px 18px rgba(0,0,0,.55)}
 .th-dark .term-win.win-active{box-shadow:0 0 0 2px #7aa2f7,0 4px 18px rgba(0,0,0,.55)}
+/* --- тайл-режим (сетка + центральная крестовина) --- */
+.tiled .win-rz{display:none}
+.tiled .term-win{box-shadow:none}
+.tiled .win-h{cursor:default}
+.tile-cross{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#ffb000;border:2px solid #120a00;cursor:move;z-index:70;box-shadow:0 0 0 3px rgba(255,176,0,.25);touch-action:none}
+.tile-cross.ax{cursor:ew-resize}
+.tile-cross.ay{cursor:ns-resize}
+.th-dos .tile-cross{background:#0ff;box-shadow:0 0 0 3px rgba(0,255,255,.22)}
+.th-dark .tile-cross{background:#7aa2f7;box-shadow:0 0 0 3px rgba(122,162,247,.22)}
