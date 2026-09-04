@@ -37,6 +37,11 @@
     var set = g === "stable" ? STABLE_T : FIAT_T;
     return Object.keys(DATA.series).filter(function (s) { return set.indexOf(ticker(s)) >= 0; }).sort(byName).slice(0, 12);
   }
+  // валюты панели: свой набор cfg.cur, иначе группа cfg.grp (для watch/heat/movers)
+  function panelSlugs(p) {
+    if (p.cfg.cur && p.cfg.cur.length) return p.cfg.cur.filter(function (s) { return DATA.series[s]; });
+    return groupSlugs(p.cfg.grp || "top");
+  }
 
   // ---------------- математика рядов ----------------
   function rebased(slug, base) {
@@ -455,13 +460,17 @@
         rangeTabs(p.cfg.range);
     }
     if (p.t === "watch" || p.t === "heat") {
-      return '<select class="win-s win-grp">' +
-          '<option value="top"' + (p.cfg.grp === "top" ? " selected" : "") + ">" + T("Топ-крипта", "Top crypto") + "</option>" +
-          '<option value="stable"' + (p.cfg.grp === "stable" ? " selected" : "") + ">" + T("Стейблы", "Stables") + "</option>" +
-          '<option value="fiat"' + (p.cfg.grp === "fiat" ? " selected" : "") + ">" + T("Фиат", "Fiat") + "</option>" +
+      return '<button class="win-b win-pick" title="' + T("Выбрать валюты", "Pick currencies") + '">◧ ' + T("Валюты", "Currencies") + " (" + panelSlugs(p).length + ")</button>" +
+        '<select class="win-s win-grp">' +
+          '<option value="top"' + (!p.cfg.cur && p.cfg.grp === "top" ? " selected" : "") + ">" + T("Топ-крипта", "Top crypto") + "</option>" +
+          '<option value="stable"' + (!p.cfg.cur && p.cfg.grp === "stable" ? " selected" : "") + ">" + T("Стейблы", "Stables") + "</option>" +
+          '<option value="fiat"' + (!p.cfg.cur && p.cfg.grp === "fiat" ? " selected" : "") + ">" + T("Фиат", "Fiat") + "</option>" +
+          (p.cfg.cur && p.cfg.cur.length ? '<option value="" selected>' + T("свой набор", "custom") + "</option>" : "") +
         "</select>" + rangeTabs(p.cfg.range);
     }
-    if (p.t === "movers") return rangeTabs(p.cfg.range);
+    if (p.t === "movers") {
+      return '<button class="win-b win-pick" title="' + T("Выбрать валюты", "Pick currencies") + '">◧ ' + T("Валюты", "Currencies") + " (" + (p.cfg.cur && p.cfg.cur.length ? p.cfg.cur.length : T("все", "all")) + ")</button>" + rangeTabs(p.cfg.range);
+    }
     if (p.t === "screen") {
       var q = "";
       if (p.cfg.mode === "pair") {
@@ -503,7 +512,11 @@
     var logc = el.querySelector(".win-logc");
     if (logc) logc.addEventListener("change", function () { p.cfg.log = logc.checked; drawBody(p, body()); saveWS(); });
     var grp = el.querySelector(".win-grp");
-    if (grp) grp.addEventListener("change", function () { p.cfg.grp = grp.value; drawBody(p, body()); saveWS(); });
+    if (grp) grp.addEventListener("change", function () {
+      if (grp.value) { p.cfg.grp = grp.value; p.cfg.cur = null; }
+      var pk = el.querySelector(".win-pick"); if (pk) pk.textContent = "◧ " + T("Валюты", "Currencies") + " (" + panelSlugs(p).length + ")";
+      drawBody(p, body()); saveWS();
+    });
     var pick = el.querySelector(".win-pick");
     if (pick) pick.addEventListener("click", function () { openPicker(p, el); });
     var mode = el.querySelector(".win-mode");
@@ -760,7 +773,7 @@
 
   // ----- WATCHLIST -----
   function drawWatch(p, body) {
-    var slugs = groupSlugs(p.cfg.grp);
+    var slugs = panelSlugs(p);
     if (!slugs.length) { body.innerHTML = empty(T("Пусто.", "Empty.")); return; }
     var rows = slugs.map(function (s) {
       return { s: s, last: lastVal(s, "USD"), pc: pctChange(s, "USD", p.cfg.range), spk: rangeFilter(rebased(s, "USD"), p.cfg.range) };
@@ -786,7 +799,8 @@
 
   // ----- МУВЕРЫ -----
   function drawMovers(p, body) {
-    var all = Object.keys(DATA.series).map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; })
+    var universe = (p.cfg.cur && p.cfg.cur.length) ? p.cfg.cur.filter(function (s) { return DATA.series[s]; }) : Object.keys(DATA.series);
+    var all = universe.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; })
       .filter(function (o) { return o.pc != null && isFinite(o.pc); });
     all.sort(function (a, b) { return b.pc - a.pc; });
     var n = p.cfg.n || 8, gain = all.slice(0, n), loss = all.slice(-n).reverse();
@@ -805,7 +819,7 @@
 
   // ----- ТЕПЛОВАЯ КАРТА -----
   function drawHeat(p, body) {
-    var slugs = groupSlugs(p.cfg.grp);
+    var slugs = panelSlugs(p);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
       return '<div class="ht-cell" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
@@ -948,7 +962,8 @@
   var pickBox = null;
   function openPicker(p, el) {
     if (pickBox) pickBox.remove();
-    var chosen = {}; p.cfg.cur.forEach(function (s) { chosen[s] = 1; });
+    var init = (p.cfg.cur && p.cfg.cur.length) ? p.cfg.cur : (p.t === "movers" ? [] : panelSlugs(p));
+    var chosen = {}; init.forEach(function (s) { chosen[s] = 1; });
     pickBox = document.createElement("div"); pickBox.className = "term-pick";
     var slugs = Object.keys(DATA.series).sort(byName);
     pickBox.innerHTML =
