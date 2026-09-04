@@ -31,7 +31,7 @@ jobs:
           if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
             echo "TG не настроен (нет TELEGRAM_TOKEN/ALERT_CHAT_ID) — пропускаю"; exit 0
           fi
-          MSG="⚠️ Репозиторий ${GITHUB_REPOSITORY}: ${SIZE_MB} МБ (порог ${THRESHOLD_MB} МБ). Память растёт. Нажми «🧹 Очистить историю» → впиши SQUASH → Run workflow. Всё автоматом: тег-бэкап, снятие/возврат защиты ветки, свёртка истории в 1 коммит. Лимит GitHub ~1 ГБ."
+          MSG=$(printf '⚠️ Репозиторий %s: %s МБ (порог %s МБ). Пора почистить историю git.\n\n🧹 Как очистить (по шагам):\n1) Нажми кнопку «🧹 Очистить историю» ниже — откроется страница workflow на GitHub.\n2) Справа вверху нажми «Run workflow».\n3) В поле confirm впиши заглавными: SQUASH\n4) Нажми зелёную «Run workflow».\n5) Через ~1 мин придёт ответ «🧹 История очищена…».\n\nВсё остальное — автоматически: тег-бэкап, снятие и возврат защиты ветки, свёртка истории в 1 коммит. Откат всегда возможен по бэкап-тегу. Мягкий лимит GitHub ~1 ГБ.' "$GITHUB_REPOSITORY" "$SIZE_MB" "$THRESHOLD_MB")
           BTN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/workflows/history-squash.yml"
           RM="{\"inline_keyboard\":[[{\"text\":\"🧹 Очистить историю\",\"url\":\"${BTN_URL}\"}]]}"
           curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
