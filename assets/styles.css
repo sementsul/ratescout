@@ -59,10 +59,21 @@ img{border:none;max-width:100%}
 #main{overflow:hidden}
 #content{float:right;width:71%;padding:0 0 20px;min-height:400px}
 #sidebar{float:left;width:26%;padding:0 0 20px}
+/* мобильное меню-тоггл (checkbox-хак, без JS): на десктопе скрыто */
+.navcb{position:absolute;left:-9999px}
+.navtgl-btn{display:none}
 @media(max-width:760px){
   #main{display:flex;flex-direction:column}
   #content,#sidebar{float:none;width:100%}
   #sidebar{order:-1}          /* калькулятор+поиск наверх, не под каталогом */
+  /* сворачиваемое верхнее меню — экономит первый экран */
+  .navtgl-btn{display:block;cursor:pointer;padding:.55rem 1rem;margin:6px 0;text-align:center;font:inherit}
+  #topnav{display:none}
+  #navtgl:checked ~ #topnav{display:block}
+  #menu-top li{display:block;margin:0}
+  #menu-top li a{display:block;padding:11px 8px}   /* крупные тап-цели ≥44px */
+  /* удобнее тапать по спискам разделов/валют/направлений */
+  .sblock li a,.dlist li a,.bloglist li a{display:block;padding:7px 4px}
 }
 .clearboth{clear:both}
 

@@ -1766,6 +1766,8 @@ def header(lang, path):
   <h1 id="logotop"><a href="{PREF[lang]}/"><span class="logo">[⇄]</span> {S['name']}<span class="tld">.ru</span></a></h1>
   {switch}
 </div>
+<input type="checkbox" id="navtgl" class="navcb" aria-hidden="true">
+<label for="navtgl" class="navtgl-btn doscyan dosborder">☰ {tr(lang,'sections')}</label>
 <div id="topnav" class="doscyan dosborder">
   <ul id="menu-top">
     <li><a href="{PREF[lang]}/">{tr(lang,'nav_monitor')}</a></li>
