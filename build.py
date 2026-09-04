@@ -1616,12 +1616,24 @@ def trust_bar(lang):
     """Полоса доверия/свежести: сколько валют и направлений в базе + когда обновлено + ссылка на методику."""
     nc, nd = len(CUR), len(RATES)
     if lang == "ru":
-        return (f'<div class="trustbar"><span>Валют в базе: <b>{nc}</b></span>'
-                f'<span>Направлений: <b>{nd}</b></span><span>{updated_str(lang)}</span>'
-                f'<span><a href="{PREF[lang]}/redakciya/">Методика и источник данных →</a></span></div>')
-    return (f'<div class="trustbar"><span>Currencies: <b>{nc}</b></span>'
-            f'<span>Directions: <b>{nd}</b></span><span>{updated_str(lang)}</span>'
-            f'<span><a href="{PREF[lang]}/redakciya/">Methodology &amp; data source →</a></span></div>')
+        intro = (f'<b>RateScout</b> — бесплатный справочник курсов обмена криптовалют и наличных '
+                 f'по данным мониторинга обменников <b>BestChange</b>. В базе <b>{nc}</b> валют '
+                 f'и <b>{nd}</b> направлений обмена; курсы обновляются <b>ежечасно</b> '
+                 f'и приведены для справки (не оферта).')
+        facts = (f'<span>Валют: <b>{nc}</b></span><span>Направлений: <b>{nd}</b></span>'
+                 f'<span>{updated_str(lang)}</span>'
+                 f'<span><a href="{PREF[lang]}/redakciya/">Методика и источник данных →</a></span>')
+    else:
+        intro = (f'<b>RateScout</b> is a free directory of crypto and cash exchange rates '
+                 f'based on <b>BestChange</b> exchange-monitoring data. It tracks <b>{nc}</b> currencies '
+                 f'and <b>{nd}</b> exchange directions; rates are updated <b>hourly</b> '
+                 f'and provided for reference (not an offer).')
+        facts = (f'<span>Currencies: <b>{nc}</b></span><span>Directions: <b>{nd}</b></span>'
+                 f'<span>{updated_str(lang)}</span>'
+                 f'<span><a href="{PREF[lang]}/redakciya/">Methodology &amp; data source →</a></span>')
+    return (f'<section class="trustbar dosborder">'
+            f'<p class="answer tb-intro">{intro}</p>'
+            f'<div class="tb-facts">{facts}</div></section>')
 
 
 METRIKA = """<!-- Yandex.Metrika counter -->
