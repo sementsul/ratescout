@@ -71,7 +71,14 @@ python3 -m http.server 8000 -d dist   # локальное превью (на gi
 - **UC-119: SEO — устранение сирот.** `currency_directions` линкует ВСЕ пары валюты (топ-30 + `<details class="moredirs">` с остальными) → пары получают вх.ссылки со страниц обеих валют. Сироты 11 346→1 (`/app/`). CSS `.moredirs`.
 
 - **UC-120: предохранитель размера репо.** `repo-size-guard.yml` — еженедельно читает size репо (GitHub API) и при ≥400 МБ шлёт алерт в TG (секреты watchdog). Read-only, без force-push. GitHub видит репо как ~3 МБ (server-gc) → запас годы.
-- **UC-133: кнопка очистки истории в алерте + workflow `history-squash.yml`.** В TG-алерте repo-size-guard теперь inline-кнопка-ссылка «🧹 Очистить историю» → страница ручного запуска `history-squash.yml` (workflow_dispatch, поле confirm=SQUASH). Workflow: ставит тег-бэкап `backup/pre-squash-<дата>` на старый HEAD и пушит его, затем orphan-squash (текущее дерево → 1 коммит) с `git push --force-with-lease=main:<OLD>` (если main сдвинулся часовым deploy — push отклонится, история цела) + `[skip ci]` (не триггерит deploy) + TG-уведомление об итоге/ошибке. Своя concurrency-группа `history-squash` (deploy её не отменит). 🔴 Т.к. защита `main` включена (Block force pushes, enforce_admins=ON), перед запуском НУЖНО временно снять «Block force pushes», после — вернуть (это делает человек; встроенный GITHUB_TOKEN админ-настройку не меняет). Кнопка callback не используется — у ratescout нет живого бота-поллера, поэтому именно URL-кнопка на страницу workflow.
+- **UC-133: очистка истории «по кнопке» — алерт + workflow `history-squash.yml`.** В TG-алерте repo-size-guard inline-кнопка-ссылка «🧹 Очистить историю» → страница запуска `history-squash.yml` (workflow_dispatch, confirm=SQUASH; callback-кнопки нет — у ratescout нет живого бота-поллера, поэтому URL на страницу workflow). Workflow полностью автоматический через секрет **`GH_PAT`** (тот же PAT владельца, что у keepalive.yml):
+  1) GET текущей branch-protection (нужен admin-scope у GH_PAT; иначе падаем ДО изменений — история цела);
+  2) PUT `allow_force_pushes=true` (снимает Block force pushes, остальные поля сохраняются через jq-маппинг);
+  3) тег-бэкап `backup/pre-squash-<дата>` на старый HEAD (откат: `git reset --hard <tag>`);
+  4) orphan-squash (текущее дерево → 1 коммит) + `git push --force-with-lease=main:<OLD>` под GH_PAT (`[skip ci]` → не триггерит deploy; force-with-lease → если main сдвинулся часовым deploy, push отклонится);
+  5) `always()` возврат защиты (PUT с исходным allow_force_pushes); при неудаче — 🔴 в TG «включи защиту вручную»;
+  6) TG-уведомление об итоге.
+  Своя concurrency-группа `history-squash` (часовой deploy её не отменит). Секрет **GH_PAT** должен иметь admin-scope на репо (для protection API) — у классического PAT `repo`-scope он есть.
 
 - **Защита ветки `main` (вкл. 2026-08-25).** GitHub branch protection: 🔒 force-push запрещён, 🔒 удаление запрещено, enforce_admins=ON; require PR/checks — ВЫКЛ (иначе умрёт прямой PAT keep-alive пуш кронов). Для ручного squash временно снять «Block force pushes» (см. docs/how-to/repo-size-alert.md).
 
