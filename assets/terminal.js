@@ -968,7 +968,7 @@
     var slugs = Object.keys(DATA.series).sort(byName);
     pickBox.innerHTML =
       '<div class="pick-in">' +
-        '<div class="pick-h"><b>' + T("Валюты на графике", "Currencies on chart") + '</b><button class="pick-x">✕</button></div>' +
+        '<div class="pick-h"><b>' + T("Выбор валют", "Select currencies") + " · " + esc(PTITLE[p.t] || "") + '</b><button class="pick-x">✕</button></div>' +
         '<input class="pick-search" placeholder="' + T("поиск…", "search…") + '" autocomplete="off">' +
         '<div class="pick-presets"><button data-g="top">' + T("Топ-крипта", "Top crypto") + '</button><button data-g="stable">' + T("Стейблы", "Stables") + '</button><button data-g="fiat">' + T("Фиат", "Fiat") + '</button><button data-g="clr">' + T("Очистить", "Clear") + "</button></div>" +
         '<div class="pick-list"></div>' +
@@ -996,9 +996,11 @@
     renderList("");
     searchEl.addEventListener("input", function () { renderList(searchEl.value); });
     Array.prototype.forEach.call(pickBox.querySelectorAll(".pick-presets button"), function (b) {
-      b.addEventListener("click", function () {
+      b.addEventListener("click", function (e) {
+        e.preventDefault();
         var g = b.getAttribute("data-g");
-        if (g === "clr") chosen = {}; else groupSlugs(g).forEach(function (s) { chosen[s] = 1; });
+        chosen = {}; // группа/очистка ЗАМЕНЯЮТ выбор (иначе «Стейблы»/«Фиат» лишь доклеиваются и не переключают)
+        if (g !== "clr") groupSlugs(g).forEach(function (s) { chosen[s] = 1; });
         renderList(searchEl.value);
       });
     });
