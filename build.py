@@ -3905,6 +3905,8 @@ def render_glossary(lang):
         see_html = ("".join(f'<li><a href="{PREF[lang]}/slovar/{s["slug"]}/">{_gterm(s, lang)}</a></li>' for s in see))
         seeh = ("См. также" if lang == "ru" else "See also")
         allh = ("Все термины" if lang == "ru" else "All terms")
+        morh = ("Подробнее" if lang == "ru" else "In more detail")
+        ext = t.get("ext_" + lang, "")
         title = f"{term} — что это простыми словами | {S['name']}" if lang == "ru" else f"{term} — meaning explained | {S['name']}"
         desc = (dfn[:155]).rsplit(" ", 1)[0] + "…"
         dt_ld = jsonld({"@context": "https://schema.org", "@type": "DefinedTerm", "name": term,
@@ -3920,6 +3922,7 @@ def render_glossary(lang):
     <nav class="crumbs"><a href="{PREF[lang]}/">{tr(lang,'monitor')}</a> / <a href="{PREF[lang]}/slovar/">{'Словарь' if lang=='ru' else 'Glossary'}</a> / {term}</nav>
     <h1>{term}</h1>
     <div class="dosblue dosborder">{dfn}</div>
+    {f'<h2 class="news">{morh}</h2><p>{ext}</p>' if ext else ''}
     {f'<h2 class="news">{seeh}</h2><ul class="dlist">{see_html}</ul>' if see_html else ''}
     <p class="related"><a href="{PREF[lang]}/slovar/">← {allh}</a> · <a href="{PREF[lang]}/faq/">{tr(lang,'nav_faq')}</a> · <a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></p>
   </div>
@@ -4197,7 +4200,9 @@ def compliance_pages(lang):
 <li>если контрагент незнаком.</li></ul>
 <h2>Как проверить</h2>
 <p>Полноценный AML-скоринг (миксеры, скам, даркнет) выполняют специализированные сервисы анализа блокчейна.
-   Ниже — наша <b>базовая</b> проверка: формат адреса и официальный санкционный список OFAC.</p>""" + aml_checker(lang),
+   Ниже — наша <b>базовая</b> проверка: формат адреса и официальный санкционный список OFAC.</p>
+<p>Статус и детали конкретного перевода удобно проверять по его хэшу (TxID) в обозревателе сети — как это сделать,
+   разобрано в статье <a href="/blog/kak-proverit-tranzakciyu-txid/">Как проверить транзакцию по TxID</a>.</p>""" + aml_checker(lang),
                     "AML-проверка")
         render_page(lang, "raskrytie", "Раскрытие информации и дисклеймеры",
                     "Партнёрское раскрытие и правовая информация RateScout.",
