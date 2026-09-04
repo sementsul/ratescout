@@ -976,12 +976,16 @@
   if (mqMobile.addEventListener) mqMobile.addEventListener("change", onModeChange); else if (mqMobile.addListener) mqMobile.addListener(onModeChange);
   var rzTimer = null, lastW = window.innerWidth;
   window.addEventListener("resize", function () {
-    // на мобиле показ/скрытие адресной строки меняет ТОЛЬКО высоту и шлёт resize —
-    // перерисовывать не надо (иначе пересборка DOM прыгает страницу наверх). Реагируем лишь на смену ширины.
-    if (window.innerWidth === lastW) return;
-    lastW = window.innerWidth;
+    // МОБИЛА: показ/скрытие адресной строки шлёт resize и слегка меняет размеры. Перерисовка тут запрещена —
+    // renderAll() пересобирает DOM, меняет высоту → браузер снова дёргает панель → петля и прыжки страницы вверх.
+    // Потоковой (столбиком) мобильной раскладке ресайз не нужен; поворот ловим отдельно (orientationchange).
+    if (isMobile()) return;
+    var w = window.innerWidth;
+    if (Math.abs(w - lastW) < 24) return; // мелкий джиттер ширины игнорируем
+    lastW = w;
     clearTimeout(rzTimer); rzTimer = setTimeout(function () { renderAll(); }, 200);
   });
+  window.addEventListener("orientationchange", function () { clearTimeout(rzTimer); rzTimer = setTimeout(function () { lastW = window.innerWidth; renderAll(); }, 300); });
 
   // если стартуем в классическом виде — покажем его сразу, терминал подгрузим лениво
   if (initialView() === "classic") { root.className = "th-bloomberg"; if (classicEl) classicEl.style.display = ""; if (btnClassic) btnClassic.classList.add("on"); if (btnTerm) btnTerm.classList.remove("on"); }
