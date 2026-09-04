@@ -76,7 +76,7 @@ BLOG_PER_PAGE = 6            # статей на страницу блога (п
 # Версии ассетов для кеш-бастинга (хеш содержимого) — заполняется в main() до рендера.
 # Стабильный путь /assets/app.js кешируется браузером; ?v=<hash> меняется только при
 # изменении файла и заставляет подхватить новую версию (важно для ежечасных пересборок).
-VER = {"css": "", "js": "", "cat": "", "mon": ""}
+VER = {"css": "", "js": "", "cat": "", "mon": "", "alert": "", "term": ""}
 
 
 def _h(s):
@@ -4778,14 +4778,23 @@ def make_monitor_json():
         c = info.get("category", "")
         cs = CAT_SLUG.get(c, "prochee")
         present.add(c)
-        cur[slug] = {"n": info.get("name", slug), "t": info.get("ticker", ""), "cs": cs}
+        entry = {"n": info.get("name", slug), "t": info.get("ticker", ""), "cs": cs}
+        # id/num — чтобы терминал мог собрать affiliate-ссылку BestChange для пар без своей страницы (см. bc_link)
+        if info.get("id") is not None:
+            entry["id"] = info["id"]
+        if info.get("num"):
+            entry["num"] = info["num"]
+        cur[slug] = entry
     # категории (в порядке CATS), только те, что реально есть среди валют монитора, с локализ. названиями
     cats = [{"s": CAT_SLUG.get(c, "prochee"), "ru": cat_name(c, "ru"), "en": cat_name(c, "en")}
             for c in CATS if c in present]
+    # «ядровые» пары (страницы /obmen/<from>-<to>/ есть в обеих локалях) — для кнопки «открыть на сайте»
+    pairs = ["%s-%s" % (p["from"], p["to"]) for p in PAIR_PAGES if p["from"] in HISTORY and p["to"] in HISTORY]
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
-        json.dump({"unit": "USDT", "cur": cur, "cats": cats, "series": HISTORY}, f, ensure_ascii=False, separators=(",", ":"))
-    print("✅ data/monitor.json: %d валют, %d категорий" % (len(cur), len(cats)))
+        json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs, "series": HISTORY},
+                  f, ensure_ascii=False, separators=(",", ":"))
+    print("✅ data/monitor.json: %d валют, %d категорий, %d ядровых пар" % (len(cur), len(cats), len(pairs)))
 
 
 def render_alert(lang):
@@ -4835,11 +4844,19 @@ def render_monitor(lang):
     desc = L("Монитор курсов: графики валют на одной шкале, выбор базовой валюты (по умолчанию доллар), линии или свечи, выбор валют галочками — RateScout.",
              "Rate monitor: currency charts on one scale, base currency (USD by default), lines or candles, pick currencies with checkboxes — RateScout.")
     h1 = L("Профессиональный монитор курсов", "Professional rate monitor")
-    lead = L("Графики валют на одной шкале. Выберите базовую валюту (по умолчанию доллар), тип отображения (линии или свечи) и отметьте нужные валюты справа.",
-             "Currency charts on one scale. Pick the base currency (USD by default), display type (lines or candles) and check currencies on the right.")
+    lead = L("Биржевой терминал: несколько панелей (графики, watchlist, лидеры роста/падения, тепловая карта), которые можно двигать, менять размер и сохранять. Или классический вид — все валюты на одном графике.",
+             "Trading-terminal view: several panels (charts, watchlist, top movers, heatmap) you can drag, resize and save. Or the classic view — all currencies on one chart.")
     body = f"""
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
+  <div class="mon-mode">
+    <button id="modeTerm" class="on" type="button">⊞ {L('Терминал','Terminal')}</button>
+    <button id="modeClassic" type="button">{L('Классика','Classic')}</button>
+  </div>
+  <div id="terminal">
+    <div id="termBar" class="term-bar"></div>
+    <div id="termCanvas"></div>
+  </div>
   <div id="monitor" class="mon-wrap">
     <div class="mon-main">
       <div class="mon-ctl">
@@ -4869,6 +4886,7 @@ def render_monitor(lang):
     </aside>
   </div>
   <script src="/assets/monitor.js?v={VER['mon']}"></script>
+  <script src="/assets/terminal.js?v={VER['term']}"></script>
 """
     render_page(lang, "monitor", title, desc, body, h1)
 
@@ -4920,6 +4938,7 @@ def main():
     VER["cat"] = _h(catjs)
     VER["mon"] = _h(open(os.path.join(ROOT, "assets", "monitor.js"), encoding="utf-8").read())
     VER["alert"] = _h(open(os.path.join(ROOT, "assets", "alert.js"), encoding="utf-8").read())
+    VER["term"] = _h(open(os.path.join(ROOT, "assets", "terminal.js"), encoding="utf-8").read())
     for _s in CUR:
         _hh = HISTORY.get(_s, [])
         if len(_hh) >= 2:

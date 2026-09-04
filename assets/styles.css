@@ -336,3 +336,142 @@ summary{cursor:pointer;color:#ffff55}
 .moredirs>summary{cursor:pointer;color:#55ffff;padding:4px 0}
 .moredirs>summary:hover{background:#00aaaa;color:#111}
 .moredirs .dlist{margin-top:8px}
+
+/* ============ ТЕРМИНАЛ (многопанельный монитор) ============ */
+.mon-mode{display:flex;gap:6px;margin:10px 0 4px}
+.mon-mode button{font:inherit;cursor:pointer;padding:6px 14px;border:1px solid #245;background:#0a0f14;color:#7cf;border-radius:4px}
+.mon-mode button.on{background:#00aaaa;color:#04121a;border-color:#00aaaa;font-weight:bold}
+#terminal{display:none}
+#terminal.term{display:block}
+.term-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 10px;margin:4px 0;border-radius:4px}
+.term-bar .tb-grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.term-bar .tb-right{margin-left:auto}
+.term-bar .tb-l{font-size:.78rem;opacity:.85}
+.tb-btn,.tb-sel{font:inherit;font-size:.8rem;cursor:pointer;padding:5px 10px;border-radius:3px;border:1px solid;background:transparent}
+.tb-sel{padding:4px 6px}
+#termCanvas{position:relative;width:100%;border-radius:4px;min-height:560px}
+.term-win{position:absolute;display:flex;flex-direction:column;border:1px solid;border-radius:4px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+.term-win .win-h{display:flex;align-items:center;gap:6px;padding:3px 6px;cursor:grab;user-select:none;flex-wrap:wrap;min-height:26px}
+.term-win .win-t{font-weight:bold;font-size:.78rem;margin-right:2px;white-space:nowrap}
+.term-win .win-ctl{display:flex;align-items:center;gap:4px;margin-left:auto;flex-wrap:wrap}
+.win-b,.win-s{font:inherit;font-size:.72rem;cursor:pointer;padding:2px 6px;border-radius:3px;border:1px solid;background:transparent}
+.win-log{font-size:.72rem;display:inline-flex;align-items:center;gap:3px;cursor:pointer}
+.win-rng{display:inline-flex;gap:1px}
+.win-r{font:inherit;font-size:.68rem;cursor:pointer;padding:2px 5px;border:1px solid transparent;background:transparent;opacity:.7}
+.win-r.on{opacity:1;font-weight:bold;border-radius:3px}
+.win-x{font:inherit;cursor:pointer;background:transparent;border:none;font-size:.85rem;line-height:1;padding:2px 4px;opacity:.8}
+.win-x:hover{opacity:1}
+.term-win .win-body{flex:1;overflow:auto;padding:4px 6px;position:relative}
+.win-rz{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 50%,currentColor 50%);opacity:.4}
+.win-empty{opacity:.6;font-size:.8rem;padding:10px;text-align:center}
+.win-svg{display:block}
+.win-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.72rem;padding:4px 2px 2px}
+.win-lg{display:inline-flex;align-items:center;gap:4px}
+.win-lg i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.win-leg .up,.wl-c.up,.mv-h.up{color:#26d07c}
+.win-leg .dn,.wl-c.dn,.mv-h.dn{color:#ff5c5c}
+.win-tblw{overflow:auto}
+.win-tbl{width:100%;border-collapse:collapse;font-size:.74rem}
+.win-tbl th{text-align:left;font-weight:normal;opacity:.6;padding:2px 6px;position:sticky;top:0}
+.win-tbl td{padding:2px 6px;white-space:nowrap}
+.win-tbl .wl-n b{opacity:.6;font-weight:normal;font-size:.9em}
+.win-tbl .wl-p{text-align:right;font-variant-numeric:tabular-nums}
+.win-tbl .wl-c{text-align:right;font-variant-numeric:tabular-nums}
+.win-tbl .wl-s{width:64px}
+.win-movers{display:flex;gap:8px;height:100%}
+.win-movers .mv-col{flex:1;min-width:0}
+.win-movers .mv-h{font-size:.74rem;font-weight:bold;padding:2px 6px;position:sticky;top:0}
+.win-heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:4px;padding:2px}
+.ht-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border-radius:3px;min-height:48px}
+.ht-t{font-weight:bold;font-size:.76rem}
+.ht-p{font-size:.72rem;opacity:.95}
+/* модалка выбора валют */
+.term-pick{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.pick-in{background:#0c1116;border:2px solid #55ffff;border-radius:6px;width:min(440px,100%);max-height:80vh;display:flex;flex-direction:column;color:#cde}
+.pick-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #234;font-size:.9rem}
+.pick-x{background:transparent;border:none;color:#8ad;cursor:pointer;font-size:1rem}
+.pick-search{margin:8px 12px;padding:6px 8px;background:#060a0e;border:1px solid #245;color:#cde;border-radius:3px;font:inherit}
+.pick-presets{display:flex;flex-wrap:wrap;gap:4px;padding:0 12px 6px}
+.pick-presets button{font:inherit;font-size:.72rem;cursor:pointer;padding:3px 8px;border:1px solid #245;background:#0a0f14;color:#7cf;border-radius:3px}
+.pick-list{overflow:auto;padding:0 12px;flex:1}
+.pick-i{display:block;padding:3px 0;font-size:.82rem;cursor:pointer}
+.pick-i b{opacity:.6;font-weight:normal}
+.pick-f{padding:8px 12px;border-top:1px solid #234;text-align:right}
+.pick-ok{font:inherit;cursor:pointer;padding:6px 16px;background:#00aaaa;color:#04121a;border:none;border-radius:3px;font-weight:bold}
+/* ---- ТЕМА: Bloomberg ---- */
+.th-bloomberg #termCanvas{background:#050608}
+.th-bloomberg .term-bar{background:#0c0f14;border:1px solid #1c2530}
+.th-bloomberg .tb-btn{border-color:#ff9500;color:#ffb000}
+.th-bloomberg .tb-btn:hover{background:#ff9500;color:#08120a}
+.th-bloomberg .tb-sel{border-color:#33455a;color:#cfe;background:#0a1017}
+.th-bloomberg .term-win{background:#0a0d12;border-color:#22303f}
+.th-bloomberg .win-h{background:linear-gradient(#ffb000,#f59e0b);color:#120a00}
+.th-bloomberg .win-h .win-x{color:#120a00}
+.th-bloomberg .win-b,.th-bloomberg .win-s,.th-bloomberg .win-r{border-color:rgba(0,0,0,.35);color:#1a1000}
+.th-bloomberg .win-r.on{background:rgba(0,0,0,.22)}
+.th-bloomberg .win-body{color:#c6d3e0}
+.th-bloomberg .win-grid{stroke:#12202c}
+.th-bloomberg .win-ax{fill:#6f8296}
+/* ---- ТЕМА: DOS-cyan ---- */
+.th-dos #termCanvas{background:#050a0a}
+.th-dos .term-bar{background:#031416;border:1px solid #0a4}
+.th-dos .tb-btn{border-color:#0aa;color:#5ff}
+.th-dos .tb-btn:hover{background:#0aa;color:#012}
+.th-dos .tb-sel{border-color:#0aa;color:#cff;background:#021}
+.th-dos .term-win{background:#04100f;border-color:#0aa}
+.th-dos .win-h{background:#022b2b;color:#5ff}
+.th-dos .win-b,.th-dos .win-s,.th-dos .win-r{border-color:#088;color:#7ee}
+.th-dos .win-r.on{background:#0aa;color:#012}
+.th-dos .win-body{color:#bde}
+.th-dos .win-grid{stroke:#0a2a2a}
+.th-dos .win-ax{fill:#5aa}
+/* ---- ТЕМА: тёмная ---- */
+.th-dark #termCanvas{background:#0b0d10}
+.th-dark .term-bar{background:#12151a;border:1px solid #2a3038}
+.th-dark .tb-btn{border-color:#3a4756;color:#9db4d0}
+.th-dark .tb-btn:hover{background:#2a3644;color:#cfe}
+.th-dark .tb-sel{border-color:#2a3038;color:#cde;background:#12161b}
+.th-dark .term-win{background:#12151a;border-color:#2a3038}
+.th-dark .win-h{background:#1c222b;color:#bcd}
+.th-dark .win-b,.th-dark .win-s,.th-dark .win-r{border-color:#33404e;color:#9db4d0}
+.th-dark .win-r.on{background:#2a3644;color:#dff}
+.th-dark .win-body{color:#c2ccd8}
+.th-dark .win-grid{stroke:#20262e}
+.th-dark .win-ax{fill:#6a7686}
+/* мобильная раскладка: панели столбиком на всю ширину */
+.term.term-mobile #termCanvas{height:auto!important}
+.term-mobile .term-win{position:relative!important;left:auto!important;top:auto!important;width:100%!important;height:auto!important;margin:0 0 10px;box-shadow:none}
+.term-mobile .term-win .win-h{cursor:default}
+.term-mobile .win-chart .win-body,.term-mobile .win-heat .win-body{min-height:220px}
+.term-mobile .win-watch .win-body,.term-mobile .win-movers .win-body{min-height:180px}
+.term-mobile .win-rz{display:none}
+
+/* --- открыть на сайте / клики --- */
+.op-i{opacity:.4;font-size:.85em}
+.op-link{cursor:pointer}
+.op-link:hover{text-decoration:underline}
+.op-link:hover .op-i{opacity:1}
+.win-lg[data-cur],.win-lg[data-pair]{cursor:pointer}
+.win-tbl tr[data-cur],.win-tbl tr[data-pair]{cursor:pointer}
+.win-tbl tr[data-cur]:hover,.win-tbl tr[data-pair]:hover{background:rgba(127,160,200,.12)}
+.wl-n[data-cur]{cursor:pointer}
+.ht-cell[data-cur]{cursor:pointer}
+.ht-cell[data-cur]:hover{outline:1px solid rgba(255,255,255,.5);outline-offset:-1px}
+/* --- муверы без наезда колонок --- */
+.win-movers .win-tbl{table-layout:fixed}
+.win-movers .wl-n{overflow:hidden;text-overflow:ellipsis;max-width:0}
+.win-movers .wl-c{width:62px}
+/* --- скринер --- */
+.scr-f{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding:2px 2px 6px;font-size:.72rem}
+.scr-f input,.scr-f select,.scr-dir{font:inherit;font-size:.72rem;padding:3px 5px;border-radius:3px;border:1px solid rgba(127,140,160,.45);background:transparent;color:inherit}
+.scr-q{flex:1;min-width:90px}
+.scr-chg,.scr-vol{width:54px}
+.scr-fl{display:inline-flex;align-items:center;gap:3px;opacity:.85}
+.scr-dir{cursor:pointer}
+.scr-cnt{opacity:.6;margin-left:auto}
+.win-tbl .wl-v{text-align:right;opacity:.8;font-variant-numeric:tabular-nums}
+/* --- контекстное меню по графику --- */
+.term-menu{position:fixed;z-index:10000;min-width:190px;background:#0c1218;border:1px solid #33455a;border-radius:5px;padding:4px;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+.term-menu button{display:block;width:100%;text-align:left;font:inherit;font-size:.8rem;cursor:pointer;background:transparent;border:none;color:#cfe;padding:6px 10px;border-radius:3px}
+.term-menu button:hover{background:#1b2733}
+.term-menu .tm-sep{height:1px;background:#26323f;margin:4px 6px}
