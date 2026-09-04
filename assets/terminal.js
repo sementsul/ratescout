@@ -235,10 +235,23 @@
   }
   function toggleFull() { if (isFull()) exitFull(); else reqFull(); }
   function onFullChange() {
+    var fe = fsEl();
     var b = bar.querySelector("#tbFull");
-    if (b) b.textContent = (isFull() ? "⤢ " + T("Свернуть", "Exit") : "⛶ " + T("Во весь экран", "Fullscreen"));
-    root.classList.toggle("term-full", isFull());
-    renderAll();
+    if (b) b.textContent = (fe === root ? "⤢ " + T("Свернуть", "Exit") : "⛶ " + T("Во весь экран", "Fullscreen"));
+    root.classList.toggle("term-full", fe === root);
+    var winFullEl = (fe && fe.classList && fe.classList.contains("term-win")) ? fe : null;
+    Array.prototype.forEach.call(canvas.querySelectorAll(".term-win"), function (w) {
+      w.classList.toggle("win-full-on", w === winFullEl);
+      var fb = w.querySelector(".win-full"); if (fb) fb.textContent = (w === winFullEl) ? "⤢" : "⛶";
+    });
+    if (winFullEl) {
+      // одна панель во весь экран — перерисовать только её тело (renderAll() убил бы fullscreen-элемент)
+      var id = +winFullEl.getAttribute("data-id"), p = null;
+      STATE.panels.forEach(function (x) { if (x.id === id) p = x; });
+      if (p) drawBody(p, winFullEl.querySelector(".win-body"));
+    } else {
+      renderAll();
+    }
   }
   document.addEventListener("fullscreenchange", onFullChange);
   document.addEventListener("webkitfullscreenchange", onFullChange);
@@ -291,7 +304,11 @@
     }
     el.innerHTML =
       '<header class="win-h"><span class="win-t">' + esc(PTITLE[p.t]) + "</span>" +
-        '<span class="win-ctl">' + panelControls(p) + '<button class="win-x" title="' + T("Закрыть", "Close") + '">✕</button></span>' +
+        '<span class="win-ctl">' + panelControls(p) + "</span>" +
+        '<span class="win-tools">' +
+          '<button class="win-full" title="' + T("Во весь экран", "Fullscreen") + '">⛶</button>' +
+          '<button class="win-x" title="' + T("Закрыть", "Close") + '">✕</button>' +
+        "</span>" +
       "</header>" +
       '<div class="win-body"></div>' +
       (isMobile() ? "" : '<div class="win-rz" title="' + T("Тянуть — размер", "Drag to resize") + '"></div>');
@@ -340,8 +357,12 @@
     }).join("") + "</span>";
   }
 
+  function winFull(el) { var f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) try { f.call(el); } catch (e) {} }
+  function toggleWinFull(el) { if (fsEl() === el) exitFull(); else winFull(el); }
   function wirePanel(p, el) {
     el.querySelector(".win-x").addEventListener("click", function () { closePanel(p.id); });
+    var full = el.querySelector(".win-full");
+    if (full) full.addEventListener("click", function (e) { e.stopPropagation(); toggleWinFull(el); });
     var body = function () { return el.querySelector(".win-body"); };
     var rng = el.querySelectorAll(".win-r");
     Array.prototype.forEach.call(rng, function (b) {
@@ -423,6 +444,8 @@
     var padL = 52, padR = 10, padT = 10, padB = 22, w = W - padL - padR, h = H - padT - padB;
     if (w < 40 || h < 30) { body.innerHTML = empty("…"); return; }
     var accent = COLORS[0];
+    var bn = cfg.base === "USD" ? "USDT" : (ticker(cfg.base) || "");
+    p._hover = null;
     var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" height="' + H + '" preserveAspectRatio="none" class="win-svg">';
 
     if (cfg.type === "candle") {
@@ -443,6 +466,8 @@
       });
       svg += xlabels(ohlc.map(function (c) { return c.d; }), padL, w, H, padB);
       svg += "</svg>"; body.innerHTML = svg + legendHTML([{ s: sels[0], col: "#26d07c", extra: T("свечи", "candles") }], p); wireOpens(body);
+      p._hover = { kind: "candle", W: W, padL: padL, w: w, ohlc: ohlc, Xi: function (i) { return padL + (ohlc.length === 1 ? w / 2 : i / (ohlc.length - 1) * w); }, name: name(sels[0]), baseName: bn };
+      attachHover(p, body);
       return;
     }
 
@@ -459,6 +484,9 @@
       svg += xlabels(rp.map(function (x) { return x[0]; }), padL, w, H, padB, RX);
       var rpc = (rp[rp.length - 1][1] / rp[0][1] - 1) * 100;
       svg += "</svg>"; body.innerHTML = svg + legendHTML([{ pairAB: sels[0] + "|" + sels[1], col: accent, label: (ticker(sels[0]) || name(sels[0])) + "/" + (ticker(sels[1]) || name(sels[1])), val: fmtNum(rp[rp.length - 1][1]), pc: rpc }], p); wireOpens(body);
+      var rmap = {}; rp.forEach(function (pt) { rmap[pt[0]] = pt[1]; });
+      p._hover = { kind: "line", W: W, padL: padL, w: w, x0: rx0, xs: rxs, Xd: RX, dates: rp.map(function (pt) { return pt[0]; }), dnums: rp.map(function (pt) { return dnum(pt[0]); }), names: [(ticker(sels[0]) || sels[0]) + "/" + (ticker(sels[1]) || sels[1])], cols: [accent], maps: [rmap], baseName: "" };
+      attachHover(p, body);
       return;
     }
 
@@ -485,6 +513,17 @@
       return { s: o.s, col: single ? accent : COLORS[i % COLORS.length], val: single ? fmtNum(last) : Math.round(last), pc: pc };
     });
     body.innerHTML = svg + legendHTML(leg, p); wireOpens(body);
+    var uni = {}; sd.forEach(function (o) { o.pts.forEach(function (pt) { uni[pt[0]] = 1; }); });
+    var udates = Object.keys(uni).sort();
+    p._hover = {
+      kind: "line", W: W, padL: padL, w: w, x0: x0, xs: xs, Xd: function (d) { return X(d); },
+      dates: udates, dnums: udates.map(dnum),
+      names: sd.map(function (o) { return name(o.s); }),
+      cols: sd.map(function (o, i) { return single ? accent : COLORS[i % COLORS.length]; }),
+      maps: sd.map(function (o) { var m = {}; o.pts.forEach(function (pt) { m[pt[0]] = pt[1]; }); return m; }),
+      baseName: bn
+    };
+    attachHover(p, body);
   }
   function areaAndLine(pts, X, sc, col) {
     var line = "", area = "";
@@ -519,6 +558,44 @@
       var oa = it.s ? " data-cur='" + esc(it.s) + "'" : (it.pairAB ? " data-pair='" + esc(it.pairAB) + "'" : "");
       return '<span class="win-lg"' + oa + "><i style=\"background:" + it.col + '"></i>' + esc(lbl) + (it.extra ? " · " + esc(it.extra) : "") + val + pcs + (oa ? " <span class='op-i'>↗</span>" : "") + "</span>";
     }).join("") + "</div>";
+  }
+
+  // таймлайн-курсор: вертикаль + тултип со значениями в наведённой точке
+  function attachHover(p, body) {
+    var svg = body.querySelector("svg"); if (!svg || !p._hover) return;
+    var cross = document.createElement("div"); cross.className = "win-cross"; cross.style.display = "none";
+    var tip = document.createElement("div"); tip.className = "win-tip"; tip.style.display = "none";
+    body.appendChild(cross); body.appendChild(tip);
+    function leave() { cross.style.display = "none"; tip.style.display = "none"; }
+    svg.addEventListener("mousemove", function (e) { onHover(e, p, body, svg, cross, tip); });
+    svg.addEventListener("mouseleave", leave);
+    svg.addEventListener("touchmove", function (e) { if (e.touches && e.touches[0]) onHover(e.touches[0], p, body, svg, cross, tip); });
+  }
+  function onHover(e, p, body, svg, cross, tip) {
+    var H = p._hover; if (!H) return;
+    var sr = svg.getBoundingClientRect(), br = body.getBoundingClientRect();
+    var scale = sr.width / H.W; if (!scale) return;
+    var vbX = (e.clientX - sr.left) / scale, html, cxVp;
+    if (H.kind === "candle") {
+      var n = H.ohlc.length; if (!n) return;
+      var i = n === 1 ? 0 : Math.round((vbX - H.padL) / H.w * (n - 1)); i = Math.max(0, Math.min(n - 1, i));
+      var c = H.ohlc[i]; cxVp = sr.left + H.Xi(i) * scale;
+      var up = c.c >= c.o, col = up ? "#26d07c" : "#ff5c5c";
+      html = '<div class="wt-d">' + fmtDate(c.d) + "." + c.d.slice(0, 4) + '</div><div class="wt-r"><i style="background:' + col + '"></i>' + esc(H.name) + "</div>" +
+        '<div class="wt-o">O ' + fmtNum(c.o) + " · H " + fmtNum(c.h) + "<br>L " + fmtNum(c.l) + " · C " + fmtNum(c.c) + " " + esc(H.baseName) + "</div>";
+    } else {
+      var ds = H.dnums; if (!ds.length) return;
+      var inv = H.x0 + (vbX - H.padL) / H.w * H.xs, bi = 0, bd = Infinity;
+      for (var k = 0; k < ds.length; k++) { var dd = Math.abs(ds[k] - inv); if (dd < bd) { bd = dd; bi = k; } }
+      var date = H.dates[bi]; cxVp = sr.left + H.Xd(date) * scale;
+      var rows = H.names.map(function (nm, j) { var v = H.maps[j][date]; return '<div class="wt-r"><i style="background:' + H.cols[j] + '"></i>' + esc(nm) + " <b>" + (v == null ? "—" : fmtNum(v)) + "</b></div>"; }).join("");
+      html = '<div class="wt-d">' + fmtDate(date) + "." + date.slice(0, 4) + "</div>" + rows + (H.baseName ? '<div class="wt-u">' + esc(H.baseName) + "</div>" : "");
+    }
+    var xPx = cxVp - br.left;
+    cross.style.display = "block"; cross.style.left = xPx.toFixed(1) + "px";
+    tip.innerHTML = html; tip.style.display = "block";
+    var tw = tip.offsetWidth || 140, left = xPx + 12; if (left + tw > br.width) left = xPx - tw - 12; if (left < 2) left = 2;
+    tip.style.left = left.toFixed(1) + "px";
   }
 
   // ----- WATCHLIST -----
@@ -559,7 +636,7 @@
       }).join("") + "</tbody>";
     }
     body.innerHTML =
-      '<div class="win-movers">' +
+      '<div class="movers-wrap">' +
         '<div class="mv-col"><div class="mv-h up">▲ ' + T("Рост", "Gainers") + '</div><table class="win-tbl">' + col(gain) + "</table></div>" +
         '<div class="mv-col"><div class="mv-h dn">▼ ' + T("Падение", "Losers") + '</div><table class="win-tbl">' + col(loss) + "</table></div>" +
       "</div>";
@@ -570,7 +647,7 @@
   function drawHeat(p, body) {
     var slugs = groupSlugs(p.cfg.grp);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
-    body.innerHTML = '<div class="win-heat">' + cells.map(function (c) {
+    body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
       return '<div class="ht-cell" data-cur="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
     }).join("") + "</div>";
     wireOpens(body);
@@ -676,7 +753,7 @@
     items.push({ l: T("Экспорт PNG", "Export PNG"), f: function () { exportChartPNG(p); } });
     menuEl = document.createElement("div"); menuEl.className = "term-menu";
     menuEl.innerHTML = items.map(function (it, i) { return it.sep ? '<div class="tm-sep"></div>' : '<button data-i="' + i + '">' + esc(it.l) + "</button>"; }).join("");
-    document.body.appendChild(menuEl);
+    (fsEl() || document.body).appendChild(menuEl);
     var vw = window.innerWidth, vh = window.innerHeight, mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
     menuEl.style.left = Math.min(x, vw - mw - 4) + "px"; menuEl.style.top = Math.min(y, vh - mh - 4) + "px";
     Array.prototype.forEach.call(menuEl.querySelectorAll("button"), function (b) {
@@ -722,14 +799,20 @@
         '<div class="pick-list"></div>' +
         '<div class="pick-f"><button class="pick-ok">' + T("Готово", "Done") + "</button></div>" +
       "</div>";
-    document.body.appendChild(pickBox);
+    (fsEl() || document.body).appendChild(pickBox);
     var listEl = pickBox.querySelector(".pick-list"), searchEl = pickBox.querySelector(".pick-search");
+    var pbase = p.cfg.base || "USD", prng = p.cfg.range;
     function renderList(q) {
       q = (q || "").toLowerCase().trim();
       var fs = slugs.filter(function (s) { if (!q) return true; var c = DATA.cur[s] || {}; return (s + " " + (c.n || "") + " " + (c.t || "")).toLowerCase().indexOf(q) >= 0; });
-      listEl.innerHTML = fs.map(function (s) {
+      var hd = '<div class="pick-row pick-hd"><span>' + T("Валюта", "Currency") + "</span><span>" + T("Цена", "Price") + "</span><span>Δ%</span><span>" + T("вол%", "vol%") + "</span></div>";
+      listEl.innerHTML = hd + fs.map(function (s) {
         var c = DATA.cur[s] || { n: s, t: "" };
-        return '<label class="pick-i"><input type="checkbox" data-s="' + esc(s) + '"' + (chosen[s] ? " checked" : "") + "> " + esc(c.n) + " <b>" + esc(c.t) + "</b></label>";
+        var last = lastVal(s, pbase), chg = pctChange(s, pbase, prng), vol = volat(s, pbase, prng);
+        return '<label class="pick-i pick-row"><span class="pick-nm"><input type="checkbox" data-s="' + esc(s) + '"' + (chosen[s] ? " checked" : "") + "> " + esc(c.n) + " <b>" + esc(c.t) + "</b></span>" +
+          '<span class="pick-p">' + fmtNum(last) + "</span>" +
+          '<span class="pick-c ' + (chg >= 0 ? "up" : "dn") + '">' + (chg == null ? "—" : fmtPct(chg)) + "</span>" +
+          '<span class="pick-v">' + (vol == null ? "—" : vol.toFixed(1)) + "</span></label>";
       }).join("");
       Array.prototype.forEach.call(listEl.querySelectorAll("input"), function (inp) {
         inp.addEventListener("change", function () { var s = inp.getAttribute("data-s"); if (inp.checked) chosen[s] = 1; else delete chosen[s]; });
