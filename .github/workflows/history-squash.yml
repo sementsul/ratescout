@@ -102,7 +102,9 @@ jobs:
           else
             MSG="⚠️ Очистка истории ${GITHUB_REPOSITORY} НЕ завершилась (см. Actions). История НЕ переписана (или откат по бэкап-тегу)."
           fi
-          [ "${PROT_FAIL:-0}" = "1" ] && MSG="🔴 ${GITHUB_REPOSITORY}: защита ветки НЕ восстановлена автоматически — включи «Block force pushes» вручную! ${MSG}"
+          if [ "${PROT_FAIL:-0}" = "1" ]; then
+            MSG=$(printf '🔴 %s: защита ветки main НЕ восстановлена автоматически! Верни вручную (важно — сейчас force-push разрешён):\n1) Открой https://github.com/%s/settings/branches\n2) У правила ветки main нажми Edit.\n3) Поставь галку «Block force pushes».\n4) (если было) включи «Do not allow bypassing the above settings» — это enforce admins.\n5) Save changes.\n\n%s' "$GITHUB_REPOSITORY" "$GITHUB_REPOSITORY" "$MSG")
+          fi
           curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TG_CHAT}" --data-urlencode "text=${MSG}" \
             -o /dev/null -w "telegram: %{http_code}\n" || true
