@@ -502,3 +502,10 @@ summary{cursor:pointer;color:#ffff55}
 .win-tip .wt-r i{width:8px;height:8px;border-radius:2px;display:inline-block}
 .win-tip .wt-r b{margin-left:auto;padding-left:10px;font-variant-numeric:tabular-nums}
 .win-tip .wt-u,.win-tip .wt-o{opacity:.6;font-size:.66rem;margin-top:2px}
+.win-tip .wt-s{opacity:.55;font-size:.62rem;margin:1px 0 4px 13px;white-space:nowrap}
+.win-tip .wt-r em{margin-left:6px;font-style:normal}
+.win-tip .wt-r em.up{color:#26d07c}.win-tip .wt-r em.dn{color:#ff5c5c}
+/* активный график — с ним взаимодействуют остальные окна */
+.term-win.win-active{box-shadow:0 0 0 2px #ffb000,0 4px 18px rgba(0,0,0,.55)}
+.th-dos .term-win.win-active{box-shadow:0 0 0 2px #0ff,0 4px 18px rgba(0,0,0,.55)}
+.th-dark .term-win.win-active{box-shadow:0 0 0 2px #7aa2f7,0 4px 18px rgba(0,0,0,.55)}

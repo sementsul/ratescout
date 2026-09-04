@@ -100,6 +100,16 @@
     var m = rets.reduce(function (a, b) { return a + b; }, 0) / rets.length;
     return Math.sqrt(rets.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / rets.length) * 100;
   }
+  // метрики ряда по УЖЕ отрисованным точкам [[date,val]]: первый/послед./мин/макс/сред/волат/изм%
+  function statsOf(pts) {
+    if (!pts || pts.length < 2) return null;
+    var v = pts.map(function (p) { return p[1]; });
+    var mn = Math.min.apply(null, v), mx = Math.max.apply(null, v);
+    var first = v[0], last = v[v.length - 1], avg = v.reduce(function (a, b) { return a + b; }, 0) / v.length;
+    var rets = []; for (var i = 1; i < v.length; i++) { if (v[i - 1]) rets.push(v[i] / v[i - 1] - 1); }
+    var vol = null; if (rets.length) { var m = rets.reduce(function (a, b) { return a + b; }, 0) / rets.length; vol = Math.sqrt(rets.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / rets.length) * 100; }
+    return { first: first, last: last, mn: mn, mx: mx, avg: avg, vol: vol, chg: first ? (last / first - 1) * 100 : null };
+  }
 
   // ---------------- ссылки «открыть на сайте» ----------------
   var PREF = EN ? "/en" : "";
@@ -127,9 +137,50 @@
     });
   }
 
+  // ---------------- активный график: другие окна добавляют в него валюты/пары ----------------
+  function chartPanels() { return STATE.panels.filter(function (p) { return p.t === "chart"; }); }
+  function getActiveChart() {
+    var p = STATE.panels.filter(function (x) { return x.id === activeId && x.t === "chart"; })[0];
+    return p || chartPanels()[0] || null;
+  }
+  function markActive() {
+    var a = getActiveChart(); activeId = a ? a.id : null;
+    Array.prototype.forEach.call(canvas.querySelectorAll(".term-win"), function (w) {
+      w.classList.toggle("win-active", a && +w.getAttribute("data-id") === activeId);
+    });
+  }
+  function setActive(id) { var p = STATE.panels.filter(function (x) { return x.id === id; })[0]; if (p && p.t === "chart") { activeId = id; markActive(); } }
+  function addToActiveChart(slug) {
+    if (!DATA.series[slug]) return;
+    var c = getActiveChart();
+    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [slug], base: "USD", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
+    else if (c.cfg.cur.indexOf(slug) < 0) c.cfg.cur.push(slug);
+    activeId = c.id; renderAll(); saveWS();
+  }
+  function setActiveRatio(a, b) {
+    if (!DATA.series[a] || !DATA.series[b]) return;
+    var c = getActiveChart();
+    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [a, b], base: "USD", type: "ratio", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
+    else { c.cfg.cur = [a, b]; c.cfg.type = "ratio"; }
+    activeId = c.id; renderAll(); saveWS();
+  }
+  // навесить «добавить в активный график» на [data-add] (валюта) и [data-addpair] (пара)
+  function wireAdd(el) {
+    Array.prototype.forEach.call(el.querySelectorAll("[data-add]"), function (n) {
+      n.title = T("Добавить в активный график", "Add to active chart"); n.classList.add("op-link");
+      n.addEventListener("click", function (e) { e.stopPropagation(); addToActiveChart(n.getAttribute("data-add")); });
+    });
+    Array.prototype.forEach.call(el.querySelectorAll("[data-addpair]"), function (n) {
+      var ab = n.getAttribute("data-addpair").split("|");
+      n.title = T("Открыть пару в активном графике", "Open pair in active chart"); n.classList.add("op-link");
+      n.addEventListener("click", function (e) { e.stopPropagation(); setActiveRatio(ab[0], ab[1]); });
+    });
+  }
+
   // ---------------- состояние воркспейса ----------------
   var STATE = { theme: "bloomberg", panels: [], seq: 1 };
   var zTop = 10;
+  var activeId = null; // id активного графика — с ним взаимодействуют остальные окна
   var LS_KEY = "rs_term_ws";
 
   function defaultWorkspace() {
@@ -291,6 +342,7 @@
     });
     if (!isMobile()) canvas.style.height = Math.max(availH(), maxB + 24) + "px";
     else canvas.style.height = "auto";
+    markActive();
   }
 
   function renderPanel(p) {
@@ -384,10 +436,13 @@
     if (mode) mode.addEventListener("change", function () { p.cfg.mode = mode.value; renderAll(); saveWS(); });
     var quote = el.querySelector(".win-quote");
     if (quote) quote.addEventListener("change", function () { p.cfg.quote = quote.value; drawBody(p, body()); saveWS(); });
-    if (p.t === "chart") el.addEventListener("contextmenu", function (e) {
-      if (e.target.closest(".win-h")) return; // по шапке — не мешаем
-      e.preventDefault(); openChartMenu(p, e.clientX, e.clientY);
-    });
+    if (p.t === "chart") {
+      el.addEventListener("pointerdown", function () { setActive(p.id); });
+      el.addEventListener("contextmenu", function (e) {
+        if (e.target.closest(".win-h")) return; // по шапке — не мешаем
+        e.preventDefault(); openChartMenu(p, e.clientX, e.clientY);
+      });
+    }
     if (!isMobile()) enableDrag(p, el);
   }
 
@@ -466,7 +521,7 @@
       });
       svg += xlabels(ohlc.map(function (c) { return c.d; }), padL, w, H, padB);
       svg += "</svg>"; body.innerHTML = svg + legendHTML([{ s: sels[0], col: "#26d07c", extra: T("свечи", "candles") }], p); wireOpens(body);
-      p._hover = { kind: "candle", W: W, padL: padL, w: w, ohlc: ohlc, Xi: function (i) { return padL + (ohlc.length === 1 ? w / 2 : i / (ohlc.length - 1) * w); }, name: name(sels[0]), baseName: bn };
+      p._hover = { kind: "candle", W: W, padL: padL, w: w, ohlc: ohlc, Xi: function (i) { return padL + (ohlc.length === 1 ? w / 2 : i / (ohlc.length - 1) * w); }, name: name(sels[0]), baseName: bn, stats: [statsOf(pts)] };
       attachHover(p, body);
       return;
     }
@@ -485,7 +540,7 @@
       var rpc = (rp[rp.length - 1][1] / rp[0][1] - 1) * 100;
       svg += "</svg>"; body.innerHTML = svg + legendHTML([{ pairAB: sels[0] + "|" + sels[1], col: accent, label: (ticker(sels[0]) || name(sels[0])) + "/" + (ticker(sels[1]) || name(sels[1])), val: fmtNum(rp[rp.length - 1][1]), pc: rpc }], p); wireOpens(body);
       var rmap = {}; rp.forEach(function (pt) { rmap[pt[0]] = pt[1]; });
-      p._hover = { kind: "line", W: W, padL: padL, w: w, x0: rx0, xs: rxs, Xd: RX, dates: rp.map(function (pt) { return pt[0]; }), dnums: rp.map(function (pt) { return dnum(pt[0]); }), names: [(ticker(sels[0]) || sels[0]) + "/" + (ticker(sels[1]) || sels[1])], cols: [accent], maps: [rmap], baseName: "" };
+      p._hover = { kind: "line", W: W, padL: padL, w: w, x0: rx0, xs: rxs, Xd: RX, dates: rp.map(function (pt) { return pt[0]; }), dnums: rp.map(function (pt) { return dnum(pt[0]); }), names: [(ticker(sels[0]) || sels[0]) + "/" + (ticker(sels[1]) || sels[1])], cols: [accent], maps: [rmap], baseName: "", stats: [statsOf(rp)] };
       attachHover(p, body);
       return;
     }
@@ -521,7 +576,7 @@
       names: sd.map(function (o) { return name(o.s); }),
       cols: sd.map(function (o, i) { return single ? accent : COLORS[i % COLORS.length]; }),
       maps: sd.map(function (o) { var m = {}; o.pts.forEach(function (pt) { m[pt[0]] = pt[1]; }); return m; }),
-      baseName: bn
+      baseName: bn, stats: sd.map(function (o) { return statsOf(o.pts); })
     };
     attachHover(p, body);
   }
@@ -560,6 +615,12 @@
     }).join("") + "</div>";
   }
 
+  function statLine(st) {
+    if (!st) return "";
+    return '<div class="wt-s">' + T("период", "range") + ": " + (st.chg == null ? "—" : fmtPct(st.chg)) +
+      " · " + T("волат", "vol") + " " + (st.vol == null ? "—" : st.vol.toFixed(1) + "%") +
+      " · min " + fmtNum(st.mn) + " · max " + fmtNum(st.mx) + " · " + T("сред", "avg") + " " + fmtNum(st.avg) + "</div>";
+  }
   // таймлайн-курсор: вертикаль + тултип со значениями в наведённой точке
   function attachHover(p, body) {
     var svg = body.querySelector("svg"); if (!svg || !p._hover) return;
@@ -582,13 +643,18 @@
       var c = H.ohlc[i]; cxVp = sr.left + H.Xi(i) * scale;
       var up = c.c >= c.o, col = up ? "#26d07c" : "#ff5c5c";
       html = '<div class="wt-d">' + fmtDate(c.d) + "." + c.d.slice(0, 4) + '</div><div class="wt-r"><i style="background:' + col + '"></i>' + esc(H.name) + "</div>" +
-        '<div class="wt-o">O ' + fmtNum(c.o) + " · H " + fmtNum(c.h) + "<br>L " + fmtNum(c.l) + " · C " + fmtNum(c.c) + " " + esc(H.baseName) + "</div>";
+        '<div class="wt-o">O ' + fmtNum(c.o) + " · H " + fmtNum(c.h) + "<br>L " + fmtNum(c.l) + " · C " + fmtNum(c.c) + " " + esc(H.baseName) + "</div>" + statLine(H.stats && H.stats[0]);
     } else {
       var ds = H.dnums; if (!ds.length) return;
       var inv = H.x0 + (vbX - H.padL) / H.w * H.xs, bi = 0, bd = Infinity;
       for (var k = 0; k < ds.length; k++) { var dd = Math.abs(ds[k] - inv); if (dd < bd) { bd = dd; bi = k; } }
       var date = H.dates[bi]; cxVp = sr.left + H.Xd(date) * scale;
-      var rows = H.names.map(function (nm, j) { var v = H.maps[j][date]; return '<div class="wt-r"><i style="background:' + H.cols[j] + '"></i>' + esc(nm) + " <b>" + (v == null ? "—" : fmtNum(v)) + "</b></div>"; }).join("");
+      var rows = H.names.map(function (nm, j) {
+        var v = H.maps[j][date], st = H.stats && H.stats[j];
+        var run = (st && st.first && v != null) ? (v / st.first - 1) * 100 : null;
+        var runh = (run == null) ? "" : ' <em class="' + (run >= 0 ? "up" : "dn") + '">' + fmtPct(run) + "</em>";
+        return '<div class="wt-r"><i style="background:' + H.cols[j] + '"></i>' + esc(nm) + " <b>" + (v == null ? "—" : fmtNum(v)) + "</b>" + runh + "</div>" + statLine(st);
+      }).join("");
       html = '<div class="wt-d">' + fmtDate(date) + "." + date.slice(0, 4) + "</div>" + rows + (H.baseName ? '<div class="wt-u">' + esc(H.baseName) + "</div>" : "");
     }
     var xPx = cxVp - br.left;
@@ -608,12 +674,12 @@
     body.innerHTML =
       '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Цена, USDT", "Price, USDT") + "</th><th></th><th>" + T("Δ", "Δ") + "</th></tr></thead><tbody>" +
       rows.map(function (r) {
-        return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + " <b>" + esc(ticker(r.s)) + "</b> <span class='op-i'>↗</span></td>" +
+        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(name(r.s)) + " <b>" + esc(ticker(r.s)) + "</b> <span class='op-i'>📈</span></td>" +
           "<td class='wl-p'>" + fmtNum(r.last) + "</td>" +
           "<td class='wl-s'>" + spark(r.spk, r.pc) + "</td>" +
           "<td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
       }).join("") + "</tbody></table></div>";
-    wireOpens(body);
+    wireAdd(body);
   }
   function spark(pts, pc) {
     if (!pts || pts.length < 2) return "";
@@ -632,7 +698,7 @@
     var n = p.cfg.n || 8, gain = all.slice(0, n), loss = all.slice(-n).reverse();
     function col(list) {
       return "<tbody>" + list.map(function (r) {
-        return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(ticker(r.s) || name(r.s)) + " <span class='op-i'>↗</span></td><td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
+        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(ticker(r.s) || name(r.s)) + " <span class='op-i'>📈</span></td><td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
       }).join("") + "</tbody>";
     }
     body.innerHTML =
@@ -640,7 +706,7 @@
         '<div class="mv-col"><div class="mv-h up">▲ ' + T("Рост", "Gainers") + '</div><table class="win-tbl">' + col(gain) + "</table></div>" +
         '<div class="mv-col"><div class="mv-h dn">▼ ' + T("Падение", "Losers") + '</div><table class="win-tbl">' + col(loss) + "</table></div>" +
       "</div>";
-    wireOpens(body);
+    wireAdd(body);
   }
 
   // ----- ТЕПЛОВАЯ КАРТА -----
@@ -648,9 +714,9 @@
     var slugs = groupSlugs(p.cfg.grp);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
-      return '<div class="ht-cell" data-cur="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
+      return '<div class="ht-cell" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
     }).join("") + "</div>";
-    wireOpens(body);
+    wireAdd(body);
   }
 
   // ----- СКРИНЕР (поиск валют/пар по показателям + открыть на сайте) -----
@@ -682,12 +748,12 @@
           var rets = []; for (var i = 1; i < rp.length; i++) { if (rp[i - 1][1]) rets.push(rp[i][1] / rp[i - 1][1] - 1); }
           vol = null; if (rets.length) { var m = rets.reduce(function (a, b) { return a + b; }, 0) / rets.length; vol = Math.sqrt(rets.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / rets.length) * 100; }
           label = esc(ticker(s) || name(s)) + "/" + esc(ticker(quote) || name(quote));
-          openAttr = "data-pair='" + esc(s) + "|" + esc(quote) + "'";
+          openAttr = "data-addpair='" + esc(s) + "|" + esc(quote) + "'";
         } else {
           last = lastVal(s, "USD"); chg = pctChange(s, "USD", c.range); vol = volat(s, "USD", c.range);
           if (chg == null) return;
           label = esc(name(s)) + (ticker(s) ? " <b>" + esc(ticker(s)) + "</b>" : "");
-          openAttr = "data-cur='" + esc(s) + "'";
+          openAttr = "data-add='" + esc(s) + "'";
         }
         list.push({ s: s, label: label, last: last, chg: chg, vol: vol, oa: openAttr });
       });
@@ -717,9 +783,9 @@
       if (!list.length) { tbl.innerHTML = empty(T("Ничего не найдено", "Nothing found")); return; }
       tbl.innerHTML = '<table class="win-tbl"><thead><tr><th>' + (isPair ? T("Пара", "Pair") : T("Валюта", "Currency")) + "</th><th>" + (isPair ? T("Курс", "Rate") : T("Цена", "Price")) + "</th><th>" + T("Изм%", "Chg%") + "</th><th>" + T("Вол%", "Vol%") + "</th></tr></thead><tbody>" +
         list.map(function (r) {
-          return "<tr " + r.oa + "><td class='wl-n'>" + r.label + " <span class='op-i'>↗</span></td><td class='wl-p'>" + fmtNum(r.last) + "</td><td class='wl-c " + (r.chg >= 0 ? "up" : "dn") + "'>" + fmtPct(r.chg) + "</td><td class='wl-v'>" + (r.vol == null ? "—" : r.vol.toFixed(1)) + "</td></tr>";
+          return "<tr " + r.oa + "><td class='wl-n'>" + r.label + " <span class='op-i'>📈</span></td><td class='wl-p'>" + fmtNum(r.last) + "</td><td class='wl-c " + (r.chg >= 0 ? "up" : "dn") + "'>" + fmtPct(r.chg) + "</td><td class='wl-v'>" + (r.vol == null ? "—" : r.vol.toFixed(1)) + "</td></tr>";
         }).join("") + "</tbody></table>";
-      wireOpens(tbl);
+      wireAdd(tbl);
     }
     body.querySelector(".scr-q").addEventListener("input", function () { c.q = this.value; renderTable(); saveWS(); });
     body.querySelector(".scr-chg").addEventListener("input", function () { c.fchg = this.value; renderTable(); saveWS(); });
@@ -827,7 +893,17 @@
         renderList(searchEl.value);
       });
     });
-    function apply() { p.cfg.cur = Object.keys(chosen).filter(function (s) { return DATA.series[s]; }); pickBox.remove(); pickBox = null; renderAll(); saveWS(); }
+    function apply() {
+      p.cfg.cur = Object.keys(chosen).filter(function (s) { return DATA.series[s]; });
+      pickBox.remove(); pickBox = null;
+      // обновляем панель на месте (не renderAll — иначе вылет из фулскрина)
+      var pel = canvas.querySelector('[data-id="' + p.id + '"]');
+      if (pel) {
+        var pk = pel.querySelector(".win-pick"); if (pk) pk.textContent = "◧ " + T("Валюты", "Currencies") + " (" + p.cfg.cur.length + ")";
+        drawBody(p, pel.querySelector(".win-body"));
+      } else { renderAll(); }
+      saveWS();
+    }
     pickBox.querySelector(".pick-ok").addEventListener("click", apply);
     pickBox.querySelector(".pick-x").addEventListener("click", function () { pickBox.remove(); pickBox = null; });
     pickBox.addEventListener("click", function (e) { if (e.target === pickBox) { pickBox.remove(); pickBox = null; } });
