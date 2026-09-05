@@ -4829,10 +4829,17 @@ def make_monitor_json():
                 if _i.get("num"):
                     _e["num"] = _i["num"]
                 cur[_s] = _e
+    # синтетический плоский ряд для базового USDT (цена в USDT ≡ 1) — чтобы и он строился в графике,
+    # а не выкидывал на страницу сайта (единственная валюта без своего ряда — знаменатель).
+    ser_out = dict(HISTORY)
+    _axis = max(HISTORY.values(), key=len) if HISTORY else []
+    for _s in list(cur):
+        if _s not in ser_out and (cur[_s].get("t") or "").upper() == "USDT":
+            ser_out[_s] = [[d, 1.0] for d, _v in _axis]
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
         json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs,
-                   "popular": POPULAR, "trending": TRENDING, "yandex": YANDEX_Q, "metrika": METRIKA_Q, "series": HISTORY},
+                   "popular": POPULAR, "trending": TRENDING, "yandex": YANDEX_Q, "metrika": METRIKA_Q, "series": ser_out},
                   f, ensure_ascii=False, separators=(",", ":"))
     print("✅ data/monitor.json: %d валют, %d кат., %d пар, %d GSC-напр., %d трендов, %d Яндекс-запр., %d Метрика-фраз"
           % (len(cur), len(cats), len(pairs), len(POPULAR), len(TRENDING), len(YANDEX_Q), len(METRIKA_Q)))
