@@ -4977,14 +4977,30 @@ def make_cli_pages():
             for i in range(0, len(items), 6):
                 L.append("  " + "".join(tile(r, per) for r in items[i:i + 6]))
         wr(f"heat-{per}.txt", L + foot())
-        sc = sorted([r for r in rows if r["c"][per] is not None], key=lambda r: r["c"][per], reverse=True)
-        g, l = sc[:15], list(reversed(sc[-15:]))
-        M = head(f"лидеры движения · {lbl}") + [f"  {G}> ЛИДЕРЫ РОСТА{R}"] + [ml(r, per) for r in g] + ["", f"  {RED}> ЛИДЕРЫ ПАДЕНИЯ{R}"] + [ml(r, per) for r in l]
+        M = head(f"движение · все валюты по типам (сорт. по изм.) · {lbl}")
+        for c in cat_order:
+            items = by_cat.get(c, [])
+            if c == "Криптовалюты":
+                items = dedup(sorted(items, key=lambda r: r["rank"]))
+            items = [r for r in items if r["c"][per] is not None]
+            items.sort(key=lambda r: r["c"][per], reverse=True)
+            if not items:
+                continue
+            M += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
+            M += [ml(r, per) for r in items]
         wr(f"movers-{per}.txt", M + foot())
 
     def wl(r):
         return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
-    wr("watch.txt", head("watchlist · топ-крипта") + [wl(r) for r in crypto[:20]] + foot())
+    WL = head("watchlist · все валюты по типам")
+    for c in cat_order:
+        items = by_cat.get(c, [])
+        items = dedup(sorted(items, key=lambda r: r["rank"])) if c == "Криптовалюты" else sorted(items, key=lambda r: (r["name"] or ""))
+        if not items:
+            continue
+        WL += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
+        WL += [wl(r) for r in items]
+    wr("watch.txt", WL + foot())
 
     for fn in ("rs.ps1", "rs.sh"):
         src = os.path.join(ROOT, "console", fn)
