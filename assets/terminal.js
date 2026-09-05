@@ -1092,6 +1092,21 @@
     e.preventDefault(); e.stopPropagation();
     openCurMenu(slug, el.getAttribute("data-tname") || "", e.clientX, e.clientY);
   }, true);
+
+  // ЛКМ по пустому месту (кроме графика, контролов и названий валют/направлений) →
+  // открыть пикер выбора валют для активного графика.
+  function openPickerForActive() {
+    var p = getActiveChart();
+    if (!p) { p = { id: STATE.seq++, t: "chart", cfg: { cur: [], base: "USD", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(p); activeId = p.id; renderAll(); }
+    var el = canvas.querySelector('[data-id="' + p.id + '"]');
+    if (el) openPicker(p, el);
+  }
+  canvas.addEventListener("click", function (e) {
+    if (isMobile()) return;
+    // пропускаем: сам график (окно), шапки/ресайз/крестовину, контролы, валюты/направления/фразы
+    if (e.target.closest("button,select,input,label,a,.win-chart,.win-h,.win-rz,.tile-cross,.op-link,[data-cur],[data-add],[data-tslug],[data-a],[data-pair],[data-addpair],[data-yq]")) return;
+    openPickerForActive();
+  });
   function exportChartCSV(p) {
     var sels = p.cfg.cur.filter(function (s) { return DATA.series[s]; }); if (!sels.length) return;
     var uni = {}, maps = sels.map(function (s) { var m = {}; rangeFilter(rebased(s, p.cfg.base), p.cfg.range).forEach(function (pt) { m[pt[0]] = pt[1]; uni[pt[0]] = 1; }); return m; });
