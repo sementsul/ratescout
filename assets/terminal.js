@@ -201,7 +201,7 @@
         { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "USD", type: "line", range: 365, log: false }, g: [8, 8, 560, 340] },
         { t: "watch", cfg: { grp: "top", range: 30 }, g: [576, 8, 360, 340] },
         { t: "movers", cfg: { range: 30, n: 8 }, g: [8, 356, 360, 320] },
-        { t: "heat", cfg: { grp: "top", range: 30 }, g: [376, 356, 560, 320] }
+        { t: "heat", cfg: { grp: "all", range: 30 }, g: [376, 356, 560, 320] }
       ]
     };
   }
@@ -333,7 +333,7 @@
     if (t === "chart") cfg = { cur: groupSlugs("top").slice(0, 3), base: "USD", type: "line", range: 365, log: false };
     else if (t === "watch") cfg = { grp: "top", range: 30 };
     else if (t === "movers") cfg = { range: 30, n: 8 };
-    else if (t === "heat") cfg = { grp: "top", range: 30 };
+    else if (t === "heat") cfg = { grp: "all", range: 30 };
     else if (t === "screen") cfg = { mode: "cur", quote: findQuote(), range: 30, sort: "chg", dir: -1, fchg: "", fvol: "", q: "" };
     else if (t === "demand") cfg = { view: "dir" };
     else return;
@@ -1275,7 +1275,7 @@
         { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "USD", type: "line", range: 365, log: false }, g: gg[0] },
         { t: "watch", cfg: { grp: "top", range: 30 }, g: gg[1] },
         { t: "movers", cfg: { range: 30, n: 8 }, g: gg[2] },
-        { t: "heat", cfg: { grp: "top", range: 30 }, g: gg[3] }
+        { t: "heat", cfg: { grp: "all", range: 30 }, g: gg[3] }
       ];
     } else if (name === "charts2") {
       var g2 = grid2([[0, 0], [1, 0]]);
@@ -1291,7 +1291,7 @@
       P = [
         { t: "watch", cfg: { grp: "top", range: 30 }, g: [g, g, cellW, 650] },
         { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 3), base: "USD", type: "line", range: 365, log: false }, g: [g * 2 + cellW, g, cellW, 320] },
-        { t: "heat", cfg: { grp: "top", range: 30 }, g: [g * 2 + cellW, g * 2 + 320, cellW, 322] }
+        { t: "heat", cfg: { grp: "all", range: 30 }, g: [g * 2 + cellW, g * 2 + 320, cellW, 322] }
       ];
     }
     if (!P.length) return;
