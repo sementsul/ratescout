@@ -1,16 +1,16 @@
-# RateScout — интерактивный консольный монитор курсов (Windows PowerShell).
-# Клавиши: h — тепловая карта, w — watchlist, m — лидеры; период 1/2/3 = 24ч/7д/30д; r — обновить; q — выход.
-# Скрипт только СКАЧИВАЕТ готовые текстовые страницы с ratescout.ru и печатает их. Ничего не ставит,
-# не меняет файлы, не собирает данные. Открытый исходник: https://ratescout.ru/cli/rs.ps1
+# RateScout - interactive console rate monitor (Windows PowerShell).
+# Keys: h heatmap, w watchlist, m movers; period 1/2/3 = 24h/7d/30d; r refresh, q quit.
+# It only DOWNLOADS ready-made text pages from ratescout.ru and prints them. No install, no code from data.
+# Source: https://ratescout.ru/cli/rs.ps1
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 $base = "https://ratescout.ru/cli"; $view = "heat"; $period = "24h"
+$wc = New-Object System.Net.WebClient; $wc.Encoding = [System.Text.Encoding]::UTF8
 try { [Console]::CursorVisible = $false } catch {}
 try {
   while ($true) {
     $p = if ($view -eq "watch") { "watch" } else { "$view-$period" }
     Clear-Host
-    try { Write-Host (Invoke-RestMethod "$base/$p.txt" -TimeoutSec 20) }
-    catch { Write-Host "  нет связи — нажмите r, чтобы повторить" }
-    Write-Host "`n [h]хитмап  [w]watchlist  [m]муверы    период: [1]24ч [2]7д [3]30д    [r]обновить  [q]выход" -ForegroundColor DarkGray
+    try { Write-Host ($wc.DownloadString("$base/$p.txt")) } catch { Write-Host "  no connection - press r to retry" }
     $k = [Console]::ReadKey($true).KeyChar
     switch ($k) {
       'h' { $view = "heat" } 'w' { $view = "watch" } 'm' { $view = "movers" }

@@ -4939,7 +4939,9 @@ def make_cli_pages():
         return [CY + "=" * 79 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 79 + R, ""]
 
     def foot():
-        return ["", f"  {GR}BestChange (цены в USDT), обновление ежечасно · полный монитор: ratescout.ru/monitor · 18+{R}"]
+        return ["", CY + "=" * 79 + R,
+                f"  {W}[h]{GR}тепл.карта  {W}[w]{GR}watchlist  {W}[m]{GR}лидеры    период {W}[1]{GR}24ч {W}[2]{GR}7д {W}[3]{GR}30д    {W}[r]{GR}обновить  {W}[q]{GR}выход{R}",
+                f"  {GR}BestChange (цены в USDT), ежечасно · полный монитор: ratescout.ru/monitor · 18+{R}"]
 
     cdir = os.path.join(DIST, "cli")
     os.makedirs(cdir, exist_ok=True)
