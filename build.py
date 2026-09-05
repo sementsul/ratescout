@@ -4790,11 +4790,25 @@ def make_monitor_json():
             for c in CATS if c in present]
     # «ядровые» пары (страницы /obmen/<from>-<to>/ есть в обеих локалях) — для кнопки «открыть на сайте»
     pairs = ["%s-%s" % (p["from"], p["to"]) for p in PAIR_PAGES if p["from"] in HISTORY and p["to"] in HISTORY]
+    # popular.json (GSC): спрос из поиска по направлениям {"from>to": clicks}. Добавляем имена/id слугов,
+    # которых нет среди валют монитора (фиат/платёжки), — чтобы панель «Спрос» показывала названия и ссылки.
+    for _key in POPULAR:
+        for _s in _key.split(">"):
+            if _s not in cur:
+                _i = CUR.get(_s) or {}
+                _e = {"n": _i.get("name", _s), "t": _i.get("ticker", "")}
+                if _i.get("id") is not None:
+                    _e["id"] = _i["id"]
+                if _i.get("num"):
+                    _e["num"] = _i["num"]
+                cur[_s] = _e
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
-        json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs, "series": HISTORY},
+        json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs,
+                   "popular": POPULAR, "series": HISTORY},
                   f, ensure_ascii=False, separators=(",", ":"))
-    print("✅ data/monitor.json: %d валют, %d категорий, %d ядровых пар" % (len(cur), len(cats), len(pairs)))
+    print("✅ data/monitor.json: %d валют, %d категорий, %d ядровых пар, %d поисковых направлений"
+          % (len(cur), len(cats), len(pairs), len(POPULAR)))
 
 
 def render_alert(lang):

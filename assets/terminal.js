@@ -237,6 +237,7 @@
         '<button class="tb-btn tb-add" data-t="movers">+ ' + T("Муверы", "Movers") + "</button>" +
         '<button class="tb-btn tb-add" data-t="heat">+ ' + T("Хитмап", "Heatmap") + "</button>" +
         '<button class="tb-btn tb-add" data-t="screen">+ ' + T("Скринер", "Screener") + "</button>" +
+        '<button class="tb-btn tb-add" data-t="demand">+ ' + T("Спрос", "Demand") + "</button>" +
       "</div>" +
       '<div class="tb-grp">' +
         '<label class="tb-l">' + T("Раскладка", "Layout") + ': <select class="tb-sel" id="tbLayout">' +
@@ -319,7 +320,7 @@
   function availH() { return isFull() ? Math.max(400, (window.innerHeight || 800) - (bar.offsetHeight || 44) - 20) : 560; }
 
   // ---------------- панели ----------------
-  var PTITLE = { chart: T("График", "Chart"), watch: "Watchlist", movers: T("Муверы", "Movers"), heat: T("Тепловая карта", "Heatmap"), screen: T("Скринер", "Screener") };
+  var PTITLE = { chart: T("График", "Chart"), watch: "Watchlist", movers: T("Муверы", "Movers"), heat: T("Тепловая карта", "Heatmap"), screen: T("Скринер", "Screener"), demand: T("Спрос из поиска", "Search demand") };
   function nextPos() { var n = STATE.panels.length; return [24 + (n % 4) * 28, 24 + (n % 4) * 28, 440, 300]; }
   function addPanel(t) {
     var cfg;
@@ -328,8 +329,9 @@
     else if (t === "movers") cfg = { range: 30, n: 8 };
     else if (t === "heat") cfg = { grp: "top", range: 30 };
     else if (t === "screen") cfg = { mode: "cur", quote: findQuote(), range: 30, sort: "chg", dir: -1, fchg: "", fvol: "", q: "" };
+    else if (t === "demand") cfg = { view: "dir" };
     else return;
-    STATE.panels.push({ id: STATE.seq++, t: t, cfg: cfg, g: t === "screen" ? [24, 24, 560, 420] : nextPos() });
+    STATE.panels.push({ id: STATE.seq++, t: t, cfg: cfg, g: (t === "screen" || t === "demand") ? [24, 24, 480, 380] : nextPos() });
     renderAll(); saveWS();
   }
   function findQuote() { // slug для котировки по умолчанию (USDT), иначе первый доступный стейбл/любой
@@ -484,6 +486,12 @@
           '<option value="pair"' + (p.cfg.mode === "pair" ? " selected" : "") + ">" + T("Пары к B", "Pairs vs B") + "</option>" +
         "</select>" + q + rangeTabs(p.cfg.range);
     }
+    if (p.t === "demand") {
+      return '<select class="win-s win-view">' +
+          '<option value="dir"' + (p.cfg.view === "dir" ? " selected" : "") + ">" + T("Направления", "Directions") + "</option>" +
+          '<option value="cur"' + (p.cfg.view === "cur" ? " selected" : "") + ">" + T("Валюты", "Currencies") + "</option>" +
+        "</select>";
+    }
     return "";
   }
   function rangeTabs(cur) {
@@ -521,6 +529,8 @@
     if (pick) pick.addEventListener("click", function () { openPicker(p, el); });
     var mode = el.querySelector(".win-mode");
     if (mode) mode.addEventListener("change", function () { p.cfg.mode = mode.value; renderAll(); saveWS(); });
+    var view = el.querySelector(".win-view");
+    if (view) view.addEventListener("change", function () { p.cfg.view = view.value; drawBody(p, body()); saveWS(); });
     var quote = el.querySelector(".win-quote");
     if (quote) quote.addEventListener("change", function () { p.cfg.quote = quote.value; drawBody(p, body()); saveWS(); });
     if (p.t === "chart") {
@@ -595,6 +605,7 @@
     else if (p.t === "movers") drawMovers(p, body);
     else if (p.t === "heat") drawHeat(p, body);
     else if (p.t === "screen") drawScreen(p, body);
+    else if (p.t === "demand") drawDemand(p, body);
   }
   function empty(msg) { return '<p class="win-empty">' + esc(msg) + "</p>"; }
 
@@ -901,6 +912,27 @@
     body.querySelector(".scr-sort").addEventListener("change", function () { c.sort = this.value; renderTable(); saveWS(); });
     body.querySelector(".scr-dir").addEventListener("click", function () { c.dir = c.dir < 0 ? 1 : -1; this.textContent = c.dir < 0 ? "↓" : "↑"; renderTable(); saveWS(); });
     renderTable();
+  }
+
+  // ----- СПРОС ИЗ ПОИСКА (Google Search Console: популярные направления/валюты) -----
+  function drawDemand(p, body) {
+    var pop = DATA.popular || {}, keys = Object.keys(pop);
+    if (!keys.length) { body.innerHTML = empty(T("Данных поиска пока мало — накапливаются из Google Search Console.", "Little search data yet — accumulating from Google Search Console.")); return; }
+    var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). ↗ — открыть на сайте.", "From Google search (clicks). ↗ — open on site.") + "</p>";
+    if (p.cfg.view === "cur") {
+      var agg = {};
+      keys.forEach(function (k) { var c = pop[k]; k.split(">").forEach(function (s) { agg[s] = (agg[s] || 0) + c; }); });
+      var rows = Object.keys(agg).map(function (s) { return { s: s, c: agg[s] }; }).sort(function (a, b) { return b.c - a.c; });
+      body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
+        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>↗</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        "</tbody></table></div>";
+    } else {
+      var drows = keys.map(function (k) { var ab = k.split(">"); return { a: ab[0], b: ab[1], c: pop[k] }; }).sort(function (x, y) { return y.c - x.c; });
+      body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Направление", "Direction") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
+        drows.map(function (r) { return "<tr><td class='wl-n' data-pair='" + esc(r.a) + "|" + esc(r.b) + "'>" + esc(name(r.a)) + " → " + esc(name(r.b)) + " <span class='op-i'>↗</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        "</tbody></table></div>";
+    }
+    wireOpens(body);
   }
 
   // ---------------- контекстное меню по графику (правый клик) ----------------
