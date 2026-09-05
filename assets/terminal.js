@@ -1031,6 +1031,10 @@
     items.push({ l: T("Выбрать валюты…", "Pick currencies…"), f: function () { var el = canvas.querySelector('[data-id="' + p.id + '"]'); openPicker(p, el); } });
     items.push({ l: T("Экспорт CSV", "Export CSV"), f: function () { exportChartCSV(p); } });
     items.push({ l: T("Экспорт PNG", "Export PNG"), f: function () { exportChartPNG(p); } });
+    showMenu(items, x, y);
+  }
+  // общая отрисовка контекстного меню
+  function showMenu(items, x, y) {
     menuEl = document.createElement("div"); menuEl.className = "term-menu";
     menuEl.innerHTML = items.map(function (it, i) { return it.sep ? '<div class="tm-sep"></div>' : '<button data-i="' + i + '">' + esc(it.l) + "</button>"; }).join("");
     (fsEl() || document.body).appendChild(menuEl);
@@ -1041,6 +1045,53 @@
     });
     setTimeout(function () { document.addEventListener("click", closeMenu); }, 0);
   }
+  function webSearch(engine, q) {
+    var t = encodeURIComponent(q);
+    openUrl(engine === "g" ? "https://www.google.com/search?q=" + t : "https://yandex.ru/search/?text=" + t);
+  }
+  // меню по одной валюте (правый клик в любом окне)
+  function openCurMenu(slug, dispName, x, y) {
+    closeMenu();
+    var ours = !!(slug && DATA.cur[slug]), q = ours ? name(slug) : (dispName || slug);
+    var items = [];
+    if (chartableCur(slug)) items.push({ l: "📈 " + T("Открыть в графике", "Open in chart"), f: function () { addToActiveChart(slug); } });
+    if (ours) items.push({ l: "↗ " + T("Страница валюты на сайте", "Currency page on site"), f: function () { openUrl(curUrl(slug)); } });
+    items.push({ sep: 1 });
+    items.push({ l: "🔍 Google: " + q, f: function () { webSearch("g", q + " курс криптовалюта"); } });
+    items.push({ l: "🔍 " + T("Яндекс", "Yandex") + ": " + q, f: function () { webSearch("y", q + " курс криптовалюта"); } });
+    showMenu(items, x, y);
+  }
+  // меню по направлению/паре (правый клик по строке направления)
+  function openPairMenu(a, b, x, y) {
+    closeMenu();
+    var ca = chartableCur(a), cb = chartableCur(b), items = [];
+    if (ca && cb) items.push({ l: "📈 " + T("Пара A/B в графике", "A/B pair in chart"), f: function () { setActiveRatio(a, b); } });
+    else if (ca) items.push({ l: "📈 " + T("Открыть в графике", "Open in chart") + ": " + name(a), f: function () { addToActiveChart(a); } });
+    else if (cb) items.push({ l: "📈 " + T("Открыть в графике", "Open in chart") + ": " + name(b), f: function () { addToActiveChart(b); } });
+    items.push({ l: (pairHasPage(a, b) ? "↗ " + T("Страница направления", "Direction page") : "↗ " + T("Открыть на BestChange (реф.)", "Open on BestChange (ref)")), f: function () { openUrl(pairUrl(a, b)); } });
+    items.push({ sep: 1 });
+    var q = name(a) + " " + name(b) + " обмен";
+    items.push({ l: "🔍 Google", f: function () { webSearch("g", q); } });
+    items.push({ l: "🔍 " + T("Яндекс", "Yandex"), f: function () { webSearch("y", q); } });
+    showMenu(items, x, y);
+  }
+  // делегированный правый клик (capture) по валютам/направлениям в любом окне
+  canvas.addEventListener("contextmenu", function (e) {
+    var el = e.target.closest("[data-cur],[data-add],[data-tslug],[data-a],[data-pair],[data-addpair]");
+    if (!el) return; // не валюта — пусть работает меню графика/дефолт
+    var pr = el.getAttribute("data-a") ? [el.getAttribute("data-a"), el.getAttribute("data-b")]
+      : (el.getAttribute("data-pair") ? el.getAttribute("data-pair").split("|")
+        : (el.getAttribute("data-addpair") ? el.getAttribute("data-addpair").split("|") : null));
+    if (pr && pr[0] && pr[1]) {
+      e.preventDefault(); e.stopPropagation();
+      openPairMenu(pr[0], pr[1], e.clientX, e.clientY);
+      return;
+    }
+    var slug = el.getAttribute("data-cur") || el.getAttribute("data-add") || el.getAttribute("data-tslug") || "";
+    if (!slug) return;
+    e.preventDefault(); e.stopPropagation();
+    openCurMenu(slug, el.getAttribute("data-tname") || "", e.clientX, e.clientY);
+  }, true);
   function exportChartCSV(p) {
     var sels = p.cfg.cur.filter(function (s) { return DATA.series[s]; }); if (!sels.length) return;
     var uni = {}, maps = sels.map(function (s) { var m = {}; rangeFilter(rebased(s, p.cfg.base), p.cfg.range).forEach(function (pt) { m[pt[0]] = pt[1]; uni[pt[0]] = 1; }); return m; });
