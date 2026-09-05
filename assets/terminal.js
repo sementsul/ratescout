@@ -1075,22 +1075,50 @@
     items.push({ l: "🔍 " + T("Яндекс", "Yandex"), f: function () { webSearch("y", q); } });
     showMenu(items, x, y);
   }
-  // делегированный правый клик (capture) по валютам/направлениям в любом окне
+  // меню по поисковой фразе (Яндекс/Метрика)
+  function openPhraseMenu(q, x, y) {
+    closeMenu();
+    showMenu([
+      { l: "🔍 Google: " + q, f: function () { webSearch("g", q); } },
+      { l: "🔍 " + T("Яндекс", "Yandex") + ": " + q, f: function () { webSearch("y", q); } }
+    ], x, y);
+  }
+  // меню фона терминала (пустое место / между окнами)
+  function openBgMenu(x, y) {
+    closeMenu();
+    showMenu([
+      { l: "◧ " + T("Выбрать валюты (активный график)", "Pick currencies (active chart)"), f: openPickerForActive },
+      { sep: 1 },
+      { l: "+ " + T("График", "Chart"), f: function () { addPanel("chart"); } },
+      { l: "+ Watchlist", f: function () { addPanel("watch"); } },
+      { l: "+ " + T("Муверы", "Movers"), f: function () { addPanel("movers"); } },
+      { l: "+ " + T("Хитмап", "Heatmap"), f: function () { addPanel("heat"); } },
+      { l: "+ " + T("Скринер", "Screener"), f: function () { addPanel("screen"); } },
+      { l: "+ " + T("Спрос", "Demand"), f: function () { addPanel("demand"); } },
+      { sep: 1 },
+      { l: (STATE.tiled ? "✓ " : "") + "⊞ " + T("Сетка", "Tile"), f: function () { STATE.tiled = !STATE.tiled; renderAll(); saveWS(); } },
+      { l: "⛶ " + T("Во весь экран", "Fullscreen"), f: toggleFull }
+    ], x, y);
+  }
+  // делегированный правый клик (capture): валюта/пара → своё меню; фраза → Google/Яндекс;
+  // тело графика → меню графика (bubble); поля ввода → родное; остальное → меню фона (без браузерного).
   canvas.addEventListener("contextmenu", function (e) {
+    if (e.target.closest("input,select,textarea")) return;
     var el = e.target.closest("[data-cur],[data-add],[data-tslug],[data-a],[data-pair],[data-addpair]");
-    if (!el) return; // не валюта — пусть работает меню графика/дефолт
-    var pr = el.getAttribute("data-a") ? [el.getAttribute("data-a"), el.getAttribute("data-b")]
-      : (el.getAttribute("data-pair") ? el.getAttribute("data-pair").split("|")
-        : (el.getAttribute("data-addpair") ? el.getAttribute("data-addpair").split("|") : null));
-    if (pr && pr[0] && pr[1]) {
+    if (el) {
+      var pr = el.getAttribute("data-a") ? [el.getAttribute("data-a"), el.getAttribute("data-b")]
+        : (el.getAttribute("data-pair") ? el.getAttribute("data-pair").split("|")
+          : (el.getAttribute("data-addpair") ? el.getAttribute("data-addpair").split("|") : null));
       e.preventDefault(); e.stopPropagation();
-      openPairMenu(pr[0], pr[1], e.clientX, e.clientY);
+      if (pr && pr[0] && pr[1]) openPairMenu(pr[0], pr[1], e.clientX, e.clientY);
+      else { var slug = el.getAttribute("data-cur") || el.getAttribute("data-add") || el.getAttribute("data-tslug") || ""; if (slug) openCurMenu(slug, el.getAttribute("data-tname") || "", e.clientX, e.clientY); }
       return;
     }
-    var slug = el.getAttribute("data-cur") || el.getAttribute("data-add") || el.getAttribute("data-tslug") || "";
-    if (!slug) return;
+    var yq = e.target.closest("[data-yq]");
+    if (yq) { e.preventDefault(); e.stopPropagation(); openPhraseMenu(yq.getAttribute("data-yq"), e.clientX, e.clientY); return; }
+    if (e.target.closest(".win-chart .win-body")) return; // тело графика → своё меню (bubble)
     e.preventDefault(); e.stopPropagation();
-    openCurMenu(slug, el.getAttribute("data-tname") || "", e.clientX, e.clientY);
+    openBgMenu(e.clientX, e.clientY);
   }, true);
 
   // ЛКМ по пустому месту (кроме графика, контролов и названий валют/направлений) →
