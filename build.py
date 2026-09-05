@@ -5010,6 +5010,54 @@ def render_monitor(lang):
     h1 = L("Профессиональный монитор курсов", "Professional rate monitor")
     lead = L("Биржевой терминал: несколько панелей (графики, watchlist, лидеры роста/падения, тепловая карта), которые можно двигать, менять размер и сохранять. Или классический вид — все валюты на одном графике.",
              "Trading-terminal view: several panels (charts, watchlist, top movers, heatmap) you can drag, resize and save. Or the classic view — all currencies on one chart.")
+    faq_items = [
+        ("Что такое профессиональный монитор курсов?",
+         "Это бесплатный инструмент RateScout: показывает курсы валют по данным мониторинга обменников BestChange (цены в USDT, обновление ежечасно) и позволяет собрать свой «терминал» из панелей — графики, watchlist, лидеры роста/падения, тепловая карта, скринер, спрос из поиска. Установка и регистрация не нужны."),
+        ("Это бесплатно и нужна ли регистрация?",
+         "Полностью бесплатно и без регистрации. Монитор ничего не покупает и не продаёт — только показывает и сравнивает цифры."),
+        ("Откуда данные и как часто обновляются?",
+         "Из мониторинга обменников BestChange; цена каждой валюты дана в USDT, обновление ежечасно. Это справочные данные для сравнения, а не оферта — реальный курс подтверждается на стороне обменника."),
+        ("Чем «Терминал» отличается от «Классики»?",
+         "Классика — один график с выбором валют галочками. Терминал — многопанельный режим: несколько окон (графики, watchlist, муверы, тепловая карта, скринер, спрос), которые двигаются, меняют размер, выстраиваются в сетку и сохраняются."),
+        ("Как добавить валюту на график?",
+         "Кликните валюту в любом окне (в списке, тепловой карте, скринере, панели спроса) — она добавится на активный график; повторный клик уберёт её. Валюты, которые уже на графике, отмечены точкой во всех окнах."),
+        ("Что такое «активный график»?",
+         "Это окно графика, на которое вы нажали последним (оно подсвечено рамкой). Клики по валютам в других окнах отправляют их именно в активный график. Если графика ещё нет — первый клик по валюте создаёт новое окно."),
+        ("Что значит «Оценка в»?",
+         "Валюта, относительно которой считаются цена и изменение. По умолчанию USDT; можно выбрать любую — например BTC, и тогда динамика будет показана относительно биткоина. В терминале есть общий селектор, у тепловой карты может быть свой."),
+        ("Можно ли сохранить рабочий стол и поделиться им?",
+         "Да. Раскладка запоминается в браузере, а кнопка «Ссылка» кодирует весь набор окон в адрес — им можно поделиться или сохранить закладкой; по ссылке откроется тот же рабочий стол."),
+        ("Работает ли на телефоне?",
+         "Да, панели выстраиваются в одну колонку, а чтение и клики работают так же. Неудобные для маленького экрана функции (перетаскивание окон, полноэкранный режим) на мобильном скрыты."),
+        ("Это обменник? Можно ли здесь обменять валюту?",
+         "Нет. RateScout — независимый информационный сервис мониторинга курсов, обмен он не проводит. Выбрав направление, вы совершаете сделку на стороне обменника; там же сверьте курс и резерв. 18+."),
+    ] if ru else [
+        ("What is the professional rate monitor?",
+         "It is a free RateScout tool: it shows currency rates from BestChange exchanger-monitoring data (prices in USDT, hourly updates) and lets you build your own terminal from panels — charts, watchlist, top movers, heatmap, screener, search demand. No install or sign-up."),
+        ("Is it free and do I need to register?",
+         "Fully free and no sign-up. The monitor buys and sells nothing — it only shows and compares numbers."),
+        ("Where does the data come from and how often is it updated?",
+         "From BestChange exchanger monitoring; each currency's price is in USDT, updated hourly. These are reference figures for comparison, not an offer — the real rate is confirmed on the exchanger side."),
+        ("How is the Terminal different from Classic?",
+         "Classic is a single chart with checkboxes. Terminal is a multi-panel mode: several windows (charts, watchlist, movers, heatmap, screener, demand) you can drag, resize, tile and save."),
+        ("How do I add a currency to the chart?",
+         "Click a currency in any window (a list, heatmap, screener, demand panel) — it is added to the active chart; click again to remove it. Currencies already on the chart are marked with a dot in every window."),
+        ("What is the active chart?",
+         "It is the chart window you clicked last (highlighted). Clicks on currencies in other windows go to the active chart. If no chart exists, the first click creates a new one."),
+        ("What does Valued in mean?",
+         "The currency price and change are measured against. USDT by default; pick any — e.g. BTC to see dynamics relative to bitcoin. The terminal has a global selector; the heatmap can have its own."),
+        ("Can I save and share my workspace?",
+         "Yes. The layout is remembered in the browser, and the Link button encodes the whole set of windows into a URL you can share or bookmark; the link reopens the same workspace."),
+        ("Does it work on a phone?",
+         "Yes — panels stack into a single column and reading and clicking work the same. Features awkward on a small screen (dragging windows, fullscreen) are hidden on mobile."),
+        ("Is this an exchange? Can I swap here?",
+         "No. RateScout is an independent rate-monitoring service and does not process exchanges. After choosing a direction you make the deal on the exchanger side; verify the rate and reserve there. 18+."),
+    ]
+    _qa = "".join(f'<details><summary>{q}</summary><p>{a}</p></details>' for q, a in faq_items)
+    _faqld = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": re.sub("<[^>]+>", "", a)}}
+        for q, a in faq_items]})
+    faq_html = f'<h2 class="news">{L("Частые вопросы о мониторе", "Monitor FAQ")}</h2>{_qa}{_faqld}'
     body = f"""
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
@@ -5049,6 +5097,7 @@ def render_monitor(lang):
       <div id="monList" class="mon-list"></div>
     </aside>
   </div>
+  {faq_html}
   <script src="/assets/monitor.js?v={VER['mon']}"></script>
   <script src="/assets/terminal.js?v={VER['term']}"></script>
 """
