@@ -4921,7 +4921,8 @@ def make_cli_pages():
         by = CHG_BY.get(slug) or {}
         rows.append({"name": info.get("name", slug), "tk": info.get("ticker", ""), "price": h[-1][1],
                      "c": {"24h": by.get("24h"), "7d": by.get("7d"), "30d": by.get("30d")},
-                     "rank": (MARKET.get(slug) or {}).get("rank") or 9999, "crypto": info.get("category") == "Криптовалюты"})
+                     "rank": (MARKET.get(slug) or {}).get("rank") or 9999,
+                     "cat": info.get("category") or "Прочее", "crypto": info.get("category") == "Криптовалюты"})
 
     def dedup(lst):
         seen, out = set(), []
@@ -4933,6 +4934,11 @@ def make_cli_pages():
             out.append(r)
         return out
     crypto = dedup(sorted([r for r in rows if r["crypto"]], key=lambda r: r["rank"]))
+    # все валюты, сгруппированные по типам (для тепловой карты «по типам»)
+    by_cat = {}
+    for r in rows:
+        by_cat.setdefault(r["cat"], []).append(r)
+    cat_order = list(CATS) + [c for c in by_cat if c not in CATS]
     ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
 
     def head(sub):
@@ -4958,11 +4964,18 @@ def make_cli_pages():
         txt = f"{r['tk'][:5]:>5} {'+' if pc >= 0 else ''}{pc:.0f}%"
         return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:11].ljust(11)} {R}"
     for per, lbl in (("24h", "24ч"), ("7d", "7д"), ("30d", "30д")):
-        hs = [r for r in crypto if r["c"][per] is not None]
-        hs.sort(key=lambda r: r["c"][per], reverse=True)
-        L = head(f"тепловая карта крипты · {lbl}")
-        for i in range(0, len(hs), 6):
-            L.append("  " + "".join(tile(r, per) for r in hs[i:i + 6]))
+        L = head(f"тепловая карта · все валюты по типам · {lbl}")
+        for c in cat_order:
+            items = by_cat.get(c, [])
+            if c == "Криптовалюты":
+                items = dedup(sorted(items, key=lambda r: r["rank"]))
+            items = [r for r in items if r["c"][per] is not None]
+            items.sort(key=lambda r: r["c"][per], reverse=True)
+            if not items:
+                continue
+            L += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
+            for i in range(0, len(items), 6):
+                L.append("  " + "".join(tile(r, per) for r in items[i:i + 6]))
         wr(f"heat-{per}.txt", L + foot())
         sc = sorted([r for r in rows if r["c"][per] is not None], key=lambda r: r["c"][per], reverse=True)
         g, l = sc[:15], list(reversed(sc[-15:]))
