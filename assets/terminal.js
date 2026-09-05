@@ -475,7 +475,7 @@
           '<option value="stable"' + (!p.cfg.cur && p.cfg.grp === "stable" ? " selected" : "") + ">" + T("Стейблы", "Stables") + "</option>" +
           '<option value="fiat"' + (!p.cfg.cur && p.cfg.grp === "fiat" ? " selected" : "") + ">" + T("Фиат", "Fiat") + "</option>" +
           (p.cfg.cur && p.cfg.cur.length ? '<option value="" selected>' + T("свой набор", "custom") + "</option>" : "") +
-        "</select>" + rangeTabs(p.cfg.range);
+        "</select>" + (p.t === "heat" ? baseSelect(p) : "") + rangeTabs(p.cfg.range);
     }
     if (p.t === "movers") {
       return '<button class="win-b win-pick" title="' + T("Выбрать валюты", "Pick currencies") + '">◧ ' + T("Валюты", "Currencies") + " (" + (p.cfg.cur && p.cfg.cur.length ? p.cfg.cur.length : T("все", "all")) + ")</button>" + rangeTabs(p.cfg.range);
@@ -509,6 +509,15 @@
       return '<button class="win-r' + (r.k === cur ? " on" : "") + '" data-k="' + r.k + '">' + r.l + "</button>";
     }).join("") + "</span>";
   }
+  // селект валюты оценки (base): USDT по умолчанию + все валюты
+  function baseSelect(p) {
+    var b = p.cfg.base || "USD";
+    var opts = '<option value="USD"' + (b === "USD" ? " selected" : "") + ">USDT</option>" +
+      Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; }).sort(byName).map(function (s) {
+        return '<option value="' + esc(s) + '"' + (b === s ? " selected" : "") + ">" + esc(ticker(s) || name(s)) + "</option>";
+      }).join("");
+    return '<label class="win-log">' + T("в", "in") + ' <select class="win-s win-base">' + opts + "</select></label>";
+  }
 
   function winFull(el) { var f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) try { f.call(el); } catch (e) {} }
   function toggleWinFull(el) { if (fsEl() === el) exitFull(); else winFull(el); }
@@ -535,6 +544,8 @@
       var pk = el.querySelector(".win-pick"); if (pk) pk.textContent = "◧ " + T("Валюты", "Currencies") + " (" + panelSlugs(p).length + ")";
       drawBody(p, body()); saveWS();
     });
+    var baseSel = el.querySelector(".win-base");
+    if (baseSel) baseSel.addEventListener("change", function () { p.cfg.base = baseSel.value; drawBody(p, body()); saveWS(); });
     var pick = el.querySelector(".win-pick");
     if (pick) pick.addEventListener("click", function () { openPicker(p, el); });
     var mode = el.querySelector(".win-mode");
@@ -845,8 +856,9 @@
 
   // ----- ТЕПЛОВАЯ КАРТА -----
   function drawHeat(p, body) {
-    var slugs = panelSlugs(p);
-    var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
+    var base = p.cfg.base || "USD";
+    var slugs = panelSlugs(p).filter(function (s) { return s !== base; }); // базовую валюту не показываем (её изменение к себе = 0)
+    var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, base, p.cfg.range) }; });
     cells.sort(function (a, b) { return (b.pc == null ? -1e9 : b.pc) - (a.pc == null ? -1e9 : a.pc); }); // по цвету: рост → падение
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
       var on = inActiveChart(c.s);
