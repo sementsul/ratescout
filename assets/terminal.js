@@ -918,22 +918,31 @@
   }
 
   // ----- СПРОС ИЗ ПОИСКА (Google Search Console: популярные направления/валюты) -----
+  function chartableCur(s) { return !!(s && DATA.series[s]); }
+  // иконка-подсказка: 📈 построится в графике · ↗ откроет страницу на сайте · 🔍 нет у нас → поиск
+  function dmCurIcon(s) { return chartableCur(s) ? "📈" : (s && DATA.cur[s] ? "↗" : "🔍"); }
   function drawDemand(p, body) {
     if (p.cfg.view === "trend") {
       var tr = DATA.trending || [];
       if (!tr.length) { body.innerHTML = empty(T("Тренд пока не загружен (обновляется из CoinGecko).", "Trending not loaded yet (updates from CoinGecko).")); return; }
-      body.innerHTML = '<p class="dm-hint">' + T("Топ поиска по крипте на CoinGecko. 📈 — в активный график.", "Top searched crypto on CoinGecko. 📈 — into active chart.") + "</p>" +
+      body.innerHTML = '<p class="dm-hint">' + T("Топ поиска CoinGecko. 📈 — в график · ↗ — страница валюты · 🔍 — поиск.", "Top searched on CoinGecko. 📈 — chart · ↗ — currency page · 🔍 — search.") + "</p>" +
         '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Монета", "Coin") + "</th><th>" + T("Ранг", "Rank") + "</th><th>24ч</th></tr></thead><tbody>" +
         tr.map(function (c, i) {
           var slug = c.slug || "";
           var nm = esc(c.name || c.symbol || "?") + (c.symbol ? " <b>" + esc(c.symbol) + "</b>" : "");
-          return "<tr><td class='wl-n'" + (slug ? " data-tslug='" + esc(slug) + "'" : "") + ">" + (i + 1) + ". " + nm + (slug ? " <span class='op-i'>📈</span>" : "") + "</td>" +
+          return "<tr><td class='wl-n' data-tslug='" + esc(slug) + "' data-tname='" + esc(c.name || c.symbol || "") + "'>" + (i + 1) + ". " + nm + " <span class='op-i'>" + dmCurIcon(slug) + "</span></td>" +
             "<td class='wl-c'>" + (c.rank || "—") + "</td>" +
             "<td class='wl-c " + (c.chg24h >= 0 ? "up" : "dn") + "'>" + (c.chg24h == null ? "—" : fmtPct(c.chg24h)) + "</td></tr>";
         }).join("") + "</tbody></table></div>";
       Array.prototype.forEach.call(body.querySelectorAll("[data-tslug]"), function (n) {
-        n.classList.add("op-link"); n.title = T("В активный график", "Into active chart");
-        n.addEventListener("click", function (e) { e.stopPropagation(); var s = n.getAttribute("data-tslug"); if (DATA.series[s]) addToActiveChart(s); else openUrl(curUrl(s)); });
+        n.classList.add("op-link");
+        n.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var s = n.getAttribute("data-tslug");
+          if (chartableCur(s)) addToActiveChart(s);
+          else if (s && DATA.cur[s]) openUrl(curUrl(s));
+          else openUrl("https://yandex.ru/search/?text=" + encodeURIComponent((n.getAttribute("data-tname") || "") + " курс"));
+        });
       });
       return;
     }
@@ -966,18 +975,18 @@
     }
     var pop = DATA.popular || {}, keys = Object.keys(pop);
     if (!keys.length) { body.innerHTML = empty(T("Данных поиска пока мало — накапливаются из Google Search Console.", "Little search data yet — accumulating from Google Search Console.")); return; }
-    var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). 📈 — в активный график (если не графикуется — откроется на сайте).", "From Google search (clicks). 📈 — into active chart (opens on site if not chartable).") + "</p>";
+    var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). 📈 — в график · ↗ — на сайте.", "From Google search (clicks). 📈 — chart · ↗ — on site.") + "</p>";
     if (p.cfg.view === "cur") {
       var agg = {};
       keys.forEach(function (k) { var c = pop[k]; k.split(">").forEach(function (s) { agg[s] = (agg[s] || 0) + c; }); });
       var rows = Object.keys(agg).map(function (s) { return { s: s, c: agg[s] }; }).sort(function (a, b) { return b.c - a.c; });
       body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
-        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>📈</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>" + dmCurIcon(r.s) + "</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
         "</tbody></table></div>";
     } else {
       var drows = keys.map(function (k) { var ab = k.split(">"); return { a: ab[0], b: ab[1], c: pop[k] }; }).sort(function (x, y) { return y.c - x.c; });
       body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Направление", "Direction") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
-        drows.map(function (r) { return "<tr><td class='wl-n' data-a='" + esc(r.a) + "' data-b='" + esc(r.b) + "'>" + esc(name(r.a)) + " → " + esc(name(r.b)) + " <span class='op-i'>📈</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        drows.map(function (r) { var ch = (chartableCur(r.a) || chartableCur(r.b)) ? "📈" : "↗"; return "<tr><td class='wl-n' data-a='" + esc(r.a) + "' data-b='" + esc(r.b) + "'>" + esc(name(r.a)) + " → " + esc(name(r.b)) + " <span class='op-i'>" + ch + "</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
         "</tbody></table></div>";
     }
     // умный клик: в активный график (пара A/B или валюта в USDT), иначе — открыть на сайте
