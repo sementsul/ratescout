@@ -40,6 +40,7 @@
   // валюты панели: свой набор cfg.cur, иначе группа cfg.grp (для watch/heat/movers)
   function panelSlugs(p) {
     if (p.cfg.cur && p.cfg.cur.length) return p.cfg.cur.filter(function (s) { return DATA.series[s]; });
+    if (p.cfg.grp === "all") return Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; });
     return groupSlugs(p.cfg.grp || "top");
   }
 
@@ -469,6 +470,7 @@
     if (p.t === "watch" || p.t === "heat") {
       return '<button class="win-b win-pick" title="' + T("Выбрать валюты", "Pick currencies") + '">◧ ' + T("Валюты", "Currencies") + " (" + panelSlugs(p).length + ")</button>" +
         '<select class="win-s win-grp">' +
+          '<option value="all"' + (!p.cfg.cur && p.cfg.grp === "all" ? " selected" : "") + ">" + T("Все валюты", "All currencies") + "</option>" +
           '<option value="top"' + (!p.cfg.cur && p.cfg.grp === "top" ? " selected" : "") + ">" + T("Топ-крипта", "Top crypto") + "</option>" +
           '<option value="stable"' + (!p.cfg.cur && p.cfg.grp === "stable" ? " selected" : "") + ">" + T("Стейблы", "Stables") + "</option>" +
           '<option value="fiat"' + (!p.cfg.cur && p.cfg.grp === "fiat" ? " selected" : "") + ">" + T("Фиат", "Fiat") + "</option>" +
