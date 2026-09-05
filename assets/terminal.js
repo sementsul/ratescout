@@ -1176,7 +1176,7 @@
       '<div class="pick-in">' +
         '<div class="pick-h"><b>' + T("Выбор валют", "Select currencies") + " · " + esc(PTITLE[p.t] || "") + '</b><button class="pick-x">✕</button></div>' +
         '<input class="pick-search" placeholder="' + T("поиск…", "search…") + '" autocomplete="off">' +
-        '<div class="pick-presets"><button data-g="top">' + T("Топ-крипта", "Top crypto") + '</button><button data-g="stable">' + T("Стейблы", "Stables") + '</button><button data-g="fiat">' + T("Фиат", "Fiat") + '</button><button data-g="clr">' + T("Очистить", "Clear") + "</button></div>" +
+        '<div class="pick-presets"><button data-g="all">' + T("Все", "All") + '</button><button data-g="top">' + T("Топ-крипта", "Top crypto") + '</button><button data-g="stable">' + T("Стейблы", "Stables") + '</button><button data-g="fiat">' + T("Фиат", "Fiat") + '</button><button data-g="clr">' + T("Очистить", "Clear") + "</button></div>" +
         '<div class="pick-list"></div>' +
         '<div class="pick-f"><button class="pick-ok">' + T("Готово", "Done") + "</button></div>" +
       "</div>";
@@ -1206,8 +1206,9 @@
       b.addEventListener("click", function (e) {
         e.preventDefault();
         var g = b.getAttribute("data-g");
-        chosen = {}; // группа/очистка ЗАМЕНЯЮТ выбор (иначе «Стейблы»/«Фиат» лишь доклеиваются и не переключают)
-        if (g !== "clr") groupSlugs(g).forEach(function (s) { chosen[s] = 1; });
+        chosen = {}; // группа/очистка/«все» ЗАМЕНЯЮТ выбор (иначе группы лишь доклеиваются и не переключают)
+        if (g === "all") Object.keys(DATA.series).forEach(function (s) { chosen[s] = 1; });
+        else if (g !== "clr") groupSlugs(g).forEach(function (s) { chosen[s] = 1; });
         renderList(searchEl.value);
       });
     });
