@@ -847,6 +847,7 @@
   function drawHeat(p, body) {
     var slugs = panelSlugs(p);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
+    cells.sort(function (a, b) { return (b.pc == null ? -1e9 : b.pc) - (a.pc == null ? -1e9 : a.pc); }); // по цвету: рост → падение
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
       var on = inActiveChart(c.s);
       return '<div class="ht-cell' + (on ? " on-chart-cell" : "") + '" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '">' +
