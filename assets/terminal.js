@@ -1042,6 +1042,7 @@
   function showMenu(items, x, y) {
     menuEl = document.createElement("div"); menuEl.className = "term-menu";
     menuEl.innerHTML = items.map(function (it, i) { return it.sep ? '<div class="tm-sep"></div>' : '<button data-i="' + i + '">' + esc(it.l) + "</button>"; }).join("");
+    menuEl.addEventListener("contextmenu", function (e) { e.preventDefault(); }); // без браузерного меню поверх нашего
     (fsEl() || document.body).appendChild(menuEl);
     var vw = window.innerWidth, vh = window.innerHeight, mw = menuEl.offsetWidth, mh = menuEl.offsetHeight;
     menuEl.style.left = Math.min(x, vw - mw - 4) + "px"; menuEl.style.top = Math.min(y, vh - mh - 4) + "px";
@@ -1180,6 +1181,7 @@
         '<div class="pick-f"><button class="pick-ok">' + T("Готово", "Done") + "</button></div>" +
       "</div>";
     (fsEl() || document.body).appendChild(pickBox);
+    pickBox.addEventListener("contextmenu", function (e) { if (!e.target.closest("input,textarea")) e.preventDefault(); }); // без браузерного меню (кроме полей ввода)
     var listEl = pickBox.querySelector(".pick-list"), searchEl = pickBox.querySelector(".pick-search");
     var pbase = p.cfg.base || "USD", prng = p.cfg.range;
     function renderList(q) {
