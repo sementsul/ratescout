@@ -4802,6 +4802,55 @@ def copy_assets():
         shutil.copytree(_bk, _bd)
 
 
+def make_cli_txt():
+    """Готовый ANSI-дашборд для консольного монитора → dist/cli.txt.
+    Пользователь запускает встроенным curl/PowerShell (без установки), фид только печатается — не выполняется."""
+    if not HISTORY:
+        return
+    R, G, RED, GR, CY, B, Y = "\033[0m", "\033[92m", "\033[91m", "\033[90m", "\033[96m", "\033[1m", "\033[93m"
+    rows = []
+    for slug, h in HISTORY.items():
+        if slug == "tether-trc20" or len(h) < 2:
+            continue
+        info = CUR.get(slug) or {}
+        rows.append((info.get("name", slug), info.get("ticker", ""), h[-1][1], (CHG_BY.get(slug) or {}).get("24h")))
+    scored = [r for r in rows if r[3] is not None]
+    scored.sort(key=lambda r: r[3], reverse=True)
+    gain, lose = scored[:15], list(reversed(scored[-15:]))
+
+    def price(v):
+        if v is None:
+            return "—"
+        a = abs(v)
+        if a >= 1000:
+            return f"{v:,.0f}".replace(",", " ")
+        if a >= 1:
+            return f"{v:.2f}"
+        if a >= 0.01:
+            return f"{v:.4f}"
+        return f"{v:.6f}"
+
+    def cp(pc):
+        return f"{GR}   —   {R}" if pc is None else f"{(G if pc >= 0 else RED)}{'+' if pc >= 0 else ''}{pc:6.1f}%{R}"
+
+    def line(r):
+        return f"  {r[0][:15].ljust(15)} {GR}{r[1][:6].ljust(6)}{R} {price(r[2]).rjust(11)}  {cp(r[3])}"
+
+    ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
+    L = [f"{CY}==============================================================================={R}",
+         f"  {B}RateScout{R} — консольный монитор курсов  ·  изменение за 24ч  ·  {Y}{ts}{R}",
+         f"{CY}==============================================================================={R}", "",
+         f"  {G}> ЛИДЕРЫ РОСТА (24ч){R}"]
+    L += [line(r) for r in gain]
+    L += ["", f"  {RED}> ЛИДЕРЫ ПАДЕНИЯ (24ч){R}"]
+    L += [line(r) for r in lose]
+    L += ["", f"  {GR}Данные: мониторинг BestChange (цены в USDT), обновление ежечасно · ratescout.ru{R}",
+          f"  {GR}Полный монитор с панелями и графиками: https://ratescout.ru/monitor · не оферта, 18+{R}", ""]
+    with open(os.path.join(DIST, "cli.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(L) + "\n")
+    print(f"✅ cli.txt: {len(gain)}↑ / {len(lose)}↓")
+
+
 def make_monitor_json():
     """Данные для профессионального монитора → dist/data/monitor.json (курсы в USDT + названия валют)."""
     if not HISTORY:
@@ -5221,6 +5270,7 @@ def main():
     static_files()
     copy_assets()
     make_monitor_json()     # dist/data/monitor.json для монитора
+    make_cli_txt()          # dist/cli.txt — фид для консольного монитора
     write_favicons()        # /favicon.ico + apple-touch (после copy_assets)
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
