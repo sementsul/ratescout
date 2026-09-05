@@ -76,7 +76,7 @@ BLOG_PER_PAGE = 6            # статей на страницу блога (п
 # Версии ассетов для кеш-бастинга (хеш содержимого) — заполняется в main() до рендера.
 # Стабильный путь /assets/app.js кешируется браузером; ?v=<hash> меняется только при
 # изменении файла и заставляет подхватить новую версию (важно для ежечасных пересборок).
-VER = {"css": "", "js": "", "cat": "", "mon": "", "alert": "", "term": ""}
+VER = {"css": "", "js": "", "cat": "", "mon": "", "alert": "", "term": "", "heat": ""}
 
 
 def _h(s):
@@ -442,6 +442,7 @@ def render_home(lang):
       <li><a href="https://app.ratescout.ru">{'📱 Приложение' if lang=='ru' else '📱 App'}</a></li>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
+      <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
       <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
       <li><a href="{PREF[lang]}/alert/">{'Оповещения о курсе' if lang=='ru' else 'Rate alerts'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
@@ -1817,6 +1818,7 @@ def mobile_drawer(lang):
             (f"{P}/lidery-rynka/", tr(lang, 'nav_leaders')),
             (f"{P}/nastroeniya/", tr(lang, 'nav_mood')),
             (f"{P}/grafiki/", tr(lang, 'nav_charts')),
+            (f"{P}/heatmap/", "Тепловая карта" if ru else "Heatmap"),
             (f"{P}/halving/", "Халвинг Bitcoin" if ru else "Bitcoin halving")]),
         grp("Инструменты" if ru else "Tools", [
             (f"{P}/aml/", tr(lang, 'nav_aml')),
@@ -4623,6 +4625,7 @@ def static_files():
         items.append(u_entry(pr + "/kniga/", "monthly", "0.5"))
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/heatmap/", "hourly", "0.7"))
         items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
         items.append(u_entry(pr + "/alert/", "hourly", "0.6"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
@@ -4881,6 +4884,41 @@ def render_alert(lang):
     render_page(lang, "alert", title, desc, body, h1)
 
 
+def render_heatmap(lang):
+    """Тепловая карта по ВСЕМ валютам: плитки как в терминале (цвет = изменение за период), клик → страница валюты."""
+    if not HISTORY:
+        return
+    ru = lang == "ru"
+    L = lambda r, e: r if ru else e
+    n = len([s for s in HISTORY if s != "tether-trc20"])
+    title = L(f"Тепловая карта криптовалют — все валюты | {S['name']}",
+              f"Crypto heatmap — all currencies | {S['name']}")
+    desc = L("Тепловая карта курсов всех валют: рост и падение цветом за выбранный период (24ч…год). "
+             "Данные мониторинга BestChange, обновление ежечасно.",
+             "Heatmap of all currency rates: gains and losses by color over a chosen period (24h…year). "
+             "BestChange monitoring data, hourly updates.")
+    h1 = L("Тепловая карта валют", "Currency heatmap")
+    lead = L(f"Все {n} валют одной картой: цвет плитки — изменение цены за период (зелёный — рост, красный — падение). "
+             "Переключите период и категорию, нажмите плитку — откроется страница валюты.",
+             f"All {n} currencies as one map: tile color is price change over the period (green — up, red — down). "
+             "Switch period and category, click a tile to open the currency page.")
+    body = f"""
+  <h1>{h1}</h1>
+  <p class="lead">{lead}</p>
+  <div id="heatpage" class="dosborder">
+    <div class="hp-ctl">
+      <span id="hpRanges" class="mon-ranges"></span>
+      <input id="hpSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
+    </div>
+    <div id="hpCats" class="rsrange"></div>
+    <div id="hpGrid" class="heat-grid"><p class="mon-empty">{L('Загружаю…','Loading…')}</p></div>
+    <p id="hpNote" class="mon-note"></p>
+  </div>
+  <script src="/assets/heatmap.js?v={VER['heat']}"></script>
+"""
+    render_page(lang, "heatmap", title, desc, body, h1)
+
+
 def render_monitor(lang):
     """Профессиональный монитор: графики многих валют на одной шкале + ре-база + линии/свечи + выбор галочками."""
     if not HISTORY:
@@ -5004,6 +5042,7 @@ def main():
     VER["mon"] = _h(open(os.path.join(ROOT, "assets", "monitor.js"), encoding="utf-8").read())
     VER["alert"] = _h(open(os.path.join(ROOT, "assets", "alert.js"), encoding="utf-8").read())
     VER["term"] = _h(open(os.path.join(ROOT, "assets", "terminal.js"), encoding="utf-8").read())
+    VER["heat"] = _h(open(os.path.join(ROOT, "assets", "heatmap.js"), encoding="utf-8").read())
     for _s in CUR:
         _hh = HISTORY.get(_s, [])
         if len(_hh) >= 2:
@@ -5021,6 +5060,7 @@ def main():
         render_editorial(lang)
         render_glossary(lang)
         render_charts_overview(lang)
+        render_heatmap(lang)
         render_monitor(lang)
         render_alert(lang)
         render_relative(lang)
