@@ -4913,6 +4913,7 @@ def render_heatmap(lang):
   <div id="heatpage" class="dosborder">
     <div class="hp-ctl">
       <span id="hpRanges" class="mon-ranges"></span>
+      <label class="hp-base">{L('Оценка в','Valued in')}: <select id="hpBase"></select></label>
       <input id="hpSearch" class="mon-search" placeholder="{L('поиск валюты…','search…')}" autocomplete="off">
     </div>
     <div id="hpCats" class="rsrange"></div>

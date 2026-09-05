@@ -38,6 +38,7 @@
     return Object.keys(DATA.series).filter(function (s) { return set.indexOf(ticker(s)) >= 0; }).sort(byName).slice(0, 12);
   }
   // валюты панели: свой набор cfg.cur, иначе группа cfg.grp (для watch/heat/movers)
+  function effBase(p) { return (p && p.cfg && p.cfg.base) ? p.cfg.base : STATE.base; }
   function panelSlugs(p) {
     if (p.cfg.cur && p.cfg.cur.length) return p.cfg.cur.filter(function (s) { return DATA.series[s]; });
     if (p.cfg.grp === "all") return Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; });
@@ -164,14 +165,14 @@
   function addToActiveChart(slug) {
     if (!DATA.series[slug]) return;
     var c = getActiveChart();
-    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [slug], base: "USD", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
+    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [slug], base: "", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
     else { var i = c.cfg.cur.indexOf(slug); if (i >= 0) c.cfg.cur.splice(i, 1); else c.cfg.cur.push(slug); }
     activeId = c.id; renderAll(); saveWS();
   }
   function setActiveRatio(a, b) {
     if (!DATA.series[a] || !DATA.series[b]) return;
     var c = getActiveChart();
-    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [a, b], base: "USD", type: "ratio", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
+    if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [a, b], base: "", type: "ratio", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
     else { c.cfg.cur = [a, b]; c.cfg.type = "ratio"; }
     activeId = c.id; renderAll(); saveWS();
   }
@@ -189,7 +190,7 @@
   }
 
   // ---------------- состояние воркспейса ----------------
-  var STATE = { theme: "dos", panels: [], seq: 1, tiled: false, split: { x: 0.5, y: 0.5 } };
+  var STATE = { theme: "dos", panels: [], seq: 1, tiled: false, split: { x: 0.5, y: 0.5 }, base: "" };
   var zTop = 10;
   var activeId = null; // id активного графика — с ним взаимодействуют остальные окна
   var LS_KEY = "rs_term_ws";
@@ -198,7 +199,7 @@
     return {
       theme: "dos",
       panels: [
-        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "USD", type: "line", range: 365, log: false }, g: [8, 8, 560, 340] },
+        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "", type: "line", range: 365, log: false }, g: [8, 8, 560, 340] },
         { t: "watch", cfg: { grp: "top", range: 30 }, g: [576, 8, 360, 340] },
         { t: "movers", cfg: { range: 30, n: 8 }, g: [8, 356, 360, 320] },
         { t: "heat", cfg: { grp: "all", range: 30 }, g: [376, 356, 560, 320] }
@@ -209,7 +210,7 @@
   function isMobile() { return window.matchMedia("(max-width:760px)").matches; }
 
   function saveWS() {
-    var ws = { theme: STATE.theme, tiled: STATE.tiled, split: STATE.split, panels: STATE.panels.map(function (p) { return { t: p.t, cfg: p.cfg, g: p.g }; }) };
+    var ws = { theme: STATE.theme, tiled: STATE.tiled, split: STATE.split, base: STATE.base, panels: STATE.panels.map(function (p) { return { t: p.t, cfg: p.cfg, g: p.g }; }) };
     try { localStorage.setItem(LS_KEY, JSON.stringify(ws)); } catch (e) {}
     writeURL(ws);
   }
@@ -229,6 +230,7 @@
     if (!ws) { try { var raw = localStorage.getItem(LS_KEY); if (raw) ws = JSON.parse(raw); } catch (e2) { ws = null; } }
     if (!ws || !ws.panels || !ws.panels.length) ws = defaultWorkspace();
     STATE.theme = ws.theme || "dos";
+    STATE.base = ws.base || "USD";
     STATE.tiled = !!ws.tiled;
     STATE.split = (ws.split && typeof ws.split.x === "number") ? ws.split : { x: 0.5, y: 0.5 };
     STATE.panels = ws.panels.map(function (p) { p.id = STATE.seq++; return p; });
@@ -236,6 +238,9 @@
 
   // ---------------- каркас: тулбар ----------------
   function buildBar() {
+    var baseOpts = '<option value="USD">USDT</option>' +
+      Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; }).sort(byName)
+        .map(function (s) { return '<option value="' + esc(s) + '">' + esc(ticker(s) || name(s)) + "</option>"; }).join("");
     bar.innerHTML =
       '<div class="tb-grp">' +
         '<button class="tb-btn tb-add" data-t="chart">+ ' + T("График", "Chart") + "</button>" +
@@ -246,6 +251,7 @@
         '<button class="tb-btn tb-add" data-t="demand">+ ' + T("Спрос", "Demand") + "</button>" +
       "</div>" +
       '<div class="tb-grp">' +
+        '<label class="tb-l">' + T("Оценка в", "Valued in") + ': <select class="tb-sel" id="tbBase">' + baseOpts + "</select></label>" +
         '<label class="tb-l">' + T("Раскладка", "Layout") + ': <select class="tb-sel" id="tbLayout">' +
           '<option value="">—</option>' +
           '<option value="overview">' + T("Обзор рынка", "Market overview") + "</option>" +
@@ -268,6 +274,8 @@
     Array.prototype.forEach.call(bar.querySelectorAll(".tb-add"), function (b) {
       b.addEventListener("click", function () { addPanel(b.getAttribute("data-t")); });
     });
+    var baseG = bar.querySelector("#tbBase"); baseG.value = STATE.base;
+    baseG.addEventListener("change", function () { STATE.base = baseG.value; renderAll(); saveWS(); });
     var themeSel = bar.querySelector("#tbTheme"); themeSel.value = STATE.theme;
     themeSel.addEventListener("change", function () { setTheme(themeSel.value); saveWS(); });
     bar.querySelector("#tbLayout").addEventListener("change", function () { if (this.value) { applyLayout(this.value); this.value = ""; } });
@@ -330,7 +338,7 @@
   function nextPos() { var n = STATE.panels.length; return [24 + (n % 4) * 28, 24 + (n % 4) * 28, 440, 300]; }
   function addPanel(t) {
     var cfg;
-    if (t === "chart") cfg = { cur: groupSlugs("top").slice(0, 3), base: "USD", type: "line", range: 365, log: false };
+    if (t === "chart") cfg = { cur: groupSlugs("top").slice(0, 3), base: "", type: "line", range: 365, log: false };
     else if (t === "watch") cfg = { grp: "top", range: 30 };
     else if (t === "movers") cfg = { range: 30, n: 8 };
     else if (t === "heat") cfg = { grp: "all", range: 30 };
@@ -511,8 +519,9 @@
   }
   // селект валюты оценки (base): USDT по умолчанию + все валюты
   function baseSelect(p) {
-    var b = p.cfg.base || "USD";
-    var opts = '<option value="USD"' + (b === "USD" ? " selected" : "") + ">USDT</option>" +
+    var b = p.cfg.base || "";
+    var opts = '<option value=""' + (b === "" ? " selected" : "") + ">" + T("по терминалу", "terminal") + "</option>" +
+      '<option value="USD"' + (b === "USD" ? " selected" : "") + ">USDT</option>" +
       Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; }).sort(byName).map(function (s) {
         return '<option value="' + esc(s) + '"' + (b === s ? " selected" : "") + ">" + esc(ticker(s) || name(s)) + "</option>";
       }).join("");
@@ -638,12 +647,13 @@
     var padL = 52, padR = 10, padT = 10, padB = 22, w = W - padL - padR, h = H - padT - padB;
     if (w < 40 || h < 30) { body.innerHTML = empty("…"); return; }
     var accent = COLORS[0];
-    var bn = cfg.base === "USD" ? "USDT" : (ticker(cfg.base) || "");
+    var base = effBase(p);
+    var bn = base === "USD" ? "USDT" : (ticker(base) || "");
     p._hover = null;
     var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" height="' + H + '" preserveAspectRatio="none" class="win-svg">';
 
     if (cfg.type === "candle") {
-      var pts = rangeFilter(rebased(sels[0], cfg.base), cfg.range), byDay = {};
+      var pts = rangeFilter(rebased(sels[0], base), cfg.range), byDay = {};
       pts.forEach(function (pt) { var d = pt[0].slice(0, 10); (byDay[d] = byDay[d] || []).push(pt[1]); });
       var days = Object.keys(byDay).sort();
       var ohlc = days.map(function (d) { var a = byDay[d]; return { d: d, o: a[0], c: a[a.length - 1], h: Math.max.apply(null, a), l: Math.min.apply(null, a) }; });
@@ -689,7 +699,7 @@
     var baseSels = sels.slice();
     if (showPrev && baseSels.indexOf(prev) < 0) baseSels.push(prev);
     var single = baseSels.length === 1;
-    var sd = baseSels.map(function (s) { return { s: s, pts: rangeFilter(rebased(s, cfg.base), cfg.range) }; }).filter(function (o) { return o.pts.length; });
+    var sd = baseSels.map(function (s) { return { s: s, pts: rangeFilter(rebased(s, base), cfg.range) }; }).filter(function (o) { return o.pts.length; });
     if (!sd.length) { body.innerHTML = empty(T("Нет данных за период.", "No data for the period.")); return; }
     sd.forEach(function (o) { var st = o.pts[0][1] || 1; o.norm = o.pts.map(function (pt) { return [pt[0], single ? pt[1] : pt[1] / st * 100]; }); });
     var allv = [], allx = []; sd.forEach(function (o) { o.norm.forEach(function (pt) { allv.push(pt[1]); allx.push(dnum(pt[0])); }); });
@@ -708,7 +718,7 @@
     svg += xlabels(sd[0].norm.map(function (pt) { return pt[0]; }), padL, w, H, padB, X);
     svg += "</svg>";
     var leg = sd.map(function (o, i) {
-      var last = o.norm[o.norm.length - 1][1], pc = pctChange(o.s, cfg.base, cfg.range);
+      var last = o.norm[o.norm.length - 1][1], pc = pctChange(o.s, base, cfg.range);
       return { s: o.s, col: single ? accent : COLORS[i % COLORS.length], val: single ? fmtNum(last) : Math.round(last), pc: pc };
     });
     body.innerHTML = svg + legendHTML(leg, p); wireOpens(body);
@@ -810,10 +820,11 @@
 
   // ----- WATCHLIST -----
   function drawWatch(p, body) {
+    var base = effBase(p);
     var slugs = panelSlugs(p);
     if (!slugs.length) { body.innerHTML = empty(T("Пусто.", "Empty.")); return; }
     var rows = slugs.map(function (s) {
-      return { s: s, last: lastVal(s, "USD"), pc: pctChange(s, "USD", p.cfg.range), spk: rangeFilter(rebased(s, "USD"), p.cfg.range) };
+      return { s: s, last: lastVal(s, base), pc: pctChange(s, base, p.cfg.range), spk: rangeFilter(rebased(s, base), p.cfg.range) };
     }).sort(function (a, b) { return (b.pc == null ? -1e9 : b.pc) - (a.pc == null ? -1e9 : a.pc); });
     body.innerHTML =
       '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Цена, USDT", "Price, USDT") + "</th><th></th><th>" + T("Δ", "Δ") + "</th></tr></thead><tbody>" +
@@ -836,8 +847,9 @@
 
   // ----- МУВЕРЫ -----
   function drawMovers(p, body) {
+    var mbase = effBase(p);
     var universe = (p.cfg.cur && p.cfg.cur.length) ? p.cfg.cur.filter(function (s) { return DATA.series[s]; }) : Object.keys(DATA.series);
-    var all = universe.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; })
+    var all = universe.map(function (s) { return { s: s, pc: pctChange(s, mbase, p.cfg.range) }; })
       .filter(function (o) { return o.pc != null && isFinite(o.pc); });
     all.sort(function (a, b) { return b.pc - a.pc; });
     var n = p.cfg.n || 8, gain = all.slice(0, n), loss = all.slice(-n).reverse();
@@ -856,7 +868,7 @@
 
   // ----- ТЕПЛОВАЯ КАРТА -----
   function drawHeat(p, body) {
-    var base = p.cfg.base || "USD";
+    var base = effBase(p);
     var slugs = panelSlugs(p).filter(function (s) { return s !== base; }); // базовую валюту не показываем (её изменение к себе = 0)
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, base, p.cfg.range) }; });
     cells.sort(function (a, b) { return (b.pc == null ? -1e9 : b.pc) - (a.pc == null ? -1e9 : a.pc); }); // по цвету: рост → падение
@@ -871,7 +883,7 @@
 
   // ----- СКРИНЕР (поиск валют/пар по показателям + открыть на сайте) -----
   function drawScreen(p, body) {
-    var c = p.cfg, isPair = c.mode === "pair";
+    var c = p.cfg, isPair = c.mode === "pair", sbase = effBase(p);
     body.innerHTML =
       '<div class="scr-f">' +
         '<input class="scr-q" placeholder="' + T("поиск…", "search…") + '" value="' + esc(c.q || "") + '">' +
@@ -900,7 +912,7 @@
           label = esc(ticker(s) || name(s)) + "/" + esc(ticker(quote) || name(quote));
           openAttr = "data-addpair='" + esc(s) + "|" + esc(quote) + "'";
         } else {
-          last = lastVal(s, "USD"); chg = pctChange(s, "USD", c.range); vol = volat(s, "USD", c.range);
+          last = lastVal(s, sbase); chg = pctChange(s, sbase, c.range); vol = volat(s, sbase, c.range);
           if (chg == null) return;
           label = esc(name(s)) + (ticker(s) ? " <b>" + esc(ticker(s)) + "</b>" : "") + onMark(s);
           openAttr = "data-add='" + esc(s) + "'";
@@ -1154,7 +1166,7 @@
   // открыть пикер выбора валют для активного графика.
   function openPickerForActive() {
     var p = getActiveChart();
-    if (!p) { p = { id: STATE.seq++, t: "chart", cfg: { cur: [], base: "USD", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(p); activeId = p.id; renderAll(); }
+    if (!p) { p = { id: STATE.seq++, t: "chart", cfg: { cur: [], base: "", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(p); activeId = p.id; renderAll(); }
     var el = canvas.querySelector('[data-id="' + p.id + '"]');
     if (el) openPicker(p, el);
   }
@@ -1188,7 +1200,7 @@
   });
   function exportChartCSV(p) {
     var sels = p.cfg.cur.filter(function (s) { return DATA.series[s]; }); if (!sels.length) return;
-    var uni = {}, maps = sels.map(function (s) { var m = {}; rangeFilter(rebased(s, p.cfg.base), p.cfg.range).forEach(function (pt) { m[pt[0]] = pt[1]; uni[pt[0]] = 1; }); return m; });
+    var uni = {}, maps = sels.map(function (s) { var m = {}; rangeFilter(rebased(s, effBase(p)), p.cfg.range).forEach(function (pt) { m[pt[0]] = pt[1]; uni[pt[0]] = 1; }); return m; });
     var dates = Object.keys(uni).sort();
     var head = ["date"].concat(sels.map(function (s) { return (ticker(s) || name(s)).replace(/[;,]/g, " "); }));
     var lines = [head.join(";")];
@@ -1228,7 +1240,7 @@
     (fsEl() || document.body).appendChild(pickBox);
     pickBox.addEventListener("contextmenu", function (e) { if (!e.target.closest("input,textarea")) e.preventDefault(); }); // без браузерного меню (кроме полей ввода)
     var listEl = pickBox.querySelector(".pick-list"), searchEl = pickBox.querySelector(".pick-search");
-    var pbase = p.cfg.base || "USD", prng = p.cfg.range;
+    var pbase = effBase(p), prng = p.cfg.range;
     function renderList(q) {
       q = (q || "").toLowerCase().trim();
       var fs = slugs.filter(function (s) { if (!q) return true; var c = DATA.cur[s] || {}; return (s + " " + (c.n || "") + " " + (c.t || "")).toLowerCase().indexOf(q) >= 0; });
@@ -1284,7 +1296,7 @@
     if (name === "overview") {
       var gg = grid2([[0, 0], [1, 0], [0, 1], [1, 1]]);
       P = [
-        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "USD", type: "line", range: 365, log: false }, g: gg[0] },
+        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "", type: "line", range: 365, log: false }, g: gg[0] },
         { t: "watch", cfg: { grp: "top", range: 30 }, g: gg[1] },
         { t: "movers", cfg: { range: 30, n: 8 }, g: gg[2] },
         { t: "heat", cfg: { grp: "all", range: 30 }, g: gg[3] }
@@ -1292,17 +1304,17 @@
     } else if (name === "charts2") {
       var g2 = grid2([[0, 0], [1, 0]]);
       P = [
-        { t: "chart", cfg: { cur: ["bitcoin"].filter(function (s) { return DATA.series[s]; }), base: "USD", type: "line", range: 365, log: false }, g: g2[0] },
-        { t: "chart", cfg: { cur: ["ethereum"].filter(function (s) { return DATA.series[s]; }), base: "USD", type: "line", range: 365, log: false }, g: g2[1] }
+        { t: "chart", cfg: { cur: ["bitcoin"].filter(function (s) { return DATA.series[s]; }), base: "", type: "line", range: 365, log: false }, g: g2[0] },
+        { t: "chart", cfg: { cur: ["ethereum"].filter(function (s) { return DATA.series[s]; }), base: "", type: "line", range: 365, log: false }, g: g2[1] }
       ];
     } else if (name === "charts4") {
       var g4 = grid2([[0, 0], [1, 0], [0, 1], [1, 1]]), seed = groupSlugs("top");
-      P = [0, 1, 2, 3].map(function (i) { return { t: "chart", cfg: { cur: [seed[i]].filter(Boolean), base: "USD", type: "line", range: 365, log: false }, g: g4[i] }; });
+      P = [0, 1, 2, 3].map(function (i) { return { t: "chart", cfg: { cur: [seed[i]].filter(Boolean), base: "", type: "line", range: 365, log: false }, g: g4[i] }; });
     } else if (name === "watchbig") {
       var cellW = (cw - g * 3) / 2;
       P = [
         { t: "watch", cfg: { grp: "top", range: 30 }, g: [g, g, cellW, 650] },
-        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 3), base: "USD", type: "line", range: 365, log: false }, g: [g * 2 + cellW, g, cellW, 320] },
+        { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 3), base: "", type: "line", range: 365, log: false }, g: [g * 2 + cellW, g, cellW, 320] },
         { t: "heat", cfg: { grp: "all", range: 30 }, g: [g * 2 + cellW, g * 2 + 320, cellW, 322] }
       ];
     }

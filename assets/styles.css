@@ -345,6 +345,8 @@ hr.bkdiv{border:0;border-top:1px dashed #55ffff;opacity:.5;margin:22px 0}
 /* страница «Тепловая карта» */
 #heatpage{padding:12px}
 #heatpage .hp-ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+#heatpage .hp-base{font-size:.85rem;opacity:.9}
+#heatpage .hp-base select{font:inherit;background:#0a0f14;color:#7cf;border:1px solid #245;border-radius:3px;padding:3px 5px}
 #heatpage .mon-ranges{display:inline-flex;flex-wrap:wrap;gap:2px}
 #heatpage #hpCats{margin-bottom:10px}
 #heatpage .heat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:5px}

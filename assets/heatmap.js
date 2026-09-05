@@ -10,7 +10,7 @@
   var EN = (document.documentElement.getAttribute("lang") || "ru").slice(0, 2) === "en";
   function T(r, e) { return EN ? e : r; }
   var PREF = EN ? "/en" : "";
-  var DATA = null, sel = 30, cat = "", q = "";
+  var DATA = null, sel = 30, cat = "", q = "", base = "USD";
   var RANGES = [{ k: 1, l: T("24ч", "24h") }, { k: 7, l: T("1Н", "1W") }, { k: 30, l: T("1М", "1M") },
                 { k: 90, l: T("3М", "3M") }, { k: 180, l: T("6М", "6M") }, { k: 365, l: T("1Г", "1Y") }, { k: 0, l: T("Всё", "All") }];
 
@@ -21,11 +21,13 @@
   function ticker(s) { return (DATA.cur[s] || {}).t || ""; }
   function curUrl(s) { return PREF + "/valuta/" + s + "/"; }
   function rangeFilter(pts, days) { if (!days || pts.length < 2) return pts; var last = dnum(pts[pts.length - 1][0]) - days; return pts.filter(function (p) { return dnum(p[0]) >= last; }); }
-  function pctChange(slug, days) { var p = DATA.series[slug]; if (!p) return null; p = rangeFilter(p, days); if (p.length < 2) return null; var a = p[0][1], b = p[p.length - 1][1]; if (!a) return null; return (b / a - 1) * 100; }
+  function rebased(slug) { var s = DATA.series[slug]; if (!s) return []; if (base === "USD") return s; var bs = DATA.series[base]; if (!bs) return s; var bm = {}; bs.forEach(function (p) { bm[p[0]] = p[1]; }); var out = []; s.forEach(function (p) { var bv = bm[p[0]]; if (bv) out.push([p[0], p[1] / bv]); }); return out; }
+  function pctChange(slug, days) { var p = rangeFilter(rebased(slug), days); if (p.length < 2) return null; var a = p[0][1], b = p[p.length - 1][1]; if (!a) return null; return (b / a - 1) * 100; }
+  function byName(a, b) { return (DATA.cur[a] ? DATA.cur[a].n : a) > (DATA.cur[b] ? DATA.cur[b].n : b) ? 1 : -1; }
   function heatColor(pc) { if (pc == null || isNaN(pc)) return "#161616"; var t = Math.max(-8, Math.min(8, pc)) / 8; if (t >= 0) return "rgba(38,180,110," + (0.18 + 0.62 * t).toFixed(2) + ")"; return "rgba(210,70,70," + (0.18 + 0.62 * (-t)).toFixed(2) + ")"; }
 
   fetch("/data/monitor.json").then(function (r) { return r.json(); }).then(function (j) {
-    DATA = j; buildRanges(); buildCats(); render();
+    DATA = j; buildRanges(); buildCats(); buildBase(); render();
   }).catch(function () { grid.innerHTML = '<p class="mon-empty">' + T("Не удалось загрузить данные.", "Failed to load data.") + "</p>"; });
 
   function buildRanges() {
@@ -42,11 +44,17 @@
       b.addEventListener("click", function () { cat = b.getAttribute("data-c"); Array.prototype.forEach.call(catsEl.querySelectorAll("button"), function (x) { x.classList.toggle("on", x.getAttribute("data-c") === cat); }); render(); });
     });
   }
+  function buildBase() {
+    var el = document.getElementById("hpBase"); if (!el) return;
+    el.innerHTML = '<option value="USD">USDT</option>' + Object.keys(DATA.series).filter(function (s) { return s !== "tether-trc20"; }).sort(byName).map(function (s) { return '<option value="' + s + '">' + esc(ticker(s) || name(s)) + "</option>"; }).join("");
+    el.value = base;
+    el.addEventListener("change", function () { base = el.value; render(); });
+  }
   if (searchEl) searchEl.addEventListener("input", function () { q = searchEl.value.toLowerCase().trim(); render(); });
 
   function render() {
     var slugs = Object.keys(DATA.series).filter(function (s) {
-      if (s === "tether-trc20") return false; // база USDT — плоская
+      if (s === "tether-trc20" || s === base) return false; // база — плоская/к себе = 0
       if (cat && (DATA.cur[s] || {}).cs !== cat) return false;
       if (q) { var c = DATA.cur[s] || {}; if ((s + " " + (c.n || "") + " " + (c.t || "")).toLowerCase().indexOf(q) < 0) return false; }
       return true;
