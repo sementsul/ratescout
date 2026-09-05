@@ -443,6 +443,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
+      <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
       <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
       <li><a href="{PREF[lang]}/alert/">{'Оповещения о курсе' if lang=='ru' else 'Rate alerts'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
@@ -1819,6 +1820,7 @@ def mobile_drawer(lang):
             (f"{P}/nastroeniya/", tr(lang, 'nav_mood')),
             (f"{P}/grafiki/", tr(lang, 'nav_charts')),
             (f"{P}/heatmap/", "Тепловая карта" if ru else "Heatmap"),
+            (f"{P}/populyarnost/", "Популярность по поиску" if ru else "Search popularity"),
             (f"{P}/halving/", "Халвинг Bitcoin" if ru else "Bitcoin halving")]),
         grp("Инструменты" if ru else "Tools", [
             (f"{P}/aml/", tr(lang, 'nav_aml')),
@@ -2578,6 +2580,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
+      <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
@@ -4627,6 +4630,7 @@ def static_files():
         items.append(u_entry(pr + "/vidzhet/", "monthly", "0.5"))
         items.append(u_entry(pr + "/grafiki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/heatmap/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/populyarnost/", "daily", "0.6"))
         items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
         items.append(u_entry(pr + "/alert/", "hourly", "0.6"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
@@ -4920,6 +4924,78 @@ def render_heatmap(lang):
     render_page(lang, "heatmap", title, desc, body, h1)
 
 
+def render_popular(lang):
+    """Популярность валют по поиску: агрегат кликов GSC (popular.json) по валютам + тренд CoinGecko. SEO-хаб."""
+    if not HISTORY:
+        return
+    ru = lang == "ru"
+    L = lambda r, e: r if ru else e
+    # GSC: клики по направлениям → сумма по валютам
+    agg = {}
+    for key, clk in POPULAR.items():
+        for s in key.split(">"):
+            if s == "tether-trc20":
+                continue
+            agg[s] = agg.get(s, 0) + (clk or 0)
+    gsc_rows = sorted(((s, c) for s, c in agg.items() if s in CUR), key=lambda x: -x[1])
+
+    def cur_link(slug):
+        info = CUR.get(slug) or {}
+        nm = info.get("name", slug)
+        tk = info.get("ticker", "")
+        return f'<a href="{cpage(lang, slug)}">{nm}{(" <b>" + tk + "</b>") if tk else ""}</a>'
+
+    def chg24(slug):
+        v = CHG_BY.get(slug, {}).get("24h")
+        if v is None:
+            return "<td>—</td>"
+        cls = "up" if v >= 0 else "dn"
+        return f'<td class="{cls}">{"+" if v >= 0 else ""}{v:.1f}%</td>'
+
+    if gsc_rows:
+        head = L("<tr><th>#</th><th>Валюта</th><th>Спрос (клики)</th><th>24ч</th></tr>",
+                 "<tr><th>#</th><th>Currency</th><th>Demand (clicks)</th><th>24h</th></tr>")
+        body_rows = "".join(
+            f'<tr><td>{i+1}</td><td>{cur_link(s)}</td><td>{c}</td>{chg24(s)}</tr>'
+            for i, (s, c) in enumerate(gsc_rows))
+        gsc_block = (f'<h2>{L("По запросам в Google (наш сайт)", "By Google queries (our site)")}</h2>'
+                     f'<div class="rtbl-wrap"><table class="rtbl">{head}{body_rows}</table></div>')
+    else:
+        gsc_block = f'<p class="updnote">{L("Данные поиска накапливаются из Google Search Console — список появится здесь.", "Search data is accumulating from Google Search Console — the list will appear here.")}</p>'
+
+    # CoinGecko trending
+    if TRENDING:
+        head2 = L("<tr><th>#</th><th>Монета</th><th>Ранг</th><th>24ч</th></tr>",
+                  "<tr><th>#</th><th>Coin</th><th>Rank</th><th>24h</th></tr>")
+        def tcell(c):
+            nm = c.get("name") or c.get("symbol") or "?"
+            sym = c.get("symbol") or ""
+            slug = c.get("slug") or ""
+            label = f'{nm}{(" <b>" + sym + "</b>") if sym else ""}'
+            cell = f'<a href="{cpage(lang, slug)}">{label}</a>' if slug and slug in CUR else label
+            ch = c.get("chg24h")
+            chd = "—" if ch is None else f'{"+" if ch >= 0 else ""}{ch:.1f}%'
+            chcls = "" if ch is None else (' class="up"' if ch >= 0 else ' class="dn"')
+            return f'<td>{cell}</td><td>{c.get("rank") or "—"}</td><td{chcls}>{chd}</td>'
+        rows2 = "".join(f'<tr><td>{i+1}</td>{tcell(c)}</tr>' for i, c in enumerate(TRENDING))
+        trend_block = (f'<h2>{L("В тренде поиска (CoinGecko)", "Trending search (CoinGecko)")}</h2>'
+                       f'<div class="rtbl-wrap"><table class="rtbl">{head2}{rows2}</table></div>')
+    else:
+        trend_block = ""
+
+    title = L(f"Популярность валют по поиску — что ищут чаще | {S['name']}",
+              f"Currency popularity by search — what people look up | {S['name']}")
+    desc = L("Рейтинг популярности валют по данным поиска: что чаще ищут для обмена (Google Search Console) и что в тренде (CoinGecko).",
+             "Currency popularity ranking from search data: what people look up to exchange (Google Search Console) and what is trending (CoinGecko).")
+    h1 = L("Популярность валют по поиску", "Currency popularity by search")
+    lead = L("Какие валюты и направления люди ищут чаще всего. Слева — спрос из Google по нашему сайту, ниже — что сейчас в тренде поиска по крипте. Нажмите валюту — её страница с курсами.",
+             "Which currencies and directions people search for most. First — Google demand for our site, then what is trending in crypto search now. Click a currency for its rates page.")
+    rel = L(f'<p class="related"><a href="{PREF[lang]}/monitor/">Профессиональный монитор</a> · <a href="{PREF[lang]}/heatmap/">Тепловая карта</a></p>',
+            f'<p class="related"><a href="{PREF[lang]}/monitor/">Professional monitor</a> · <a href="{PREF[lang]}/heatmap/">Heatmap</a></p>')
+    body = f'<h1>{h1}</h1><p class="lead">{lead}</p>{gsc_block}{trend_block}{rel}'
+    render_page(lang, "populyarnost", title, desc, body, h1)
+
+
 def render_monitor(lang):
     """Профессиональный монитор: графики многих валют на одной шкале + ре-база + линии/свечи + выбор галочками."""
     if not HISTORY:
@@ -5062,6 +5138,7 @@ def main():
         render_glossary(lang)
         render_charts_overview(lang)
         render_heatmap(lang)
+        render_popular(lang)
         render_monitor(lang)
         render_alert(lang)
         render_relative(lang)
