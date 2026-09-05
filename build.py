@@ -248,6 +248,15 @@ if os.path.exists(_yp):
     except (ValueError, OSError):
         YANDEX_Q = []
 
+# Поисковые фразы из Яндекс.Метрики (fetch_metrika.py, ephemeral) — фразы по визитам из поиска.
+METRIKA_Q = []
+_mtp = os.path.join(ROOT, "metrika.json")
+if os.path.exists(_mtp):
+    try:
+        METRIKA_Q = json.load(open(_mtp, encoding="utf-8")).get("phrases", [])
+    except (ValueError, OSError):
+        METRIKA_Q = []
+
 # Индекс страха и жадности (fetch_fng.py, ephemeral) — {value, class, ts} или пусто.
 FNG = {}
 _fp = os.path.join(ROOT, "fng.json")
@@ -4823,10 +4832,10 @@ def make_monitor_json():
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
         json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs,
-                   "popular": POPULAR, "trending": TRENDING, "yandex": YANDEX_Q, "series": HISTORY},
+                   "popular": POPULAR, "trending": TRENDING, "yandex": YANDEX_Q, "metrika": METRIKA_Q, "series": HISTORY},
                   f, ensure_ascii=False, separators=(",", ":"))
-    print("✅ data/monitor.json: %d валют, %d кат., %d пар, %d GSC-напр., %d трендов, %d Яндекс-запросов"
-          % (len(cur), len(cats), len(pairs), len(POPULAR), len(TRENDING), len(YANDEX_Q)))
+    print("✅ data/monitor.json: %d валют, %d кат., %d пар, %d GSC-напр., %d трендов, %d Яндекс-запр., %d Метрика-фраз"
+          % (len(cur), len(cats), len(pairs), len(POPULAR), len(TRENDING), len(YANDEX_Q), len(METRIKA_Q)))
 
 
 def render_alert(lang):

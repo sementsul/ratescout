@@ -492,6 +492,7 @@
           '<option value="cur"' + (p.cfg.view === "cur" ? " selected" : "") + ">" + T("Валюты (GSC)", "Currencies (GSC)") + "</option>" +
           '<option value="trend"' + (p.cfg.view === "trend" ? " selected" : "") + ">" + T("Тренд (CoinGecko)", "Trending (CoinGecko)") + "</option>" +
           '<option value="yandex"' + (p.cfg.view === "yandex" ? " selected" : "") + ">" + T("Яндекс: запросы", "Yandex: queries") + "</option>" +
+          '<option value="metrika"' + (p.cfg.view === "metrika" ? " selected" : "") + ">" + T("Метрика: фразы", "Metrika: phrases") + "</option>" +
         "</select>";
     }
     return "";
@@ -945,6 +946,18 @@
           return "<tr><td class='wl-n' data-yq='" + esc(r.q) + "'>" + esc(r.q) + " <span class='op-i'>↗</span></td>" +
             "<td class='wl-c'>" + (r.shows == null ? "—" : r.shows) + "</td><td class='wl-c'>" + (r.clicks == null ? "—" : r.clicks) + "</td></tr>";
         }).join("") + "</tbody></table></div>";
+      Array.prototype.forEach.call(body.querySelectorAll("[data-yq]"), function (n) {
+        n.classList.add("op-link"); n.title = T("Открыть в Яндексе", "Open in Yandex");
+        n.addEventListener("click", function (e) { e.stopPropagation(); openUrl("https://yandex.ru/search/?text=" + encodeURIComponent(n.getAttribute("data-yq"))); });
+      });
+      return;
+    }
+    if (p.cfg.view === "metrika") {
+      var mq = DATA.metrika || [];
+      if (!mq.length) { body.innerHTML = empty(T("Фразы Метрики пока не загружены (часть Яндекс скрывает).", "Metrika phrases not loaded yet (Yandex hides some).")); return; }
+      body.innerHTML = '<p class="dm-hint">' + T("Поисковые фразы из Яндекс.Метрики (визиты). ↗ — открыть в Яндексе.", "Search phrases from Yandex Metrika (visits). ↗ — open in Yandex.") + "</p>" +
+        '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Фраза", "Phrase") + "</th><th>" + T("Визиты", "Visits") + "</th></tr></thead><tbody>" +
+        mq.map(function (r) { return "<tr><td class='wl-n' data-yq='" + esc(r.q) + "'>" + esc(r.q) + " <span class='op-i'>↗</span></td><td class='wl-c'>" + (r.visits == null ? "—" : r.visits) + "</td></tr>"; }).join("") + "</tbody></table></div>";
       Array.prototype.forEach.call(body.querySelectorAll("[data-yq]"), function (n) {
         n.classList.add("op-link"); n.title = T("Открыть в Яндексе", "Open in Yandex");
         n.addEventListener("click", function (e) { e.stopPropagation(); openUrl("https://yandex.ru/search/?text=" + encodeURIComponent(n.getAttribute("data-yq"))); });

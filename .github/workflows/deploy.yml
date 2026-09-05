@@ -67,6 +67,12 @@ jobs:
           YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
         run: python3 fetch_yandex_queries.py || echo "⚠️ Яндекс-запросы пропущены — собираю без них"
 
+      - name: Fetch Yandex Metrika search phrases → metrika.json
+        env:
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_METRIKA_COUNTER: ${{ secrets.YANDEX_METRIKA_COUNTER }}
+        run: python3 fetch_metrika.py || echo "⚠️ Метрика-фразы пропущены — собираю без них"
+
       - name: Fetch OFAC sanctions list → aml-sanctions.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # аутентиф. доступ к GitHub API (без 429 на raw)
