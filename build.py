@@ -4891,6 +4891,93 @@ def make_cli_txt():
     print(f"✅ cli.txt: watchlist {len(watch)}, {len(gain)}↑/{len(lose)}↓, хитмап {len(heat)}")
 
 
+def make_cli_pages():
+    """Страницы для ИНТЕРАКТИВНОГО консольного монитора → dist/cli/*.txt + лаунчеры rs.ps1/rs.sh.
+    Клиент по клавише тянет нужную готовую страницу (heat/movers × 24h/7d/30d, watch) — без парсинга и без установки."""
+    if not HISTORY:
+        return
+    R, G, RED, GR, CY, B, Y, W = "\033[0m", "\033[92m", "\033[91m", "\033[90m", "\033[96m", "\033[1m", "\033[93m", "\033[97m"
+
+    def price(v):
+        if v is None:
+            return "—"
+        a = abs(v)
+        return (f"{v:,.0f}".replace(",", " ") if a >= 1000 else f"{v:.2f}" if a >= 1 else f"{v:.4f}" if a >= 0.01 else f"{v:.6f}")
+
+    def cp(pc):
+        return f"{GR}   —  {R}" if pc is None else f"{(G if pc >= 0 else RED)}{'+' if pc >= 0 else ''}{pc:5.1f}%{R}"
+
+    def heat_bg(pc):
+        if pc is None:
+            return 238
+        t = max(-8.0, min(8.0, pc))
+        return (22 if t < 2 else 28 if t < 4 else 34 if t < 6 else 40) if t >= 0 else (52 if -t < 2 else 88 if -t < 4 else 124 if -t < 6 else 160)
+
+    rows = []
+    for slug, h in HISTORY.items():
+        if slug == "tether-trc20" or len(h) < 2:
+            continue
+        info = CUR.get(slug) or {}
+        by = CHG_BY.get(slug) or {}
+        rows.append({"name": info.get("name", slug), "tk": info.get("ticker", ""), "price": h[-1][1],
+                     "c": {"24h": by.get("24h"), "7d": by.get("7d"), "30d": by.get("30d")},
+                     "rank": (MARKET.get(slug) or {}).get("rank") or 9999, "crypto": info.get("category") == "Криптовалюты"})
+
+    def dedup(lst):
+        seen, out = set(), []
+        for r in lst:
+            t = (r["tk"] or "").upper()
+            if t and t in seen:
+                continue
+            seen.add(t)
+            out.append(r)
+        return out
+    crypto = dedup(sorted([r for r in rows if r["crypto"]], key=lambda r: r["rank"]))
+    ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
+
+    def head(sub):
+        return [CY + "=" * 79 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 79 + R, ""]
+
+    def foot():
+        return ["", f"  {GR}BestChange (цены в USDT), обновление ежечасно · полный монитор: ratescout.ru/monitor · 18+{R}"]
+
+    cdir = os.path.join(DIST, "cli")
+    os.makedirs(cdir, exist_ok=True)
+
+    def wr(name, lines):
+        with open(os.path.join(cdir, name), "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+
+    def ml(r, per):
+        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c'][per])}"
+
+    def tile(r, per):
+        pc = r["c"][per]
+        txt = f"{r['tk'][:5]:>5} {'+' if pc >= 0 else ''}{pc:.0f}%"
+        return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:11].ljust(11)} {R}"
+    for per, lbl in (("24h", "24ч"), ("7d", "7д"), ("30d", "30д")):
+        hs = [r for r in crypto if r["c"][per] is not None]
+        hs.sort(key=lambda r: r["c"][per], reverse=True)
+        L = head(f"тепловая карта крипты · {lbl}")
+        for i in range(0, len(hs), 6):
+            L.append("  " + "".join(tile(r, per) for r in hs[i:i + 6]))
+        wr(f"heat-{per}.txt", L + foot())
+        sc = sorted([r for r in rows if r["c"][per] is not None], key=lambda r: r["c"][per], reverse=True)
+        g, l = sc[:15], list(reversed(sc[-15:]))
+        M = head(f"лидеры движения · {lbl}") + [f"  {G}> ЛИДЕРЫ РОСТА{R}"] + [ml(r, per) for r in g] + ["", f"  {RED}> ЛИДЕРЫ ПАДЕНИЯ{R}"] + [ml(r, per) for r in l]
+        wr(f"movers-{per}.txt", M + foot())
+
+    def wl(r):
+        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
+    wr("watch.txt", head("watchlist · топ-крипта") + [wl(r) for r in crypto[:20]] + foot())
+
+    for fn in ("rs.ps1", "rs.sh"):
+        src = os.path.join(ROOT, "console", fn)
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(cdir, fn))
+    print("✅ cli/: heat/movers×(24h/7d/30d) + watch + лаунчеры rs.ps1/rs.sh")
+
+
 def make_monitor_json():
     """Данные для профессионального монитора → dist/data/monitor.json (курсы в USDT + названия валют)."""
     if not HISTORY:
@@ -5310,7 +5397,8 @@ def main():
     static_files()
     copy_assets()
     make_monitor_json()     # dist/data/monitor.json для монитора
-    make_cli_txt()          # dist/cli.txt — фид для консольного монитора
+    make_cli_txt()          # dist/cli.txt — простой фид (одна команда)
+    make_cli_pages()        # dist/cli/*.txt + лаунчеры — интерактивный консольный монитор
     write_favicons()        # /favicon.ico + apple-touch (после copy_assets)
     write_covers()          # после copy_assets (он rmtree-ит dist/assets)
     write_daily_digest()    # dist/daily.json + daily-24h.png для Telegram (тоже после copy_assets)
