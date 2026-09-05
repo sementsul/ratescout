@@ -188,14 +188,14 @@
   }
 
   // ---------------- состояние воркспейса ----------------
-  var STATE = { theme: "bloomberg", panels: [], seq: 1, tiled: false, split: { x: 0.5, y: 0.5 } };
+  var STATE = { theme: "dos", panels: [], seq: 1, tiled: false, split: { x: 0.5, y: 0.5 } };
   var zTop = 10;
   var activeId = null; // id активного графика — с ним взаимодействуют остальные окна
   var LS_KEY = "rs_term_ws";
 
   function defaultWorkspace() {
     return {
-      theme: "bloomberg",
+      theme: "dos",
       panels: [
         { t: "chart", cfg: { cur: groupSlugs("top").slice(0, 4), base: "USD", type: "line", range: 365, log: false }, g: [8, 8, 560, 340] },
         { t: "watch", cfg: { grp: "top", range: 30 }, g: [576, 8, 360, 340] },
@@ -227,7 +227,7 @@
     } catch (e) { ws = null; }
     if (!ws) { try { var raw = localStorage.getItem(LS_KEY); if (raw) ws = JSON.parse(raw); } catch (e2) { ws = null; } }
     if (!ws || !ws.panels || !ws.panels.length) ws = defaultWorkspace();
-    STATE.theme = ws.theme || "bloomberg";
+    STATE.theme = ws.theme || "dos";
     STATE.tiled = !!ws.tiled;
     STATE.split = (ws.split && typeof ws.split.x === "number") ? ws.split : { x: 0.5, y: 0.5 };
     STATE.panels = ws.panels.map(function (p) { p.id = STATE.seq++; return p; });
@@ -1306,7 +1306,7 @@
   window.addEventListener("orientationchange", function () { clearTimeout(rzTimer); rzTimer = setTimeout(function () { lastW = window.innerWidth; renderAll(); }, 300); });
 
   // если стартуем в классическом виде — покажем его сразу, терминал подгрузим лениво
-  if (initialView() === "classic") { root.className = "th-bloomberg"; if (classicEl) classicEl.style.display = ""; if (btnClassic) btnClassic.classList.add("on"); if (btnTerm) btnTerm.classList.remove("on"); }
+  if (initialView() === "classic") { root.className = "th-dos"; if (classicEl) classicEl.style.display = ""; if (btnClassic) btnClassic.classList.add("on"); if (btnTerm) btnTerm.classList.remove("on"); }
 
   fetch("/data/monitor.json").then(function (r) { return r.json(); }).then(function (j) {
     DATA = j;

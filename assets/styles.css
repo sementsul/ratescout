@@ -446,6 +446,7 @@ summary{cursor:pointer;color:#ffff55}
 .term-mobile .win-chart .win-body,.term-mobile .win-heat .win-body{min-height:220px}
 .term-mobile .win-watch .win-body,.term-mobile .win-movers .win-body{min-height:180px}
 .term-mobile .win-rz{display:none}
+.term-mobile #tbFull,.term-mobile .win-full{display:none}
 
 /* --- открыть на сайте / клики --- */
 .op-i{opacity:.4;font-size:.85em}
