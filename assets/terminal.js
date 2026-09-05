@@ -155,11 +155,16 @@
     });
   }
   function setActive(id) { var p = STATE.panels.filter(function (x) { return x.id === id; })[0]; if (p && p.t === "chart") { activeId = id; markActive(); } }
+  // валюта уже на активном графике?
+  function inActiveChart(slug) { var c = getActiveChart(); return !!(c && c.cfg.cur && c.cfg.cur.indexOf(slug) >= 0); }
+  // значок «на активном графике»
+  function onMark(slug) { return (chartableCur(slug) && inActiveChart(slug)) ? " <span class='on-chart' title='" + T("на графике", "on chart") + "'>●</span>" : ""; }
+  // тумблер: нет на активном графике → добавить; есть → убрать (если графика нет — создать)
   function addToActiveChart(slug) {
     if (!DATA.series[slug]) return;
     var c = getActiveChart();
     if (!c) { c = { id: STATE.seq++, t: "chart", cfg: { cur: [slug], base: "USD", type: "line", range: 365, log: false }, g: nextPos() }; STATE.panels.push(c); }
-    else if (c.cfg.cur.indexOf(slug) < 0) c.cfg.cur.push(slug);
+    else { var i = c.cfg.cur.indexOf(slug); if (i >= 0) c.cfg.cur.splice(i, 1); else c.cfg.cur.push(slug); }
     activeId = c.id; renderAll(); saveWS();
   }
   function setActiveRatio(a, b) {
@@ -795,7 +800,7 @@
     body.innerHTML =
       '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Цена, USDT", "Price, USDT") + "</th><th></th><th>" + T("Δ", "Δ") + "</th></tr></thead><tbody>" +
       rows.map(function (r) {
-        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(name(r.s)) + " <b>" + esc(ticker(r.s)) + "</b> <span class='op-i'>📈</span></td>" +
+        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(name(r.s)) + " <b>" + esc(ticker(r.s)) + "</b>" + onMark(r.s) + " <span class='op-i'>📈</span></td>" +
           "<td class='wl-p'>" + fmtNum(r.last) + "</td>" +
           "<td class='wl-s'>" + spark(r.spk, r.pc) + "</td>" +
           "<td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
@@ -820,7 +825,7 @@
     var n = p.cfg.n || 8, gain = all.slice(0, n), loss = all.slice(-n).reverse();
     function col(list) {
       return "<tbody>" + list.map(function (r) {
-        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(ticker(r.s) || name(r.s)) + " <span class='op-i'>📈</span></td><td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
+        return "<tr><td class='wl-n' data-add='" + esc(r.s) + "'>" + esc(ticker(r.s) || name(r.s)) + onMark(r.s) + " <span class='op-i'>📈</span></td><td class='wl-c " + (r.pc >= 0 ? "up" : "dn") + "'>" + fmtPct(r.pc) + "</td></tr>";
       }).join("") + "</tbody>";
     }
     body.innerHTML =
@@ -836,7 +841,7 @@
     var slugs = panelSlugs(p);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
-      return '<div class="ht-cell" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
+      return '<div class="ht-cell' + (inActiveChart(c.s) ? " on-chart-cell" : "") + '" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
     }).join("") + "</div>";
     wireAdd(body);
   }
@@ -874,7 +879,7 @@
         } else {
           last = lastVal(s, "USD"); chg = pctChange(s, "USD", c.range); vol = volat(s, "USD", c.range);
           if (chg == null) return;
-          label = esc(name(s)) + (ticker(s) ? " <b>" + esc(ticker(s)) + "</b>" : "");
+          label = esc(name(s)) + (ticker(s) ? " <b>" + esc(ticker(s)) + "</b>" : "") + onMark(s);
           openAttr = "data-add='" + esc(s) + "'";
         }
         list.push({ s: s, label: label, last: last, chg: chg, vol: vol, oa: openAttr });
@@ -932,7 +937,7 @@
         tr.map(function (c, i) {
           var slug = c.slug || "";
           var nm = esc(c.name || c.symbol || "?") + (c.symbol ? " <b>" + esc(c.symbol) + "</b>" : "");
-          return "<tr><td class='wl-n' data-tslug='" + esc(slug) + "' data-tname='" + esc(c.name || c.symbol || "") + "'>" + (i + 1) + ". " + nm + " <span class='op-i'>" + dmCurIcon(slug) + "</span></td>" +
+          return "<tr><td class='wl-n' data-tslug='" + esc(slug) + "' data-tname='" + esc(c.name || c.symbol || "") + "'>" + (i + 1) + ". " + nm + onMark(slug) + " <span class='op-i'>" + dmCurIcon(slug) + "</span></td>" +
             "<td class='wl-c'>" + (c.rank || "—") + "</td>" +
             "<td class='wl-c " + (c.chg24h >= 0 ? "up" : "dn") + "'>" + (c.chg24h == null ? "—" : fmtPct(c.chg24h)) + "</td></tr>";
         }).join("") + "</tbody></table></div>";
@@ -983,7 +988,7 @@
       keys.forEach(function (k) { var c = pop[k]; k.split(">").forEach(function (s) { agg[s] = (agg[s] || 0) + c; }); });
       var rows = Object.keys(agg).map(function (s) { return { s: s, c: agg[s] }; }).sort(function (a, b) { return b.c - a.c; });
       body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
-        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>" + dmCurIcon(r.s) + "</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + onMark(r.s) + " <span class='op-i'>" + dmCurIcon(r.s) + "</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
         "</tbody></table></div>";
     } else {
       var drows = keys.map(function (k) { var ab = k.split(">"); return { a: ab[0], b: ab[1], c: pop[k] }; }).sort(function (x, y) { return y.c - x.c; });
@@ -1054,7 +1059,7 @@
     closeMenu();
     var ours = !!(slug && DATA.cur[slug]), q = ours ? name(slug) : (dispName || slug);
     var items = [];
-    if (chartableCur(slug)) items.push({ l: "📈 " + T("Открыть в графике", "Open in chart"), f: function () { addToActiveChart(slug); } });
+    if (chartableCur(slug)) items.push({ l: "📈 " + (inActiveChart(slug) ? T("Убрать с активного графика", "Remove from active chart") : T("Добавить на активный график", "Add to active chart")), f: function () { addToActiveChart(slug); } });
     if (ours) items.push({ l: "↗ " + T("Страница валюты на сайте", "Currency page on site"), f: function () { openUrl(curUrl(slug)); } });
     items.push({ sep: 1 });
     items.push({ l: "🔍 Google: " + q, f: function () { webSearch("g", q + " курс криптовалюта"); } });
