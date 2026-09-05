@@ -4942,10 +4942,10 @@ def make_cli_pages():
     ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
 
     def head(sub):
-        return [CY + "=" * 79 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 79 + R, ""]
+        return [CY + "=" * 158 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 158 + R, ""]
 
     def foot():
-        return ["", CY + "=" * 79 + R,
+        return ["", CY + "=" * 158 + R,
                 f"  {W}[h]{GR}тепл.карта  {W}[w]{GR}watchlist  {W}[m]{GR}лидеры    период {W}[1]{GR}24ч {W}[2]{GR}7д {W}[3]{GR}30д    {W}[r]{GR}обновить  {W}[q]{GR}выход{R}",
                 f"  {GR}BestChange (цены в USDT), ежечасно · полный монитор: ratescout.ru/monitor · 18+{R}"]
 
@@ -4956,8 +4956,25 @@ def make_cli_pages():
         with open(os.path.join(cdir, name), "w", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
 
-    def ml(r, per):
-        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c'][per])}"
+    # --- раскладка в 2 колонки (шире, а не длиннее): паддинг по ВИДИМОЙ ширине (без ANSI) ---
+    ansi_re = re.compile(r"\033\[[0-9;]*m")
+
+    def vlen(s):
+        return len(ansi_re.sub("", s))
+
+    def padv(s, n):
+        return s + " " * max(0, n - vlen(s))
+
+    def pair(cells, cw):
+        out = []
+        for i in range(0, len(cells), 2):
+            a = padv(cells[i], cw)
+            b = cells[i + 1] if i + 1 < len(cells) else ""
+            out.append("  " + a + "   " + b)
+        return out
+
+    def ml(r, per):  # ячейка мувера (без отступа, фикс. видимая ширина под 2 колонки)
+        return f"{r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c'][per])}"
 
     def tile(r, per):
         pc = r["c"][per]
@@ -4975,8 +4992,8 @@ def make_cli_pages():
             if not items:
                 continue
             L += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
-            for i in range(0, len(items), 4):
-                L.append("  " + "".join(tile(r, per) for r in items[i:i + 4]))
+            for i in range(0, len(items), 8):
+                L.append("  " + "".join(tile(r, per) for r in items[i:i + 8]))
         wr(f"heat-{per}.txt", L + foot())
         M = head(f"движение · все валюты по типам (сорт. по изм.) · {lbl}")
         for c in cat_order:
@@ -4988,11 +5005,11 @@ def make_cli_pages():
             if not items:
                 continue
             M += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
-            M += [ml(r, per) for r in items]
+            M += pair([ml(r, per) for r in items], 46)
         wr(f"movers-{per}.txt", M + foot())
 
-    def wl(r):
-        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
+    def wl(r):  # ячейка watchlist (без отступа, под 2 колонки)
+        return f"{r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
     WL = head("watchlist · все валюты по типам")
     for c in cat_order:
         items = by_cat.get(c, [])
@@ -5000,7 +5017,7 @@ def make_cli_pages():
         if not items:
             continue
         WL += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
-        WL += [wl(r) for r in items]
+        WL += pair([wl(r) for r in items], 62)
     wr("watch.txt", WL + foot())
 
     for fn in ("rs.ps1", "rs.sh"):
