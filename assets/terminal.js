@@ -918,21 +918,36 @@
   function drawDemand(p, body) {
     var pop = DATA.popular || {}, keys = Object.keys(pop);
     if (!keys.length) { body.innerHTML = empty(T("Данных поиска пока мало — накапливаются из Google Search Console.", "Little search data yet — accumulating from Google Search Console.")); return; }
-    var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). ↗ — открыть на сайте.", "From Google search (clicks). ↗ — open on site.") + "</p>";
+    var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). 📈 — в активный график (если не графикуется — откроется на сайте).", "From Google search (clicks). 📈 — into active chart (opens on site if not chartable).") + "</p>";
     if (p.cfg.view === "cur") {
       var agg = {};
       keys.forEach(function (k) { var c = pop[k]; k.split(">").forEach(function (s) { agg[s] = (agg[s] || 0) + c; }); });
       var rows = Object.keys(agg).map(function (s) { return { s: s, c: agg[s] }; }).sort(function (a, b) { return b.c - a.c; });
       body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Валюта", "Currency") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
-        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>↗</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        rows.map(function (r) { return "<tr><td class='wl-n' data-cur='" + esc(r.s) + "'>" + esc(name(r.s)) + (ticker(r.s) ? " <b>" + esc(ticker(r.s)) + "</b>" : "") + " <span class='op-i'>📈</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
         "</tbody></table></div>";
     } else {
       var drows = keys.map(function (k) { var ab = k.split(">"); return { a: ab[0], b: ab[1], c: pop[k] }; }).sort(function (x, y) { return y.c - x.c; });
       body.innerHTML = hint + '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Направление", "Direction") + "</th><th>" + T("Запросы", "Searches") + "</th></tr></thead><tbody>" +
-        drows.map(function (r) { return "<tr><td class='wl-n' data-pair='" + esc(r.a) + "|" + esc(r.b) + "'>" + esc(name(r.a)) + " → " + esc(name(r.b)) + " <span class='op-i'>↗</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
+        drows.map(function (r) { return "<tr><td class='wl-n' data-a='" + esc(r.a) + "' data-b='" + esc(r.b) + "'>" + esc(name(r.a)) + " → " + esc(name(r.b)) + " <span class='op-i'>📈</span></td><td class='wl-c'>" + r.c + "</td></tr>"; }).join("") +
         "</tbody></table></div>";
     }
-    wireOpens(body);
+    // умный клик: в активный график (пара A/B или валюта в USDT), иначе — открыть на сайте
+    Array.prototype.forEach.call(body.querySelectorAll("[data-cur]"), function (n) {
+      n.classList.add("op-link"); n.title = T("В активный график", "Into active chart");
+      n.addEventListener("click", function (e) { e.stopPropagation(); var s = n.getAttribute("data-cur"); if (DATA.series[s]) addToActiveChart(s); else openUrl(curUrl(s)); });
+    });
+    Array.prototype.forEach.call(body.querySelectorAll("[data-a]"), function (n) {
+      n.classList.add("op-link"); n.title = T("В активный график", "Into active chart");
+      n.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var a = n.getAttribute("data-a"), b = n.getAttribute("data-b"), ca = !!DATA.series[a], cb = !!DATA.series[b];
+        if (ca && cb) setActiveRatio(a, b);
+        else if (ca) addToActiveChart(a);
+        else if (cb) addToActiveChart(b);
+        else openUrl(pairUrl(a, b));
+      });
+    });
   }
 
   // ---------------- контекстное меню по графику (правый клик) ----------------
