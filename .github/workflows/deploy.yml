@@ -61,6 +61,12 @@ jobs:
           COINGECKO_KEY: ${{ secrets.COINGECKO_KEY }}
         run: python3 fetch_trending.py || echo "⚠️ тренды пропущены — собираю без них"
 
+      - name: Fetch Yandex search queries (Webmaster API) → yandex.json
+        env:
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
+        run: python3 fetch_yandex_queries.py || echo "⚠️ Яндекс-запросы пропущены — собираю без них"
+
       - name: Fetch OFAC sanctions list → aml-sanctions.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # аутентиф. доступ к GitHub API (без 429 на raw)

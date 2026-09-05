@@ -491,6 +491,7 @@
           '<option value="dir"' + (p.cfg.view === "dir" ? " selected" : "") + ">" + T("Направления (GSC)", "Directions (GSC)") + "</option>" +
           '<option value="cur"' + (p.cfg.view === "cur" ? " selected" : "") + ">" + T("Валюты (GSC)", "Currencies (GSC)") + "</option>" +
           '<option value="trend"' + (p.cfg.view === "trend" ? " selected" : "") + ">" + T("Тренд (CoinGecko)", "Trending (CoinGecko)") + "</option>" +
+          '<option value="yandex"' + (p.cfg.view === "yandex" ? " selected" : "") + ">" + T("Яндекс: запросы", "Yandex: queries") + "</option>" +
         "</select>";
     }
     return "";
@@ -932,6 +933,21 @@
       Array.prototype.forEach.call(body.querySelectorAll("[data-tslug]"), function (n) {
         n.classList.add("op-link"); n.title = T("В активный график", "Into active chart");
         n.addEventListener("click", function (e) { e.stopPropagation(); var s = n.getAttribute("data-tslug"); if (DATA.series[s]) addToActiveChart(s); else openUrl(curUrl(s)); });
+      });
+      return;
+    }
+    if (p.cfg.view === "yandex") {
+      var yq = DATA.yandex || [];
+      if (!yq.length) { body.innerHTML = empty(T("Яндекс-запросы пока не загружены (Вебмастер).", "Yandex queries not loaded yet (Webmaster).")); return; }
+      body.innerHTML = '<p class="dm-hint">' + T("Что ищут в Яндексе, чтобы найти сайт (показы·клики). ↗ — открыть в Яндексе.", "What people search in Yandex to find the site (shows·clicks). ↗ — open in Yandex.") + "</p>" +
+        '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Запрос", "Query") + "</th><th>" + T("Показы", "Shows") + "</th><th>" + T("Клики", "Clicks") + "</th></tr></thead><tbody>" +
+        yq.map(function (r) {
+          return "<tr><td class='wl-n' data-yq='" + esc(r.q) + "'>" + esc(r.q) + " <span class='op-i'>↗</span></td>" +
+            "<td class='wl-c'>" + (r.shows == null ? "—" : r.shows) + "</td><td class='wl-c'>" + (r.clicks == null ? "—" : r.clicks) + "</td></tr>";
+        }).join("") + "</tbody></table></div>";
+      Array.prototype.forEach.call(body.querySelectorAll("[data-yq]"), function (n) {
+        n.classList.add("op-link"); n.title = T("Открыть в Яндексе", "Open in Yandex");
+        n.addEventListener("click", function (e) { e.stopPropagation(); openUrl("https://yandex.ru/search/?text=" + encodeURIComponent(n.getAttribute("data-yq"))); });
       });
       return;
     }
