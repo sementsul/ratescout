@@ -673,9 +673,12 @@
       return;
     }
 
-    // линии / area
-    var single = sels.length === 1;
-    var sd = sels.map(function (s) { return { s: s, pts: rangeFilter(rebased(s, cfg.base), cfg.range) }; }).filter(function (o) { return o.pts.length; });
+    // линии / area (с превью по наведению из других окон: подсветка/временная линия)
+    var prev = p._preview, showPrev = !!(prev && chartableCur(prev));
+    var baseSels = sels.slice();
+    if (showPrev && baseSels.indexOf(prev) < 0) baseSels.push(prev);
+    var single = baseSels.length === 1;
+    var sd = baseSels.map(function (s) { return { s: s, pts: rangeFilter(rebased(s, cfg.base), cfg.range) }; }).filter(function (o) { return o.pts.length; });
     if (!sd.length) { body.innerHTML = empty(T("Нет данных за период.", "No data for the period.")); return; }
     sd.forEach(function (o) { var st = o.pts[0][1] || 1; o.norm = o.pts.map(function (pt) { return [pt[0], single ? pt[1] : pt[1] / st * 100]; }); });
     var allv = [], allx = []; sd.forEach(function (o) { o.norm.forEach(function (pt) { allv.push(pt[1]); allx.push(dnum(pt[0])); }); });
@@ -683,11 +686,13 @@
     var sc2 = makeScale(mn2, mx2, cfg.log, padT, h), x0 = Math.min.apply(null, allx), xs = (Math.max.apply(null, allx) - x0) || 1;
     function X(d) { return padL + (dnum(d) - x0) / xs * w; }
     svg += grid(sc2, W, padL, padR, single ? fmtNum : function (v) { return Math.round(v); });
-    if (single) { svg += areaAndLine(sd[0].norm, X, sc2, accent); }
+    if (single && !showPrev) { svg += areaAndLine(sd[0].norm, X, sc2, accent); }
     else sd.forEach(function (o, i) {
-      var col = COLORS[i % COLORS.length], d = "";
+      var col = single ? accent : COLORS[i % COLORS.length];
+      var hi = showPrev && o.s === prev, op = (showPrev && !hi) ? 0.28 : 1, sw = hi ? 2.6 : 1.6;
+      var d = "";
       o.norm.forEach(function (pt, k) { d += (k ? "L" : "M") + X(pt[0]).toFixed(1) + "," + sc2.Y(pt[1]).toFixed(1); });
-      svg += '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="1.5"/>';
+      svg += '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-opacity="' + op + '"/>';
     });
     svg += xlabels(sd[0].norm.map(function (pt) { return pt[0]; }), padL, w, H, padB, X);
     svg += "</svg>";
@@ -1145,6 +1150,28 @@
     // пропускаем: сам график (окно), шапки/ресайз/крестовину, контролы, валюты/направления/фразы
     if (e.target.closest("button,select,input,label,a,.win-chart,.win-h,.win-rz,.tile-cross,.op-link,[data-cur],[data-add],[data-tslug],[data-a],[data-pair],[data-addpair],[data-yq]")) return;
     openPickerForActive();
+  });
+
+  // превью по наведению: пока курсор на валюте/плитке — её линия на активном графике (подсветка, если уже есть)
+  function redrawPanelBody(p) { var el = canvas.querySelector('[data-id="' + p.id + '"]'); if (el) drawBody(p, el.querySelector(".win-body")); }
+  function setPreview(slug) {
+    if (isMobile()) return;
+    var c = getActiveChart();
+    if (!c || c.cfg.type !== "line" || !chartableCur(slug) || c._preview === slug) return;
+    c._preview = slug; redrawPanelBody(c);
+  }
+  function clearPreview() { var c = getActiveChart(); if (!c || c._preview == null) return; c._preview = null; redrawPanelBody(c); }
+  function hoverSlug(el) { return el.getAttribute("data-cur") || el.getAttribute("data-add") || el.getAttribute("data-tslug") || ""; }
+  canvas.addEventListener("mouseover", function (e) {
+    var el = e.target.closest("[data-cur],[data-add],[data-tslug]"); if (!el) return;
+    var s = hoverSlug(el); if (s) setPreview(s);
+  });
+  canvas.addEventListener("mouseout", function (e) {
+    var el = e.target.closest("[data-cur],[data-add],[data-tslug]"); if (!el) return;
+    if (el.contains(e.relatedTarget)) return; // движение внутри той же строки
+    var to = (e.relatedTarget && e.relatedTarget.closest) ? e.relatedTarget.closest("[data-cur],[data-add],[data-tslug]") : null;
+    if (to) return; // переходим на другую валюту — mouseover переключит сам
+    clearPreview();
   });
   function exportChartCSV(p) {
     var sels = p.cfg.cur.filter(function (s) { return DATA.series[s]; }); if (!sels.length) return;
