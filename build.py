@@ -4978,9 +4978,11 @@ def make_cli_pages():
 
     def tile(r, per):
         pc = r["c"][per]
-        lab = r["tk"] if r["crypto"] else r["name"]   # у банков/карт тикер = фиат (RUB/USD), поэтому имя
-        txt = f"{lab[:11].ljust(11)} {'+' if pc >= 0 else ''}{pc:.0f}%"
-        return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:17].ljust(17)} {R}"
+        # крипта: тикер (BTC). фиат/банки/наличные: тикер = ВАЛЮТА (RUB/USD), name = способ (Cash/Sberbank);
+        # показываем «ВАЛЮТА способ» — валюта первой, чтобы всегда была видна (иначе «Cash»×22 без валюты)
+        lab = r["tk"] if r["crypto"] else f"{r['tk']} {r['name']}"
+        txt = f"{lab[:13].ljust(13)} {'+' if pc >= 0 else ''}{pc:.0f}%"
+        return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:19].ljust(19)} {R}"
     for per, lbl in (("24h", "24ч"), ("7d", "7д"), ("30d", "30д")):
         L = head(f"тепловая карта · все валюты по типам · {lbl}")
         for c in cat_order:
@@ -4992,8 +4994,8 @@ def make_cli_pages():
             if not items:
                 continue
             L += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
-            for i in range(0, len(items), 8):
-                L.append("  " + "".join(tile(r, per) for r in items[i:i + 8]))
+            for i in range(0, len(items), 7):
+                L.append("  " + "".join(tile(r, per) for r in items[i:i + 7]))
         wr(f"heat-{per}.txt", L + foot())
         M = head(f"движение · все валюты по типам (сорт. по изм.) · {lbl}")
         for c in cat_order:
