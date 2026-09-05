@@ -4807,16 +4807,8 @@ def make_cli_txt():
     Пользователь запускает встроенным curl/PowerShell (без установки), фид только печатается — не выполняется."""
     if not HISTORY:
         return
-    R, G, RED, GR, CY, B, Y = "\033[0m", "\033[92m", "\033[91m", "\033[90m", "\033[96m", "\033[1m", "\033[93m"
-    rows = []
-    for slug, h in HISTORY.items():
-        if slug == "tether-trc20" or len(h) < 2:
-            continue
-        info = CUR.get(slug) or {}
-        rows.append((info.get("name", slug), info.get("ticker", ""), h[-1][1], (CHG_BY.get(slug) or {}).get("24h")))
-    scored = [r for r in rows if r[3] is not None]
-    scored.sort(key=lambda r: r[3], reverse=True)
-    gain, lose = scored[:15], list(reversed(scored[-15:]))
+    R, G, RED, GR, CY, B, Y, W = "\033[0m", "\033[92m", "\033[91m", "\033[90m", "\033[96m", "\033[1m", "\033[93m", "\033[97m"
+    SEP = CY + "=" * 79 + R
 
     def price(v):
         if v is None:
@@ -4831,24 +4823,72 @@ def make_cli_txt():
         return f"{v:.6f}"
 
     def cp(pc):
-        return f"{GR}   —   {R}" if pc is None else f"{(G if pc >= 0 else RED)}{'+' if pc >= 0 else ''}{pc:6.1f}%{R}"
+        return f"{GR}   —  {R}" if pc is None else f"{(G if pc >= 0 else RED)}{'+' if pc >= 0 else ''}{pc:5.1f}%{R}"
 
-    def line(r):
-        return f"  {r[0][:15].ljust(15)} {GR}{r[1][:6].ljust(6)}{R} {price(r[2]).rjust(11)}  {cp(r[3])}"
+    def heat_bg(pc):
+        if pc is None:
+            return 238
+        t = max(-8.0, min(8.0, pc))
+        if t >= 0:
+            return 22 if t < 2 else (28 if t < 4 else (34 if t < 6 else 40))
+        a = -t
+        return 52 if a < 2 else (88 if a < 4 else (124 if a < 6 else 160))
+
+    rows = []
+    for slug, h in HISTORY.items():
+        if slug == "tether-trc20" or len(h) < 2:
+            continue
+        info = CUR.get(slug) or {}
+        by = CHG_BY.get(slug) or {}
+        rows.append({"name": info.get("name", slug), "tk": info.get("ticker", ""), "price": h[-1][1],
+                     "c24": by.get("24h"), "c7": by.get("7d"),
+                     "rank": (MARKET.get(slug) or {}).get("rank") or 9999,
+                     "crypto": info.get("category") == "Криптовалюты"})
+    def dedup_tk(lst):  # по одной валюте на тикер (BTC/ETH/USDT-варианты не дублируем)
+        seen, out = set(), []
+        for r in lst:
+            t = (r["tk"] or "").upper()
+            if t and t in seen:
+                continue
+            seen.add(t)
+            out.append(r)
+        return out
+    crypto_by_rank = dedup_tk(sorted([r for r in rows if r["crypto"]], key=lambda r: r["rank"]))
+    watch = crypto_by_rank[:12]
+    scored = sorted([r for r in rows if r["c24"] is not None], key=lambda r: r["c24"], reverse=True)
+    gain, lose = scored[:12], list(reversed(scored[-12:]))
+    heat = [r for r in crypto_by_rank if r["c24"] is not None][:30]
+    heat.sort(key=lambda r: r["c24"], reverse=True)
+
+    def wline(r):
+        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])} {GR}24ч{R}  {cp(r['c7'])} {GR}7д{R}"
+
+    def mline(r):
+        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])}"
+
+    def tile(r):
+        pc = r["c24"]
+        t = f"{(r['tk'][:5]):>5} {'+' if pc >= 0 else ''}{pc:.0f}%"
+        return f"\033[48;5;{heat_bg(pc)}m{W} {t[:11].ljust(11)} {R}"
 
     ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
-    L = [f"{CY}==============================================================================={R}",
-         f"  {B}RateScout{R} — консольный монитор курсов  ·  изменение за 24ч  ·  {Y}{ts}{R}",
-         f"{CY}==============================================================================={R}", "",
-         f"  {G}> ЛИДЕРЫ РОСТА (24ч){R}"]
-    L += [line(r) for r in gain]
+    L = [SEP, f"  {B}RateScout{R} — консольный монитор курсов   ·   {Y}{ts}{R}", SEP, "",
+         f"  {CY}> WATCHLIST — топ-крипта по капитализации{R}"]
+    L += [wline(r) for r in watch]
+    L += ["", f"  {G}> ЛИДЕРЫ РОСТА (24ч){R}"]
+    L += [mline(r) for r in gain]
     L += ["", f"  {RED}> ЛИДЕРЫ ПАДЕНИЯ (24ч){R}"]
-    L += [line(r) for r in lose]
-    L += ["", f"  {GR}Данные: мониторинг BestChange (цены в USDT), обновление ежечасно · ratescout.ru{R}",
-          f"  {GR}Полный монитор с панелями и графиками: https://ratescout.ru/monitor · не оферта, 18+{R}", ""]
+    L += [mline(r) for r in lose]
+    L += ["", f"  {CY}> ТЕПЛОВАЯ КАРТА — топ-крипта, изменение за 24ч{R}"]
+    for i in range(0, len(heat), 6):
+        L.append("  " + "".join(tile(r) for r in heat[i:i + 6]))
+    L += ["", SEP,
+          f"  {GR}Данные: мониторинг BestChange (цены в USDT), обновление ежечасно · ratescout.ru{R}",
+          f"  {GR}Полный интерактивный монитор (панели, графики, скринер): https://ratescout.ru/monitor{R}",
+          f"  {GR}Приложение и эта команда: https://app.ratescout.ru · не оферта, 18+{R}", ""]
     with open(os.path.join(DIST, "cli.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
-    print(f"✅ cli.txt: {len(gain)}↑ / {len(lose)}↓")
+    print(f"✅ cli.txt: watchlist {len(watch)}, {len(gain)}↑/{len(lose)}↓, хитмап {len(heat)}")
 
 
 def make_monitor_json():
