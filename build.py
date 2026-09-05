@@ -4861,10 +4861,10 @@ def make_cli_txt():
     heat.sort(key=lambda r: r["c24"], reverse=True)
 
     def wline(r):
-        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])} {GR}24ч{R}  {cp(r['c7'])} {GR}7д{R}"
+        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])} {GR}24ч{R}  {cp(r['c7'])} {GR}7д{R}"
 
     def mline(r):
-        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])}"
+        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c24'])}"
 
     def tile(r):
         pc = r["c24"]
@@ -4957,12 +4957,13 @@ def make_cli_pages():
             f.write("\n".join(lines) + "\n")
 
     def ml(r, per):
-        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c'][per])}"
+        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c'][per])}"
 
     def tile(r, per):
         pc = r["c"][per]
-        txt = f"{r['tk'][:5]:>5} {'+' if pc >= 0 else ''}{pc:.0f}%"
-        return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:11].ljust(11)} {R}"
+        lab = r["tk"] if r["crypto"] else r["name"]   # у банков/карт тикер = фиат (RUB/USD), поэтому имя
+        txt = f"{lab[:11].ljust(11)} {'+' if pc >= 0 else ''}{pc:.0f}%"
+        return f"\033[48;5;{heat_bg(pc)}m{W} {txt[:17].ljust(17)} {R}"
     for per, lbl in (("24h", "24ч"), ("7d", "7д"), ("30d", "30д")):
         L = head(f"тепловая карта · все валюты по типам · {lbl}")
         for c in cat_order:
@@ -4974,8 +4975,8 @@ def make_cli_pages():
             if not items:
                 continue
             L += ["", f"  {CY}> {cat_name(c, 'ru').upper()}{R} {GR}({len(items)}){R}"]
-            for i in range(0, len(items), 6):
-                L.append("  " + "".join(tile(r, per) for r in items[i:i + 6]))
+            for i in range(0, len(items), 4):
+                L.append("  " + "".join(tile(r, per) for r in items[i:i + 4]))
         wr(f"heat-{per}.txt", L + foot())
         M = head(f"движение · все валюты по типам (сорт. по изм.) · {lbl}")
         for c in cat_order:
@@ -4991,7 +4992,7 @@ def make_cli_pages():
         wr(f"movers-{per}.txt", M + foot())
 
     def wl(r):
-        return f"  {r['name'][:15].ljust(15)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
+        return f"  {r['name'][:18].ljust(18)} {GR}{r['tk'][:6].ljust(6)}{R} {price(r['price']).rjust(11)}  {cp(r['c']['24h'])} {GR}24ч{R}  {cp(r['c']['7d'])} {GR}7д{R}"
     WL = head("watchlist · все валюты по типам")
     for c in cat_order:
         items = by_cat.get(c, [])
