@@ -337,6 +337,11 @@ summary{cursor:pointer;color:#ffff55}
 .moredirs>summary:hover{background:#00aaaa;color:#111}
 .moredirs .dlist{margin-top:8px}
 
+/* страница книг: блоки + разделитель */
+.bookblk{margin:10px 0 6px}
+.bookblk h2{margin:6px 0 2px}
+hr.bkdiv{border:0;border-top:1px dashed #55ffff;opacity:.5;margin:22px 0}
+
 /* ============ ТЕРМИНАЛ (многопанельный монитор) ============ */
 .mon-mode{display:flex;gap:6px;margin:10px 0 4px}
 .mon-mode button{font:inherit;cursor:pointer;padding:6px 14px;border:1px solid #245;background:#0a0f14;color:#7cf;border-radius:4px}
