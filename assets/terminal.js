@@ -843,7 +843,10 @@
     var slugs = panelSlugs(p);
     var cells = slugs.map(function (s) { return { s: s, pc: pctChange(s, "USD", p.cfg.range) }; });
     body.innerHTML = '<div class="heat-grid">' + cells.map(function (c) {
-      return '<div class="ht-cell' + (inActiveChart(c.s) ? " on-chart-cell" : "") + '" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '"><span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
+      var on = inActiveChart(c.s);
+      return '<div class="ht-cell' + (on ? " on-chart-cell" : "") + '" data-add="' + esc(c.s) + '" style="background:' + heatColor(c.pc) + '">' +
+        (on ? '<span class="ht-dot" title="' + T("на графике", "on chart") + '"></span>' : "") +
+        '<span class="ht-t">' + esc(ticker(c.s) || name(c.s)) + "</span><span class='ht-p'>" + (c.pc == null ? "—" : fmtPct(c.pc)) + "</span></div>";
     }).join("") + "</div>";
     wireAdd(body);
   }

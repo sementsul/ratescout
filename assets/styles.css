@@ -400,7 +400,8 @@ hr.bkdiv{border:0;border-top:1px dashed #55ffff;opacity:.5;margin:22px 0}
 .movers-wrap .mv-col{flex:1;min-width:0}
 .movers-wrap .mv-h{font-size:.74rem;font-weight:bold;padding:2px 6px;position:sticky;top:0}
 .heat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:4px;padding:2px;align-content:start}
-.ht-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border-radius:3px;min-height:48px;overflow:hidden}
+.ht-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;border-radius:3px;min-height:48px;overflow:hidden;position:relative}
+.ht-dot{position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:#26d07c;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
 .ht-t{font-weight:bold;font-size:.76rem}
 .ht-p{font-size:.72rem;opacity:.95}
 /* модалка выбора валют */
