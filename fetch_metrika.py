@@ -20,6 +20,16 @@ MET = "https://api-metrika.yandex.net/stat/v1/data"
 _HIDE = {"не определено", "(not set)", "(none)", "not set", "—", ""}
 
 
+def _junk(q):
+    """Отсеять не-запросы: URL/путь/бренд (прямые заходы Метрика пишет как URL сайта)."""
+    ql = q.lower().strip()
+    if not ql or ql in _HIDE:
+        return True
+    if ql.startswith(("http", "www.", "/")):
+        return True
+    return "ratescout" in ql
+
+
 def main():
     if not TOKEN:
         print("нет YANDEX_OAUTH_TOKEN — пропускаю"); return 0
@@ -42,7 +52,7 @@ def main():
             visits = r["metrics"][0]
         except (KeyError, IndexError, TypeError):
             continue
-        if not name or name.lower() in _HIDE:
+        if _junk(name):
             continue
         phrases.append({"q": name, "visits": int(visits or 0)})
     json.dump({"generated_at": int(time.time()), "phrases": phrases},

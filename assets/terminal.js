@@ -919,6 +919,8 @@
 
   // ----- СПРОС ИЗ ПОИСКА (Google Search Console: популярные направления/валюты) -----
   function chartableCur(s) { return !!(s && DATA.series[s]); }
+  // фраза-мусор (URL/путь/бренд) — не показываем как «запрос»
+  function dmJunk(q) { var s = (q || "").toLowerCase().trim(); if (!s) return true; if (/^(https?:|www\.|\/)/.test(s)) return true; return s.indexOf("ratescout") >= 0; }
   // иконка-подсказка: 📈 построится в графике · ↗ откроет страницу на сайте · 🔍 нет у нас → поиск
   function dmCurIcon(s) { return chartableCur(s) ? "📈" : (s && DATA.cur[s] ? "↗" : "🔍"); }
   function drawDemand(p, body) {
@@ -947,7 +949,7 @@
       return;
     }
     if (p.cfg.view === "yandex") {
-      var yq = DATA.yandex || [];
+      var yq = (DATA.yandex || []).filter(function (r) { return !dmJunk(r.q); });
       if (!yq.length) { body.innerHTML = empty(T("Яндекс-запросы пока не загружены (Вебмастер).", "Yandex queries not loaded yet (Webmaster).")); return; }
       body.innerHTML = '<p class="dm-hint">' + T("Что ищут в Яндексе, чтобы найти сайт (показы·клики). ↗ — открыть в Яндексе.", "What people search in Yandex to find the site (shows·clicks). ↗ — open in Yandex.") + "</p>" +
         '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Запрос", "Query") + "</th><th>" + T("Показы", "Shows") + "</th><th>" + T("Клики", "Clicks") + "</th></tr></thead><tbody>" +
@@ -962,7 +964,7 @@
       return;
     }
     if (p.cfg.view === "metrika") {
-      var mq = DATA.metrika || [];
+      var mq = (DATA.metrika || []).filter(function (r) { return !dmJunk(r.q); });
       if (!mq.length) { body.innerHTML = empty(T("Фразы Метрики пока не загружены (часть Яндекс скрывает).", "Metrika phrases not loaded yet (Yandex hides some).")); return; }
       body.innerHTML = '<p class="dm-hint">' + T("Поисковые фразы из Яндекс.Метрики (визиты). ↗ — открыть в Яндексе.", "Search phrases from Yandex Metrika (visits). ↗ — open in Yandex.") + "</p>" +
         '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Фраза", "Phrase") + "</th><th>" + T("Визиты", "Visits") + "</th></tr></thead><tbody>" +

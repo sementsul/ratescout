@@ -18,6 +18,16 @@ HOST = os.environ.get("YANDEX_HOST") or "https://ratescout.ru"
 WM = "https://api.webmaster.yandex.net/v4"
 
 
+def _junk(q):
+    """Отсеять не-запросы: URL/путь/бренд (не полезны как «спрос»)."""
+    ql = (q or "").lower().strip()
+    if not ql:
+        return True
+    if ql.startswith(("http", "www.", "/")):
+        return True
+    return "ratescout" in ql
+
+
 def yget(url):
     req = urllib.request.Request(url, headers={"Authorization": f"OAuth {TOKEN}"})
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -44,7 +54,7 @@ def main():
     for r in q.get("queries", []):
         ind = r.get("indicators", {}) or {}
         qt = r.get("query_text") or ""
-        if not qt:
+        if _junk(qt):
             continue
         queries.append({"q": qt, "shows": ind.get("TOTAL_SHOWS"), "clicks": ind.get("TOTAL_CLICKS")})
     json.dump({"generated_at": int(time.time()), "queries": queries},
