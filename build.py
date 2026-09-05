@@ -2577,6 +2577,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/">{tr(lang,'all_cur')}</a></li>
       <li><a href="{PREF[lang]}/napravleniya/">{tr(lang,'nav_dirs')}</a></li>
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
+      <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
