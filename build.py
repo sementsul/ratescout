@@ -4941,13 +4941,22 @@ def make_cli_pages():
     cat_order = list(CATS) + [c for c in by_cat if c not in CATS]
     ts = datetime.fromtimestamp(RATES_GENERATED, timezone.utc).strftime("%Y-%m-%d %H:%M UTC") if RATES_GENERATED else ""
 
+    # ссылка на сайт с UTM-меткой (для аналитики переходов из консоли)
+    SITE = "https://ratescout.ru/monitor/?utm_source=console&utm_medium=cli&utm_campaign=cli_monitor"
+
+    def link(url, text):  # OSC 8 — кликабельная ссылка в совр. терминалах; где не поддержано — просто текст
+        return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
     def head(sub):
-        return [CY + "=" * 158 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 158 + R, ""]
+        return [CY + "=" * 158 + R, f"  {B}RateScout{R} · {sub} · {Y}{ts}{R}", CY + "=" * 158 + R,
+                f"  {GR}Курсы обмена валют в обменниках (данные BestChange). Полный функционал — на сайте.{R}", ""]
 
     def foot():
+        btn = link(SITE, "\033[46;30m ▶ Открыть сайт — полный монитор \033[0m")
         return ["", CY + "=" * 158 + R,
                 f"  {W}[h]{GR}тепл.карта  {W}[w]{GR}watchlist  {W}[m]{GR}лидеры    период {W}[1]{GR}24ч {W}[2]{GR}7д {W}[3]{GR}30д    {W}[r]{GR}обновить  {W}[q]{GR}выход{R}",
-                f"  {GR}BestChange (цены в USDT), ежечасно · полный монитор: ratescout.ru/monitor · 18+{R}"]
+                "  " + btn + f"   {CY}{SITE}{R}",
+                f"  {GR}BestChange (цены в USDT), ежечасно · курсы обмена в обменниках · 18+{R}"]
 
     cdir = os.path.join(DIST, "cli")
     os.makedirs(cdir, exist_ok=True)
