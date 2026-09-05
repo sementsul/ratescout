@@ -488,8 +488,9 @@
     }
     if (p.t === "demand") {
       return '<select class="win-s win-view">' +
-          '<option value="dir"' + (p.cfg.view === "dir" ? " selected" : "") + ">" + T("Направления", "Directions") + "</option>" +
-          '<option value="cur"' + (p.cfg.view === "cur" ? " selected" : "") + ">" + T("Валюты", "Currencies") + "</option>" +
+          '<option value="dir"' + (p.cfg.view === "dir" ? " selected" : "") + ">" + T("Направления (GSC)", "Directions (GSC)") + "</option>" +
+          '<option value="cur"' + (p.cfg.view === "cur" ? " selected" : "") + ">" + T("Валюты (GSC)", "Currencies (GSC)") + "</option>" +
+          '<option value="trend"' + (p.cfg.view === "trend" ? " selected" : "") + ">" + T("Тренд (CoinGecko)", "Trending (CoinGecko)") + "</option>" +
         "</select>";
     }
     return "";
@@ -916,6 +917,24 @@
 
   // ----- СПРОС ИЗ ПОИСКА (Google Search Console: популярные направления/валюты) -----
   function drawDemand(p, body) {
+    if (p.cfg.view === "trend") {
+      var tr = DATA.trending || [];
+      if (!tr.length) { body.innerHTML = empty(T("Тренд пока не загружен (обновляется из CoinGecko).", "Trending not loaded yet (updates from CoinGecko).")); return; }
+      body.innerHTML = '<p class="dm-hint">' + T("Топ поиска по крипте на CoinGecko. 📈 — в активный график.", "Top searched crypto on CoinGecko. 📈 — into active chart.") + "</p>" +
+        '<div class="win-tblw"><table class="win-tbl"><thead><tr><th>' + T("Монета", "Coin") + "</th><th>" + T("Ранг", "Rank") + "</th><th>24ч</th></tr></thead><tbody>" +
+        tr.map(function (c, i) {
+          var slug = c.slug || "";
+          var nm = esc(c.name || c.symbol || "?") + (c.symbol ? " <b>" + esc(c.symbol) + "</b>" : "");
+          return "<tr><td class='wl-n'" + (slug ? " data-tslug='" + esc(slug) + "'" : "") + ">" + (i + 1) + ". " + nm + (slug ? " <span class='op-i'>📈</span>" : "") + "</td>" +
+            "<td class='wl-c'>" + (c.rank || "—") + "</td>" +
+            "<td class='wl-c " + (c.chg24h >= 0 ? "up" : "dn") + "'>" + (c.chg24h == null ? "—" : fmtPct(c.chg24h)) + "</td></tr>";
+        }).join("") + "</tbody></table></div>";
+      Array.prototype.forEach.call(body.querySelectorAll("[data-tslug]"), function (n) {
+        n.classList.add("op-link"); n.title = T("В активный график", "Into active chart");
+        n.addEventListener("click", function (e) { e.stopPropagation(); var s = n.getAttribute("data-tslug"); if (DATA.series[s]) addToActiveChart(s); else openUrl(curUrl(s)); });
+      });
+      return;
+    }
     var pop = DATA.popular || {}, keys = Object.keys(pop);
     if (!keys.length) { body.innerHTML = empty(T("Данных поиска пока мало — накапливаются из Google Search Console.", "Little search data yet — accumulating from Google Search Console.")); return; }
     var hint = '<p class="dm-hint">' + T("По данным поиска Google (клики). 📈 — в активный график (если не графикуется — откроется на сайте).", "From Google search (clicks). 📈 — into active chart (opens on site if not chartable).") + "</p>";

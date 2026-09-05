@@ -230,6 +230,15 @@ if os.path.exists(_mp):
     except (ValueError, OSError):
         MARKET = {}
 
+# Трендовые монеты из CoinGecko (/search/trending, fetch_trending.py, ephemeral) — свежий поисковый спрос.
+TRENDING = []
+_tp = os.path.join(ROOT, "trending.json")
+if os.path.exists(_tp):
+    try:
+        TRENDING = json.load(open(_tp, encoding="utf-8")).get("coins", [])
+    except (ValueError, OSError):
+        TRENDING = []
+
 # Индекс страха и жадности (fetch_fng.py, ephemeral) — {value, class, ts} или пусто.
 FNG = {}
 _fp = os.path.join(ROOT, "fng.json")
@@ -4805,10 +4814,10 @@ def make_monitor_json():
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
         json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs,
-                   "popular": POPULAR, "series": HISTORY},
+                   "popular": POPULAR, "trending": TRENDING, "series": HISTORY},
                   f, ensure_ascii=False, separators=(",", ":"))
-    print("✅ data/monitor.json: %d валют, %d категорий, %d ядровых пар, %d поисковых направлений"
-          % (len(cur), len(cats), len(pairs), len(POPULAR)))
+    print("✅ data/monitor.json: %d валют, %d категорий, %d ядровых пар, %d поисковых направлений, %d трендов"
+          % (len(cur), len(cats), len(pairs), len(POPULAR), len(TRENDING)))
 
 
 def render_alert(lang):
