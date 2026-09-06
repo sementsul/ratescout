@@ -4982,6 +4982,9 @@ CHAINS_CSS = """<style>
 #chWrap{overflow-x:auto;padding:0}
 .ch-disc{padding:12px;margin-top:16px;color:#a8a8a8;font-size:13px}
 .ch-disc b{color:#ffd24a}
+.ch-cta{text-align:center;margin:22px 0}
+.ch-cta a{display:inline-block;background:#00aaaa;color:#111;font-weight:bold;padding:12px 30px;text-decoration:none;border-radius:4px;font-size:16px}
+.ch-cta a:hover{background:#55ffff}
 .mbar-wrap{display:inline-block;width:56px;height:7px;background:#0a0f14;border:1px solid #245;border-radius:2px;vertical-align:middle;margin-left:7px;overflow:hidden}
 .mbar-fill{display:block;height:100%}
 .mval{display:inline-block;min-width:56px}
@@ -5049,6 +5052,7 @@ def render_chains(lang, chains):
   <div id="chWrap" class="dosborder"><table id="chTbl"><thead></thead><tbody></tbody></table></div>
   <p class="mon-note" id="chUpd"></p>
   <div class="ch-disc dosborder">{disc}</div>
+  <div class="ch-cta"><a href="https://my-many.ru/?utm_source=ratescout&utm_medium=chains_cta">{L('💰 Арбитраж — база цепочек (MyMany)', '💰 Arbitrage — chains database (MyMany)')}</a></div>
 """ + CHAINS_CSS + "<script>" + js + "</script>"
     render_page(lang, "tsepochki", title, desc, body, h1)
 
