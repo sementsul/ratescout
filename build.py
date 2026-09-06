@@ -1821,6 +1821,7 @@ def mobile_drawer(lang):
             (f"{P}/nastroeniya/", tr(lang, 'nav_mood')),
             (f"{P}/grafiki/", tr(lang, 'nav_charts')),
             (f"{P}/heatmap/", "Тепловая карта" if ru else "Heatmap"),
+            (f"{P}/tsepochki/", "💱 Цепочки обмена" if ru else "💱 Exchange chains"),
             (f"{P}/populyarnost/", "Популярность по поиску" if ru else "Search popularity"),
             (f"{P}/halving/", "Халвинг Bitcoin" if ru else "Bitcoin halving")]),
         grp("Инструменты" if ru else "Tools", [
@@ -4935,10 +4936,13 @@ CHAINS_JS = r"""(function(){
  });
  function rc(r){return r<30?"r-low":r<60?"r-mid":"r-high";}
  function rl(r){return r<30?TL.low:r<60?TL.mid:TL.high;}
+ function riskColor(r){return r<30?"#8CFC8C":r<60?"#ffd24a":"#ff8a8a";}
+ function bar(w,color){w=Math.max(2,Math.min(100,w));return "<span class='mbar-wrap'><i class='mbar-fill' style='width:"+w.toFixed(0)+"%;background:"+color+"'></i></span>";}
  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
  function render(){
    var rows=(CH[mode]||[]).slice();
    rows.sort(function(a,b){return sort==="risk"?a.risk-b.risk:b.profit-a.profit;});
+   var mp=rows.reduce(function(m,r){return r.profit>m?r.profit:m;},0)||1;
    document.querySelector("#chTbl thead").innerHTML=
      "<tr><th>"+TL.chain+"</th><th class='num'>"+TL.profit+"</th><th class='num'>"+TL.risk+"</th><th class='num'>"+TL.liq+"</th></tr>";
    var tb=rows.map(function(c){
@@ -4948,8 +4952,8 @@ CHAINS_JS = r"""(function(){
          : '<b title="'+esc(n.name)+'">'+esc(n.tk)+'</b>';
      }).join(' <span class="arr">→</span> ');
      return "<tr><td class='ch-path'>"+path+"</td>"+
-       "<td class='num prof'>+"+c.profit.toFixed(2)+"%</td>"+
-       "<td class='num'><span class='badge "+rc(c.risk)+"'>"+c.risk+" "+rl(c.risk)+"</span></td>"+
+       "<td class='num prof'><span class='mval'>+"+c.profit.toFixed(2)+"%</span>"+bar(c.profit/mp*100,"#7CFC7C")+"</td>"+
+       "<td class='num'><span class='badge "+rc(c.risk)+"'>"+c.risk+" "+rl(c.risk)+"</span>"+bar(c.risk,riskColor(c.risk))+"</td>"+
        "<td class='num'>≥"+c.minCount+"</td></tr>";
    }).join("");
    document.querySelector("#chTbl tbody").innerHTML=tb||("<tr><td colspan='4' class='mon-empty'>"+TL.empty+"</td></tr>");
@@ -4975,6 +4979,9 @@ CHAINS_CSS = """<style>
 #chWrap{overflow-x:auto;padding:0}
 .ch-disc{padding:12px;margin-top:16px;color:#a8a8a8;font-size:13px}
 .ch-disc b{color:#ffd24a}
+.mbar-wrap{display:inline-block;width:56px;height:7px;background:#0a0f14;border:1px solid #245;border-radius:2px;vertical-align:middle;margin-left:7px;overflow:hidden}
+.mbar-fill{display:block;height:100%}
+.mval{display:inline-block;min-width:56px}
 </style>"""
 
 
@@ -5029,6 +5036,7 @@ def render_chains(lang, chains):
     body = f"""
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
+  <p class="updnote">{updated_str(lang)} · {L('данные','data')} BestChange</p>
   <div class="ch-ctl">
     <span class="rsrange" id="chModes"></span>
     <span class="ch-sort">{L('Сортировка', 'Sort')}:
