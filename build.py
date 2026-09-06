@@ -5708,6 +5708,8 @@ def main():
     static_files()
     copy_assets()
     make_monitor_json()     # dist/data/monitor.json для монитора
+    if os.path.exists(_rp):  # публичный экспорт направленных курсов для MyMany (арбитражные цепочки)
+        shutil.copy(_rp, os.path.join(DIST, "rates.json"))
     make_cli_txt()          # dist/cli.txt — простой фид (одна команда)
     make_cli_pages()        # dist/cli/*.txt + лаунчеры — интерактивный консольный монитор
     write_favicons()        # /favicon.ico + apple-touch (после copy_assets)
