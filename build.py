@@ -445,6 +445,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
       <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
       <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
+      <li><a href="{PREF[lang]}/tsepochki/">{'💱 Цепочки обмена' if lang=='ru' else '💱 Exchange chains'}</a></li>
       <li><a href="{PREF[lang]}/alert/">{'Оповещения о курсе' if lang=='ru' else 'Rate alerts'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
@@ -2581,6 +2582,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/lidery-rynka/">{tr(lang,'nav_leaders')}</a></li>
       <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
       <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
+      <li><a href="{PREF[lang]}/tsepochki/">{'💱 Цепочки обмена' if lang=='ru' else '💱 Exchange chains'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
@@ -4632,6 +4634,7 @@ def static_files():
         items.append(u_entry(pr + "/heatmap/", "hourly", "0.7"))
         items.append(u_entry(pr + "/populyarnost/", "daily", "0.6"))
         items.append(u_entry(pr + "/monitor/", "hourly", "0.7"))
+        items.append(u_entry(pr + "/tsepochki/", "hourly", "0.7"))
         items.append(u_entry(pr + "/alert/", "hourly", "0.6"))
         items.append(u_entry(pr + "/kursy/", "hourly", "0.6"))
         items.append(u_entry(pr + "/napravleniya/", "hourly", "0.7"))
@@ -4800,6 +4803,239 @@ def copy_assets():
         if os.path.isdir(_bd):
             shutil.rmtree(_bd)
         shutil.copytree(_bk, _bd)
+
+
+def compute_chains():
+    """Цепочки обмена (арбитраж) по данным BestChange: 2/3/4 звена A→…→A.
+    Берём только ЛИКВИДНЫЕ леги (≥MINC обменников, резерв>0) и с курсом в пределах 0.66..1.5× справедливого
+    (по цене валют в USDT) — иначе это битые/устаревшие данные, дающие фейковую «доходность». Дедуп по набору
+    ТИКЕРОВ (варианты USDT-erc20/trc20/bep20 не плодим). Доходность = произведение курсов−1 (%). Риск% —
+    эвристика: длиннее цепочка + меньше обменников + «слишком красивый» профит = выше риск (окно закроется быстрее)."""
+    empty = {"2": [], "3": [], "4": [], "generated": RATES_GENERATED}
+    if not RATES:
+        return empty
+    MINC = 3
+    usd = {s: (h[-1][1] if h else None) for s, h in HISTORY.items()}
+    R = {}                                   # R[a][b] = (rate, count) — только ликвидные/санитарные леги
+    for k, v in RATES.items():
+        if ">" not in k:
+            continue
+        a, b = k.split(">", 1)
+        try:
+            rate = float(v["rate"])
+        except (ValueError, KeyError, TypeError):
+            continue
+        if rate <= 0:
+            continue
+        cnt = int(v.get("count", 0) or 0)
+        if cnt < MINC or float(v.get("reserve", 0) or 0) <= 0:
+            continue
+        pa, pb = usd.get(a), usd.get(b)
+        if pa and pb and pb > 0:             # сверка с USDT-справедливым курсом
+            f = pa / pb
+            if rate > f * 1.5 or rate < f * 0.66:
+                continue
+        R.setdefault(a, {})[b] = (rate, cnt)
+    tkf = lambda s: (CUR.get(s, {}).get("ticker") or s)
+    deg = sorted(R, key=lambda n: -len(R[n]))
+
+    def risk(legs, minc, prof):
+        base = {2: 8, 3: 20, 4: 35}[legs]
+        liq = 30 if minc < 5 else 18 if minc < 10 else 10 if minc < 20 else 4 if minc < 40 else 0
+        hot = 30 if prof > 15 else 18 if prof > 8 else 9 if prof > 4 else 3 if prof > 2 else 0
+        return max(5, min(95, base + liq + hot))
+
+    def pack(cyc, mc, prof):
+        nodes = [{"slug": s, "name": CUR.get(s, {}).get("name", s), "tk": tkf(s)} for s in cyc + [cyc[0]]]
+        legs = []
+        for i in range(len(cyc)):
+            a, b = cyc[i], cyc[(i + 1) % len(cyc)]
+            r, c = R[a][b]
+            legs.append({"count": c, "url": bc_link(a, b)})
+        return {"nodes": nodes, "legs": legs, "profit": round(prof, 2),
+                "risk": risk(len(cyc), mc, prof), "minCount": mc}
+
+    def dedup_top(rows, n):
+        rows.sort(key=lambda x: x[0], reverse=True)
+        out, seen = [], set()
+        for prof, cyc, mc in rows:
+            tks = frozenset(tkf(s) for s in cyc)
+            if len(tks) < len(cyc) or tks in seen:   # повтор тикера в цепочке / уже был такой набор
+                continue
+            seen.add(tks)
+            out.append(pack(cyc, mc, prof))
+            if len(out) >= n:
+                break
+        return out
+
+    # 2 звена — туда-обратно A→B→A
+    rt = []
+    for a in R:
+        for b, (r1, c1) in R[a].items():
+            e = R.get(b, {}).get(a)
+            if e and a < b:
+                rt.append(((r1 * e[0] - 1) * 100, [a, b], min(c1, e[1])))
+    # 3 звена — треугольник A→B→C→A (ядро 200 ликвиднейших)
+    core3 = set(deg[:200])
+    tri = []
+    for a in core3:
+        for b, (r1, c1) in R[a].items():
+            Rb = R.get(b)
+            if not Rb:
+                continue
+            for c, (r2, c2) in Rb.items():
+                if c == a:
+                    continue
+                e = R.get(c, {}).get(a)
+                if not e:
+                    continue
+                prof = (r1 * r2 * e[0] - 1) * 100
+                if prof >= 0.2:
+                    tri.append((prof, [a, b, c], min(c1, c2, e[1])))
+    # 4 звена — A→B→C→D→A (ядро 40, иначе O(n⁴) слишком долго)
+    core4 = deg[:40]
+    cs = set(core4)
+    quad = []
+    for a in core4:
+        for b, (r1, c1) in R[a].items():
+            if b not in cs:
+                continue
+            for c, (r2, c2) in R.get(b, {}).items():
+                if c not in cs or c == a:
+                    continue
+                for d, (r3, c3) in R.get(c, {}).items():
+                    if d not in cs or d == a or d == b:
+                        continue
+                    e = R.get(d, {}).get(a)
+                    if not e:
+                        continue
+                    prof = (r1 * r2 * r3 * e[0] - 1) * 100
+                    if prof >= 0.5:
+                        quad.append((prof, [a, b, c, d], min(c1, c2, c3, e[1])))
+    return {"2": dedup_top(rt, 40), "3": dedup_top(tri, 40), "4": dedup_top(quad, 40),
+            "generated": RATES_GENERATED}
+
+
+CHAINS_JS = r"""(function(){
+ var CH=__DATA__, TL=__L__, mode="3", sort="profit";
+ var mc=document.getElementById("chModes");
+ [["2",TL.m2],["3",TL.m3],["4",TL.m4]].forEach(function(m){
+   var b=document.createElement("button"); b.textContent=m[1]; b.dataset.m=m[0];
+   if(m[0]===mode)b.className="on";
+   b.onclick=function(){mode=m[0];[].forEach.call(mc.children,function(x){x.className=x.dataset.m===mode?"on":""});render();};
+   mc.appendChild(b);
+ });
+ document.querySelectorAll(".ch-sort button").forEach(function(b){
+   b.onclick=function(){sort=b.dataset.s;
+     document.querySelectorAll(".ch-sort button").forEach(function(x){x.className=x.dataset.s===sort?"on":"";});render();};
+ });
+ function rc(r){return r<30?"r-low":r<60?"r-mid":"r-high";}
+ function rl(r){return r<30?TL.low:r<60?TL.mid:TL.high;}
+ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
+ function render(){
+   var rows=(CH[mode]||[]).slice();
+   rows.sort(function(a,b){return sort==="risk"?a.risk-b.risk:b.profit-a.profit;});
+   document.querySelector("#chTbl thead").innerHTML=
+     "<tr><th>"+TL.chain+"</th><th class='num'>"+TL.profit+"</th><th class='num'>"+TL.risk+"</th><th class='num'>"+TL.liq+"</th></tr>";
+   var tb=rows.map(function(c){
+     var path=c.nodes.map(function(n,i){
+       return i<c.legs.length
+         ? '<a href="'+c.legs[i].url+'" target="_blank" rel="nofollow sponsored" title="'+esc(n.name)+'">'+esc(n.tk)+'</a>'
+         : '<b title="'+esc(n.name)+'">'+esc(n.tk)+'</b>';
+     }).join(' <span class="arr">→</span> ');
+     return "<tr><td class='ch-path'>"+path+"</td>"+
+       "<td class='num prof'>+"+c.profit.toFixed(2)+"%</td>"+
+       "<td class='num'><span class='badge "+rc(c.risk)+"'>"+c.risk+" "+rl(c.risk)+"</span></td>"+
+       "<td class='num'>≥"+c.minCount+"</td></tr>";
+   }).join("");
+   document.querySelector("#chTbl tbody").innerHTML=tb||("<tr><td colspan='4' class='mon-empty'>"+TL.empty+"</td></tr>");
+ }
+ var up=document.getElementById("chUpd");
+ if(CH.generated&&up){var d=new Date(CH.generated*1000);up.textContent=TL.updated+" "+d.toISOString().slice(0,16).replace("T"," ")+" UTC";}
+ render();
+})();"""
+
+CHAINS_CSS = """<style>
+#chTbl{width:100%;border-collapse:collapse;font-size:14px}
+#chTbl th,#chTbl td{padding:6px 8px;border-bottom:1px solid #245;text-align:left;vertical-align:top}
+#chTbl td.num,#chTbl th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ch-path{line-height:1.9}
+.ch-path a{white-space:nowrap}
+.arr{color:#00aaaa;padding:0 1px}
+.prof{color:#7CFC7C;font-weight:bold}
+.badge{display:inline-block;padding:1px 7px;border-radius:3px;font-weight:bold;font-size:12px}
+.r-low{background:#0a3d0a;color:#8CFC8C}.r-mid{background:#3d3300;color:#ffd24a}.r-high{background:#4d0a0a;color:#ff8a8a}
+.ch-ctl{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.ch-ctl .rsrange button,.ch-sort button{background:#0a0f14;border:1px solid #245;color:#7cf;padding:4px 10px;cursor:pointer;margin-right:4px;border-radius:3px}
+.ch-ctl .on{background:#00aaaa;color:#111;font-weight:bold}
+#chWrap{overflow-x:auto;padding:0}
+.ch-disc{padding:12px;margin-top:16px;color:#a8a8a8;font-size:13px}
+.ch-disc b{color:#ffd24a}
+</style>"""
+
+
+def render_chains(lang, chains):
+    """Страница «Цепочки обмена» — арбитражные цепочки по BestChange (2/3/4 звена) с доходностью и % риска."""
+    ru = lang == "ru"
+    L = lambda r, e: r if ru else e
+    data = json.dumps(chains, ensure_ascii=False)
+    labels = json.dumps({
+        "m2": L("2 звена (туда-обратно)", "2 legs (round-trip)"),
+        "m3": L("3 звена (треугольник)", "3 legs (triangle)"),
+        "m4": L("4 звена", "4 legs"),
+        "chain": L("Цепочка обмена", "Exchange chain"),
+        "profit": L("Доходность", "Profit"),
+        "risk": L("Риск", "Risk"),
+        "liq": L("Обменников", "Exchangers"),
+        "low": L("низкий", "low"), "mid": L("средний", "med"), "high": L("высокий", "high"),
+        "empty": L("Сейчас выгодных цепочек в этом режиме нет", "No profitable chains in this mode now"),
+        "updated": L("Обновлено:", "Updated:"),
+    }, ensure_ascii=False)
+    js = CHAINS_JS.replace("__DATA__", data).replace("__L__", labels)
+    title = L(f"Цепочки обмена валют — арбитраж и доходность | {S['name']}",
+              f"Currency exchange chains — arbitrage & profit | {S['name']}")
+    desc = L("Выгодные цепочки обмена валют (2/3/4 звена) по данным BestChange: доходность и оценка риска, "
+             "обновление ежечасно. Ссылки на обменники по каждому шагу. Не финансовый совет, 18+.",
+             "Profitable currency exchange chains (2/3/4 legs) from BestChange: profit and risk score, hourly "
+             "updates. Exchanger links for every step. Not financial advice, 18+.")
+    h1 = L("Цепочки обмена валют", "Currency exchange chains")
+    lead = L("Цепочки обменов, где сумма курсов даёт плюс: обмениваешь по кругу A→B→C→A и возвращаешься с "
+             "бо́льшим. Данные — лучшие курсы обменников BestChange, обновление ежечасно. Каждый шаг — ссылка на "
+             "обменники. Рядом — оценка риска: чем длиннее цепочка, меньше обменников и «красивее» процент, тем выше.",
+             "Exchange loops where the rates net positive: swap around A→B→C→A and come back with more. Data is "
+             "the best BestChange exchanger rates, updated hourly. Each step links to exchangers. Next to each — a "
+             "risk score: longer chains, fewer exchangers and 'too nice' a percent mean higher risk.")
+    disc = L(
+        "<b>Важно.</b> Доходность здесь <b>теоретическая</b> — по лучшим рекламируемым курсам обменников BestChange "
+        "на момент обновления. Реальный результат почти всегда ниже: у обменника ограничены <b>резерв и лимиты</b>, "
+        "нужна <b>верификация (KYC)</b>, перевод занимает время, есть <b>комиссии сети</b>, а курс за это время "
+        "меняется — окно закрывается быстро. Региональные направления (карты AMD/KZT и т.п.) бывают с ограничениями. "
+        "Это <b>не инвестиционная рекомендация и не оферта</b>. Проверяйте условия у самого обменника. 18+.<br>"
+        "<b>Как считаем:</b> доходность = произведение курсов шагов минус 1. Берём только леги с ≥3 обменниками и "
+        "резервом, курс сверяем со «справедливым» (по цене в USDT) — битые курсы отбрасываем. Риск% растёт с длиной "
+        "цепочки, падением числа обменников и завышенным профитом.",
+        "<b>Important.</b> Profit here is <b>theoretical</b> — based on the best advertised BestChange exchanger "
+        "rates at update time. Real results are almost always lower: exchangers have limited <b>reserves and limits</b>, "
+        "may require <b>KYC</b>, transfers take time, there are <b>network fees</b>, and the rate shifts meanwhile — "
+        "the window closes fast. Regional directions (AMD/KZT cards etc.) may have restrictions. This is <b>not "
+        "investment advice and not an offer</b>. Verify terms with the exchanger. 18+.<br>"
+        "<b>Method:</b> profit = product of step rates minus 1. Only legs with ≥3 exchangers and reserve are used, "
+        "rates are sanity-checked against a 'fair' USDT-implied rate; broken rates are dropped. Risk% grows with "
+        "chain length, fewer exchangers and inflated profit.")
+    body = f"""
+  <h1>{h1}</h1>
+  <p class="lead">{lead}</p>
+  <div class="ch-ctl">
+    <span class="rsrange" id="chModes"></span>
+    <span class="ch-sort">{L('Сортировка', 'Sort')}:
+      <button data-s="profit" class="on">{L('доходность', 'profit')}</button>
+      <button data-s="risk">{L('риск', 'risk')}</button></span>
+  </div>
+  <div id="chWrap" class="dosborder"><table id="chTbl"><thead></thead><tbody></tbody></table></div>
+  <p class="mon-note" id="chUpd"></p>
+  <div class="ch-disc dosborder">{disc}</div>
+""" + CHAINS_CSS + "<script>" + js + "</script>"
+    render_page(lang, "tsepochki", title, desc, body, h1)
 
 
 def make_cli_txt():
@@ -5410,6 +5646,8 @@ def main():
         _hh = HISTORY.get(_s, [])
         if len(_hh) >= 2:
             CHG_BY[_s] = {pk: _pct_over(_hh, dys) for pk, dys in CHART_PERIODS}
+    _chains = compute_chains()   # цепочки обмена (арбитраж) — считаем один раз, рендерим на обоих языках
+    print(f"   цепочки: 2зв={len(_chains['2'])} 3зв={len(_chains['3'])} 4зв={len(_chains['4'])}")
     for lang in LANGS:
         render_home(lang)
         for slug, info in CUR.items():
@@ -5426,6 +5664,7 @@ def main():
         render_heatmap(lang)
         render_popular(lang)
         render_monitor(lang)
+        render_chains(lang, _chains)
         render_alert(lang)
         render_relative(lang)
         render_directions(lang)
