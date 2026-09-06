@@ -4814,7 +4814,8 @@ def compute_chains():
     empty = {"2": [], "3": [], "4": [], "generated": RATES_GENERATED}
     if not RATES:
         return empty
-    MINC = 3
+    MINC = 5        # минимум обменников на КАЖДОМ шаге (консервативно: меньше «бумажных» окон)
+    MAXRISK = 70    # цепочки с риском выше — не показываем (слишком ненадёжно)
     usd = {s: (h[-1][1] if h else None) for s, h in HISTORY.items()}
     R = {}                                   # R[a][b] = (rate, count) — только ликвидные/санитарные леги
     for k, v in RATES.items():
@@ -4862,8 +4863,11 @@ def compute_chains():
             tks = frozenset(tkf(s) for s in cyc)
             if len(tks) < len(cyc) or tks in seen:   # повтор тикера в цепочке / уже был такой набор
                 continue
+            p = pack(cyc, mc, prof)
+            if p["risk"] > MAXRISK:                  # прячем слишком рискованные
+                continue
             seen.add(tks)
-            out.append(pack(cyc, mc, prof))
+            out.append(p)
             if len(out) >= n:
                 break
         return out
@@ -5011,17 +5015,17 @@ def render_chains(lang, chains):
         "нужна <b>верификация (KYC)</b>, перевод занимает время, есть <b>комиссии сети</b>, а курс за это время "
         "меняется — окно закрывается быстро. Региональные направления (карты AMD/KZT и т.п.) бывают с ограничениями. "
         "Это <b>не инвестиционная рекомендация и не оферта</b>. Проверяйте условия у самого обменника. 18+.<br>"
-        "<b>Как считаем:</b> доходность = произведение курсов шагов минус 1. Берём только леги с ≥3 обменниками и "
+        "<b>Как считаем:</b> доходность = произведение курсов шагов минус 1. Берём только леги с <b>≥5 обменниками</b> и "
         "резервом, курс сверяем со «справедливым» (по цене в USDT) — битые курсы отбрасываем. Риск% растёт с длиной "
-        "цепочки, падением числа обменников и завышенным профитом.",
+        "цепочки, падением числа обменников и завышенным профитом; самые рискованные (риск >70) не показываем.",
         "<b>Important.</b> Profit here is <b>theoretical</b> — based on the best advertised BestChange exchanger "
         "rates at update time. Real results are almost always lower: exchangers have limited <b>reserves and limits</b>, "
         "may require <b>KYC</b>, transfers take time, there are <b>network fees</b>, and the rate shifts meanwhile — "
         "the window closes fast. Regional directions (AMD/KZT cards etc.) may have restrictions. This is <b>not "
         "investment advice and not an offer</b>. Verify terms with the exchanger. 18+.<br>"
-        "<b>Method:</b> profit = product of step rates minus 1. Only legs with ≥3 exchangers and reserve are used, "
+        "<b>Method:</b> profit = product of step rates minus 1. Only legs with <b>≥5 exchangers</b> and reserve are used, "
         "rates are sanity-checked against a 'fair' USDT-implied rate; broken rates are dropped. Risk% grows with "
-        "chain length, fewer exchangers and inflated profit.")
+        "chain length, fewer exchangers and inflated profit; the riskiest (risk >70) are hidden.")
     body = f"""
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
