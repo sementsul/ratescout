@@ -1,10 +1,17 @@
 {
   "has": {
-    "token": true,
-    "secret": true,
+    "session_key": true,
+    "session_secret": true,
+    "app_key": "",
     "group": true,
-    "token_len": 84
+    "sk_len": 86
   },
-  "user_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL",
-  "group_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL"
+  "sk_excluded": {
+    "user_error": "OK 101: PARAM_API_KEY : Application not exist",
+    "group_error": "OK 101: PARAM_API_KEY : Application not exist"
+  },
+  "sk_in_base": {
+    "user_error": "OK 101: PARAM_API_KEY : Application not exist",
+    "group_error": "OK 101: PARAM_API_KEY : Application not exist"
+  }
 }
