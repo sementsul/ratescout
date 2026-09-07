@@ -7,7 +7,7 @@
   "auth_meta": {
     "tries": [
       {
-        "username": "+79655544200",
+        "username": "sementsul.maksim@ya.ru",
         "json": true,
         "code": 400,
         "got_token": false,
@@ -18,51 +18,7 @@
         }
       },
       {
-        "username": "+79655544200",
-        "json": false,
-        "code": 400,
-        "got_token": false,
-        "resp": {
-          "non_field_errors": [
-            "Unable to login with provided credentials."
-          ]
-        }
-      },
-      {
-        "username": "79655544200",
-        "json": true,
-        "code": 400,
-        "got_token": false,
-        "resp": {
-          "non_field_errors": [
-            "Unable to login with provided credentials."
-          ]
-        }
-      },
-      {
-        "username": "79655544200",
-        "json": false,
-        "code": 400,
-        "got_token": false,
-        "resp": {
-          "non_field_errors": [
-            "Unable to login with provided credentials."
-          ]
-        }
-      },
-      {
-        "username": "89655544200",
-        "json": true,
-        "code": 400,
-        "got_token": false,
-        "resp": {
-          "non_field_errors": [
-            "Unable to login with provided credentials."
-          ]
-        }
-      },
-      {
-        "username": "89655544200",
+        "username": "sementsul.maksim@ya.ru",
         "json": false,
         "code": 400,
         "got_token": false,
