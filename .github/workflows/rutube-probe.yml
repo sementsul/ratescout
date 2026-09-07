@@ -1,0 +1,50 @@
+name: RuTube probe
+
+# Разовая проверка неофициального RuTube API: авторизация (перебор вариантов) + тестовая заливка
+# одного ролика по URL. Результат в rutube_probe.json (читаю снаружи). Секреты: RUTUBE_USER, RUTUBE_PASS.
+# Триггер — изменение rutube_api.py/этого файла + ручной запуск.
+
+on:
+  push:
+    paths: ['rutube_api.py', '.github/workflows/rutube-probe.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Probe RuTube
+        env:
+          RUTUBE_USER: ${{ secrets.RUTUBE_USER }}
+          RUTUBE_PASS: ${{ secrets.RUTUBE_PASS }}
+        run: |
+          python3 - <<'PY'
+          import json, rutube_api as rt
+          out = {"has": {"user": bool(rt.USER), "pass": bool(rt.PASS)}}
+          tok, meta = rt.auth()
+          out["auth_ok"] = bool(tok)
+          out["auth_meta"] = meta
+          if tok:
+              url = "https://raw.githubusercontent.com/sementsul/my-many/main/promo/5trr__10_.mp4"
+              code, resp = rt.add_video(
+                  url, "RateScout — тест",
+                  "Мониторинг курсов обмена: https://ratescout.ru/?p=1116359", token=tok)
+              out["video_code"] = code
+              out["video_resp"] = resp
+          json.dump(out, open("rutube_probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          PY
+      - name: Commit result
+        run: |
+          git config user.name "rutube-bot"
+          git config user.email "rutube-bot@users.noreply.github.com"
+          git add rutube_probe.json 2>/dev/null || true
+          git commit -m "ci: rutube probe [skip ci]" || { echo "нет изменений"; exit 0; }
+          git pull --rebase --autostash origin main || true
+          git push origin HEAD:main
