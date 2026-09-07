@@ -74,6 +74,9 @@ def main():
     names = [n for n, _ in media]
     last, count = load_state()
     idx = (names.index(last) + 1) % len(names) if last in names else 0   # КРУГ: после последнего → первый
+    force = os.environ.get("FORCE_NAME")                                 # тест: запостить конкретный файл
+    if force and force in names:
+        idx = names.index(force)
     name, url = media[idx]
     caption = caption_for(count)
     who = "ratescout.ru" if count % 2 == 0 else "my-many.ru"
@@ -93,8 +96,9 @@ def main():
             with open(download(url, ".jpg"), "rb") as f:
                 token = ok_api.upload_photo(f.read())
             res_post = ok_api.post_group(caption, photo_token=token)
-        json.dump({"last": name, "count": count + 1}, open(STATE, "w", encoding="utf-8"), ensure_ascii=False)
-        res = {"ok": True, "posted": name, "kind": kind, "domain": who, "topic": res_post}
+        if not force:                            # форс-тест не двигает реальную очередь
+            json.dump({"last": name, "count": count + 1}, open(STATE, "w", encoding="utf-8"), ensure_ascii=False)
+        res = {"ok": True, "posted": name, "kind": kind, "domain": who, "topic": res_post, "forced": bool(force)}
         print(f"✅ опубликовано ({who}, {kind}): {name}")
     except Exception as e:                       # noqa: BLE001
         res = {"ok": False, "error": str(e), "next": name, "kind": kind}
