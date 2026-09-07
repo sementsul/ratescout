@@ -1,6 +1,9 @@
 {
   "token_len": 32,
   "fields_http": 403,
+  "fields_body": {},
+  "rows_get_http": 403,
+  "rows_get_body": {},
   "fields_before": [],
   "create_fields": [
     {
@@ -37,7 +40,7 @@
   "fields_after": [],
   "write_http": 403,
   "wrote": {},
-  "write_resp_id": null,
+  "write_body": {},
   "read_http": 403,
   "read_count": null
 }
