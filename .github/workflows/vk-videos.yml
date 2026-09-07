@@ -8,8 +8,11 @@ on:
   schedule:
     - cron: "20 9 */2 * *"      # ~12:20 МСК, раз в 2 дня
   workflow_dispatch:
-  push:
-    paths: ['vk_video_post.py', '.github/workflows/vk-videos.yml']   # временно: сухой прогон при правке
+    inputs:
+      dry_run:
+        description: "Сухой прогон (не публиковать)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,7 +32,7 @@ jobs:
         env:
           VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
-          DRY_RUN: ${{ github.event_name == 'push' && '1' || '' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: python3 vk_video_post.py
       - name: Commit state
         run: |
