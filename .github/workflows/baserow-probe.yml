@@ -1,0 +1,76 @@
+name: Baserow probe
+
+# Разовая проверка интеграции с Baserow: токен читает поля, пробует создать нужные поля,
+# делает тест «запись строки + чтение обратно». Результат кладёт в baserow_probe.json (читаю снаружи).
+# Секрет: BASEROW_TOKEN. Триггер — изменение этого файла + ручной запуск.
+
+on:
+  push:
+    paths: ['.github/workflows/baserow-probe.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Probe Baserow
+        env:
+          T: ${{ secrets.BASEROW_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.error
+          T=os.environ.get("T","").strip(); TABLE="1182943"; BASE="https://api.baserow.io/api/database"
+          def req(method,url,data=None):
+              h={"Authorization":"Token "+T,"Content-Type":"application/json"}
+              body=json.dumps(data).encode() if data is not None else None
+              r=urllib.request.Request(url,data=body,headers=h,method=method)
+              try:
+                  with urllib.request.urlopen(r,timeout=30) as resp: return resp.status,json.load(resp)
+              except urllib.error.HTTPError as e:
+                  try: return e.code,json.loads(e.read().decode() or "{}")
+                  except Exception: return e.code,{}
+              except Exception as e:
+                  return -1,{"exc":str(e)}
+          out={"token_len":len(T)}
+          s,fields=req("GET",f"{BASE}/fields/table/{TABLE}/")
+          out["fields_http"]=s
+          flist=fields if isinstance(fields,list) else []
+          out["fields_before"]=[{"name":f.get("name"),"type":f.get("type")} for f in flist]
+          existing={f.get("name") for f in flist}
+          want=[("date","date",{"date_format":"ISO"}),("site","text",{}),("source","text",{}),
+                ("metric","text",{}),("value","number",{"number_decimal_places":2}),("note","long_text",{})]
+          created=[]
+          for name,typ,extra in want:
+              if name in existing: created.append({"name":name,"http":"exists"}); continue
+              body={"name":name,"type":typ}; body.update(extra)
+              cs,cr=req("POST",f"{BASE}/fields/table/{TABLE}/",body)
+              created.append({"name":name,"http":cs,"err":(cr.get("error") or cr.get("detail")) if cs and cs>=400 else None})
+          out["create_fields"]=created
+          s2,fields2=req("GET",f"{BASE}/fields/table/{TABLE}/")
+          now={f.get("name") for f in (fields2 if isinstance(fields2,list) else [])}
+          out["fields_after"]=sorted(now)
+          # тест-запись: только поля, которые реально существуют
+          row={}
+          if "site" in now: row["site"]="ratescout"
+          if "source" in now: row["source"]="probe"
+          if "metric" in now: row["metric"]="test"
+          if "value" in now: row["value"]=1
+          if not row:
+              tf=next((f.get("name") for f in (fields2 if isinstance(fields2,list) else []) if f.get("type") in ("text","long_text")),None)
+              if tf: row[tf]="probe"
+          ws,wr=req("POST",f"{BASE}/rows/table/{TABLE}/?user_field_names=true",row)
+          out["write_http"]=ws; out["wrote"]=row; out["write_resp_id"]=wr.get("id") if isinstance(wr,dict) else None
+          rs,rr=req("GET",f"{BASE}/rows/table/{TABLE}/?user_field_names=true&size=3")
+          out["read_http"]=rs; out["read_count"]=rr.get("count") if isinstance(rr,dict) else None
+          open("baserow_probe.json","w",encoding="utf-8").write(json.dumps(out,ensure_ascii=False,indent=2))
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+          git config user.name "baserow-bot"
+          git config user.email "baserow-bot@users.noreply.github.com"
+          git add baserow_probe.json
+          git commit -m "ci: baserow probe result [skip ci]" || echo "nochange"
+          git push
