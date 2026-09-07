@@ -16,15 +16,16 @@ import urllib.request
 import uuid
 
 VK_TOKEN = os.environ.get("VK_TOKEN")
+VK_USER = os.environ.get("VK_USER_TOKEN")     # пользовательский — умеет грузить ФОТО (сообщество не может)
 VK_GROUP = os.environ.get("VK_GROUP_ID")
 SRC = os.environ.get("DAILY_JSON_URL", "https://ratescout.ru/daily.json")
 API = "https://api.vk.com/method/"
 V = "5.199"
 
 
-def vk(method, params):
+def vk(method, params, token=None):
     p = dict(params)
-    p["access_token"] = VK_TOKEN
+    p["access_token"] = token or VK_TOKEN
     p["v"] = V
     # POST в теле, а не в URL — иначе длинное сообщение даёт 414 Request-URI Too Large
     req = urllib.request.Request(API + method, data=urllib.parse.urlencode(p).encode(), method="POST")
@@ -36,7 +37,8 @@ def vk(method, params):
 
 
 def upload_photo(img):
-    up = vk("photos.getWallUploadServer", {"group_id": VK_GROUP})
+    tok = VK_USER or VK_TOKEN                  # фото грузим пользовательским токеном (сообщество не умеет)
+    up = vk("photos.getWallUploadServer", {"group_id": VK_GROUP}, token=tok)
     boundary = uuid.uuid4().hex
     body = (f"--{boundary}\r\n".encode()
             + b'Content-Disposition: form-data; name="photo"; filename="d.png"\r\n'
@@ -47,7 +49,7 @@ def upload_photo(img):
     with urllib.request.urlopen(req, timeout=90) as r:
         ur = json.load(r)
     saved = vk("photos.saveWallPhoto", {"group_id": VK_GROUP, "server": ur["server"],
-                                        "photo": ur["photo"], "hash": ur["hash"]})[0]
+                                        "photo": ur["photo"], "hash": ur["hash"]}, token=tok)[0]
     return f'photo{saved["owner_id"]}_{saved["id"]}'
 
 
