@@ -2,10 +2,20 @@
   "has": {
     "token": true,
     "session_secret": true,
-    "app_key": "CDCNOHMGDIHBABABA",
+    "app_key": "CNGHOCOGDIHBABABA",
     "group": true,
     "token_len": 86
   },
-  "user_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL",
-  "group_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL"
+  "user": {
+    "uid": "598805286927",
+    "name": "Magz Gold"
+  },
+  "group": [
+    {
+      "name": "RateScout - Семенцул Максим",
+      "members_count": 1,
+      "revenue_pp_enabled": false,
+      "pin_notifications_off": false
+    }
+  ]
 }
