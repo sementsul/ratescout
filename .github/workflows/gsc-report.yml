@@ -33,6 +33,7 @@ jobs:
           GSC_SITE: ${{ secrets.GSC_SITE }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+          BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
         run: python3 gsc_report.py
       - name: Commit popular.json
         if: always()

@@ -27,4 +27,5 @@ jobs:
           GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ALERT_CHAT_ID: ${{ secrets.ALERT_CHAT_ID }}
+          BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
         run: python3 ga_report_tg.py

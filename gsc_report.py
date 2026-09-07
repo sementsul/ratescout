@@ -90,6 +90,12 @@ def build_report(token):
     c_prev, i_prev = _totals(prev_q)
     ctr = (c_cur / i_cur * 100) if i_cur else 0
     avg_pos = (sum(x["position"] * x["impressions"] for x in cur_q) / i_cur) if i_cur else 0
+    try:                                          # → Baserow (хаб статистики)
+        import baserow
+        baserow.put_rows(baserow.stat_rows("ratescout", "GSC", {
+            "clicks": c_cur, "impressions": i_cur, "ctr_pct": ctr, "avg_position": avg_pos}))
+    except Exception as _e:                        # noqa: BLE001
+        print("baserow GSC skip:", _e)
 
     L = [f"📈 Search Console — неделя {s} … {e}", ""]
     L.append(f"Клики: {c_cur} ({_pct(c_cur, c_prev)})   Показы: {i_cur} ({_pct(i_cur, i_prev)})")

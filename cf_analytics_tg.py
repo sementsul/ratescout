@@ -105,6 +105,13 @@ def main():
             f"🌍 Топ страны: {ctry}\n"
             f"🛡 Угроз: {s['threats']} · трафик: {human_bytes(s['bytes'])}")
     text += build_detail_text(s, total)         # классификация трафика + коды ответов
+    try:                                          # → Baserow (хаб статистики)
+        import baserow
+        baserow.put_rows(baserow.stat_rows("mymany", "Cloudflare", {
+            "uniques": g["uniq"]["uniques"], "requests": s.get("requests"),
+            "pageviews": s.get("pageViews"), "threats": s.get("threats"), "bytes": s.get("bytes")}, date=date))
+    except Exception as _e:                        # noqa: BLE001
+        print("baserow CF skip:", _e)
     print(text)
     if not (TG_TOKEN and TG_CHAT):
         print("\n(TELEGRAM_TOKEN/ALERT_CHAT_ID не заданы — сухой прогон, не отправляю)")

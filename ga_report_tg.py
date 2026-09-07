@@ -88,6 +88,13 @@ def build_report():
         return "GA4: нет данных за период (проверь Property ID и доступ сервис-аккаунта)."
     t = tot[0]
     sessions, users, views, eng, avgdur = (mv(t, i) for i in range(5))
+    try:                                          # → Baserow (хаб статистики)
+        import baserow
+        baserow.put_rows(baserow.stat_rows("ratescout", "GA", {
+            "sessions": sessions, "users": users, "pageviews": views,
+            "engagement_pct": float(eng) * 100 if eng else None, "avg_session_sec": avgdur}))
+    except Exception as _e:                        # noqa: BLE001
+        print("baserow GA skip:", _e)
     L = [f"📊 Google Analytics — {DAYS} дней (ratescout.ru)", ""]
     L.append(f"👥 Пользователи: {users}   Сеансы: {sessions}")
     L.append(f"👁 Просмотры: {views}   Вовлечённость: {float(eng) * 100:.0f}%   Ср. сеанс: {dur(avgdur)}")

@@ -231,6 +231,14 @@ def main():
     ystats = {}
     wm = webmaster_report(ystats)
     text = compare_block(ystats) + "\n\n" + wm + "\n\n" + metrika_report()
+    try:                                          # → Baserow (хаб статистики)
+        import baserow
+        tot = _met({"ids": COUNTER, "metrics": "ym:s:visits,ym:s:users,ym:s:pageviews,ym:s:bounceRate",
+                    "date1": "7daysAgo", "date2": "yesterday"}).get("totals", [[None] * 4])[0]
+        baserow.put_rows(baserow.stat_rows("ratescout", "Yandex", {
+            "visits": tot[0], "users": tot[1], "pageviews": tot[2], "bounce_pct": tot[3]}))
+    except Exception as _e:                        # noqa: BLE001
+        print("baserow Yandex skip:", _e)
     print(text)
     send_telegram(text)
     return 0
