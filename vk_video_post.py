@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Автопостинг видео из репо my-many/promo на стену VK-группы: один ролик за запуск.
-Подпись ЧЕРЕДУЕТСЯ: пост про ratescout.ru → следующий про my-many.ru → и по кругу.
+"""Автопостинг контента из репо my-many/promo на стену VK-группы: один элемент за запуск.
+Поддерживает ВИДЕО и КАРТИНКИ (вперемешку, по имени). Очередь КРУГОВАЯ: после последнего — снова первый.
+Подпись ЧЕРЕДУЕТСЯ: ratescout.ru → my-many.ru → и по кругу.
 
-Токен/группа — ТОЛЬКО из окружения (GitHub Secrets):
-  VK_USER_TOKEN — ПОЛЬЗОВАТЕЛЬСКИЙ токен с правами video/wall (community-токен видео грузить не может),
-                  бессрочный (implicit + offline). VK_GROUP_ID — числовой id группы (без минуса).
-Ролики — из GitHub (my-many/promo): список через API, файл по raw. Опубликованные — в vk_posted.json
-(коммитит воркфлоу). Тексты — VK_CAPTION_RS / VK_CAPTION_MM (или дефолт). DRY_RUN=1 — не публикует.
-Запуск раз в 2 дня (vk-videos.yml). Порядок роликов не важен — берём первый непубликованный по имени.
+Секреты (GitHub Secrets):
+  VK_USER_TOKEN — пользовательский токен (video/photos/wall; сообщество фото/видео не грузит), бессрочный.
+  VK_GROUP_ID   — числовой id группы (без минуса).
+Состояние — vk_posted.json {"last": <имя>, "count": N} (коммитит воркфлоу). DRY_RUN=1 — не публикует.
 """
 import json
 import os
@@ -26,8 +25,9 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 REPO = "sementsul/my-many"
 FOLDER = "promo"
 STATE = "vk_posted.json"
+VID_EXT = (".mp4", ".mov", ".webm", ".m4v")
+IMG_EXT = (".jpg", ".jpeg", ".png", ".webp")
 
-# Подписи чередуются по номеру поста (чётный — ratescout, нечётный — my-many). Можно переопределить env.
 CAP_RS = (os.environ.get("VK_CAPTION_RS") or "").strip() or (
     "Мониторинг курсов обмена и обменников — RateScout.\n"
     "Лучший курс на обмен крипты и валюты в одном месте: https://ratescout.ru/?p=1116359\n\n"
@@ -61,66 +61,104 @@ def gh_get(url):
         return json.load(r)
 
 
-def list_videos():
+def list_media():
     items = gh_get(f"https://api.github.com/repos/{REPO}/contents/{FOLDER}")
-    vids = [(i["name"], i["download_url"]) for i in items
-            if i.get("type") == "file" and i["name"].lower().endswith((".mp4", ".mov", ".webm", ".m4v"))]
-    vids.sort(key=lambda x: x[0])
-    return vids
+    m = [(i["name"], i["download_url"]) for i in items
+         if i.get("type") == "file" and i["name"].lower().endswith(VID_EXT + IMG_EXT)]
+    m.sort(key=lambda x: x[0])
+    return m
 
 
-def load_posted():
+def load_state():
     try:
-        return set(json.load(open(STATE, encoding="utf-8")).get("posted", []))
+        d = json.load(open(STATE, encoding="utf-8"))
     except Exception:                            # noqa: BLE001
-        return set()
+        return None, 0
+    if "posted" in d and "last" not in d:        # миграция со старого формата (список)
+        p = sorted(d.get("posted", []))
+        return (p[-1] if p else None), len(p)
+    return d.get("last"), int(d.get("count", 0))
+
+
+def download(url, suffix):
+    tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    tmp.close()
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=300) as r, \
+            open(tmp.name, "wb") as f:
+        f.write(r.read())
+    return tmp.name
+
+
+def _multipart(field, filename, ctype, data):
+    b = uuid.uuid4().hex
+    body = (f"--{b}\r\n".encode()
+            + f'Content-Disposition: form-data; name="{field}"; filename="{filename}"\r\n'.encode()
+            + f"Content-Type: {ctype}\r\n\r\n".encode() + data + b"\r\n"
+            + f"--{b}--\r\n".encode())
+    return b, body
 
 
 def upload_video(path, caption):
     saved = vk("video.save", {"group_id": GROUP, "name": "RateScout", "description": caption,
                               "wallpost": 0, "is_private": 0, "repeat": 0})
-    owner, vid, up = saved["owner_id"], saved["video_id"], saved["upload_url"]
-    boundary = uuid.uuid4().hex
     with open(path, "rb") as f:
         data = f.read()
-    body = (f"--{boundary}\r\n".encode()
-            + b'Content-Disposition: form-data; name="video_file"; filename="v.mp4"\r\n'
-            + b"Content-Type: video/mp4\r\n\r\n" + data + b"\r\n"
-            + f"--{boundary}--\r\n".encode())
-    req = urllib.request.Request(up, data=body, headers={
-        "Content-Type": "multipart/form-data; boundary=" + boundary, "User-Agent": UA})
+    b, body = _multipart("video_file", "v.mp4", "video/mp4", data)
+    req = urllib.request.Request(saved["upload_url"], data=body, headers={
+        "Content-Type": "multipart/form-data; boundary=" + b, "User-Agent": UA})
     with urllib.request.urlopen(req, timeout=300) as r:
         r.read()
-    return f"video{owner}_{vid}"
+    return f"video{saved['owner_id']}_{saved['video_id']}"
+
+
+def upload_image(path):
+    up = vk("photos.getWallUploadServer", {"group_id": GROUP})
+    with open(path, "rb") as f:
+        data = f.read()
+    b, body = _multipart("photo", "p.jpg", "image/jpeg", data)
+    req = urllib.request.Request(up["upload_url"], data=body, headers={
+        "Content-Type": "multipart/form-data; boundary=" + b, "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        ur = json.load(r)
+    saved = vk("photos.saveWallPhoto", {"group_id": GROUP, "server": ur["server"],
+                                        "photo": ur["photo"], "hash": ur["hash"]})[0]
+    return f"photo{saved['owner_id']}_{saved['id']}"
 
 
 def main():
-    vids = list_videos()
-    posted = load_posted()
-    nxt = next(((n, u) for (n, u) in vids if n not in posted), None)
-    print(f"видео всего: {len(vids)}, опубликовано: {len(posted)}")
-    if not nxt:
-        print("все ролики опубликованы — нечего постить.")
+    media = list_media()
+    if not media:
+        print("в promo нет медиа.")
         return 0
-    name, url = nxt
-    caption = caption_for(len(posted))           # чередуем по числу уже опубликованных
-    who = "ratescout.ru" if len(posted) % 2 == 0 else "my-many.ru"
-    print(f"следующий ролик: {name}\nпро домен: {who}\nподпись:\n{caption}\n")
+    names = [n for n, _ in media]
+    last, count = load_state()
+    idx = (names.index(last) + 1) % len(names) if last in names else 0   # КРУГ: после последнего → первый
+    name, url = media[idx]
+    caption = caption_for(count)
+    who = "ratescout.ru" if count % 2 == 0 else "my-many.ru"
+    kind = "видео" if name.lower().endswith(VID_EXT) else "картинка"
+    print(f"медиа всего: {len(media)} | цикл-пост #{count} | след.[{idx}]: {name} ({kind}) | домен: {who}")
+    print(f"подпись:\n{caption}\n")
     if DRY or not TOKEN or not GROUP:
         print("СУХОЙ ПРОГОН — не публикую." if DRY else "VK_USER_TOKEN/VK_GROUP_ID не заданы — сухой прогон.")
-        json.dump({"total": len(vids), "posted": len(posted), "next": name, "domain": who, "caption": caption},
-                  open("vk_dryrun.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        json.dump({"total": len(media), "count": count, "next": name, "kind": kind, "domain": who,
+                   "caption": caption}, open("vk_dryrun.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         return 0
-    tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-    tmp.close()
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=300) as r, \
-            open(tmp.name, "wb") as f:
-        f.write(r.read())
-    att = upload_video(tmp.name, caption)
-    vk("wall.post", {"owner_id": "-" + str(GROUP), "from_group": 1, "message": caption, "attachments": att})
-    posted.add(name)
-    json.dump({"posted": sorted(posted)}, open(STATE, "w", encoding="utf-8"), ensure_ascii=False)
-    print(f"✅ опубликовано ({who}): {name} ({att})")
+    try:
+        if name.lower().endswith(VID_EXT):
+            att = upload_video(download(url, ".mp4"), caption)
+        else:
+            att = upload_image(download(url, ".jpg"))
+        post = vk("wall.post", {"owner_id": "-" + str(GROUP), "from_group": 1,
+                                "message": caption, "attachments": att})
+        json.dump({"last": name, "count": count + 1}, open(STATE, "w", encoding="utf-8"), ensure_ascii=False)
+        res = {"ok": True, "posted": name, "kind": kind, "domain": who, "att": att,
+               "post_id": post.get("post_id")}
+        print(f"✅ опубликовано ({who}, {kind}): {name} ({att})")
+    except Exception as e:                       # noqa: BLE001
+        res = {"ok": False, "error": str(e), "next": name, "kind": kind}
+        print(f"❌ ошибка публикации: {e}")
+    json.dump(res, open("vk_result.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     return 0
 
 
