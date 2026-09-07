@@ -1,0 +1,77 @@
+{
+  "has": {
+    "user": true,
+    "pass": true
+  },
+  "auth_ok": false,
+  "auth_meta": {
+    "tries": [
+      {
+        "field": "login",
+        "json": true,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "username": [
+            "Обязательное поле."
+          ]
+        }
+      },
+      {
+        "field": "login",
+        "json": false,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "username": [
+            "Обязательное поле."
+          ]
+        }
+      },
+      {
+        "field": "username",
+        "json": true,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "non_field_errors": [
+            "Unable to login with provided credentials."
+          ]
+        }
+      },
+      {
+        "field": "username",
+        "json": false,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "non_field_errors": [
+            "Unable to login with provided credentials."
+          ]
+        }
+      },
+      {
+        "field": "phone",
+        "json": true,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "username": [
+            "Обязательное поле."
+          ]
+        }
+      },
+      {
+        "field": "phone",
+        "json": false,
+        "code": 400,
+        "got_token": false,
+        "resp": {
+          "username": [
+            "Обязательное поле."
+          ]
+        }
+      }
+    ]
+  }
+}
