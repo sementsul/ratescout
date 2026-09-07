@@ -23,7 +23,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os, json, urllib.request, urllib.error
-          T=os.environ.get("T","").strip(); TABLE="1182943"; BASE="https://api.baserow.io/api/database"
+          T=os.environ.get("T","").strip(); TABLE="1182998"; BASE="https://api.baserow.io/api/database"
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
           def req(method,url,data=None):
               h={"Authorization":"Token "+T,"Content-Type":"application/json","Accept":"application/json","User-Agent":UA}
@@ -45,28 +45,18 @@ jobs:
           out["fields_http"]=s; out["fields_raw"]=fraw
           flist=fields if isinstance(fields,list) else []
           out["fields_before"]=[f.get("name") for f in flist]
-          existing={f.get("name") for f in flist}
-          want=[("date","date",{"date_format":"ISO"}),("site","text",{}),("source","text",{}),
-                ("metric","text",{}),("value","number",{"number_decimal_places":2}),("note","long_text",{})]
-          created=[]
-          for name,typ,extra in want:
-              if name in existing: created.append({"name":name,"http":"exists"}); continue
-              b={"name":name,"type":typ}; b.update(extra)
-              cs,cr,craw=req("POST",f"{BASE}/fields/table/{TABLE}/",b)
-              created.append({"name":name,"http":cs,"raw":craw})
-          out["create_fields"]=created
-          s2,fields2,_=req("GET",f"{BASE}/fields/table/{TABLE}/")
-          now={f.get("name") for f in (fields2 if isinstance(fields2,list) else [])}
-          out["fields_after"]=sorted(now)
+          namemap={(f.get("name") or "").lower():f.get("name") for f in flist}
+          out["field_names"]=[f.get("name") for f in flist]
           row={}
-          for k,v in (("site","ratescout"),("source","probe"),("metric","test"),("value",1)):
-              if k in now: row[k]=v
-          if not row and now: row[sorted(now)[0]]="probe"
+          for k,v in (("site","ratescout"),("source","probe-verify"),("metric","test"),("value",1)):
+              if k in namemap: row[namemap[k]]=v
+          if not row and flist: row[flist[0]["name"]]="probe-verify"
           ws,wr,wraw=req("POST",f"{BASE}/rows/table/{TABLE}/?user_field_names=true",row)
           out["write_http"]=ws; out["wrote"]=row; out["write_raw"]=wraw
           rs,rr,rraw=req("GET",f"{BASE}/rows/table/{TABLE}/?user_field_names=true&size=3")
-          out["read_http"]=rs; out["read_raw"]=rraw
-          out["read_count"]=rr.get("count") if isinstance(rr,dict) else None
+          out["read_http"]=rs; out["read_count"]=rr.get("count") if isinstance(rr,dict) else None
+          ds,_,_=req("DELETE",f"{BASE}/rows/table/1182943/6/")   # подчистить тестовую строку из старой таблицы
+          out["cleanup_old_delete_http"]=ds
           open("baserow_probe.json","w",encoding="utf-8").write(json.dumps(out,ensure_ascii=False,indent=2))
           print(json.dumps(out,ensure_ascii=False,indent=2))
           PY
