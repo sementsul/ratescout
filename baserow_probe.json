@@ -1,46 +1,61 @@
 {
   "token_len": 32,
-  "fields_http": 403,
-  "fields_body": {},
-  "rows_get_http": 403,
-  "rows_get_body": {},
-  "fields_before": [],
+  "fields_http": 200,
+  "fields_raw": "[{\"id\":10676223,\"table_id\":1182943,\"name\":\"Log Entry\",\"order\":0,\"type\":\"text\",\"primary\":true,\"read_only\":false,\"immutable_type\":false,\"immutable_properties\":false,\"description\":null,\"database_id\":5491",
+  "fields_before": [
+    "Log Entry",
+    "Rate Type",
+    "Date Accessed",
+    "Reliability Score",
+    "Comments",
+    "Source"
+  ],
   "create_fields": [
     {
       "name": "date",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     },
     {
       "name": "site",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     },
     {
       "name": "source",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     },
     {
       "name": "metric",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     },
     {
       "name": "value",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     },
     {
       "name": "note",
-      "http": 403,
-      "err": null
+      "http": 401,
+      "raw": "{\"error\":\"ERROR_NO_PERMISSION_TO_TABLE\",\"detail\":\"The token does not have permissions to the table.\"}"
     }
   ],
-  "fields_after": [],
-  "write_http": 403,
-  "wrote": {},
-  "write_body": {},
-  "read_http": 403,
-  "read_count": null
+  "fields_after": [
+    "Comments",
+    "Date Accessed",
+    "Log Entry",
+    "Rate Type",
+    "Reliability Score",
+    "Source"
+  ],
+  "write_http": 200,
+  "wrote": {
+    "Comments": "probe"
+  },
+  "write_raw": "{\"id\":6,\"order\":\"6.00000000000000000000\",\"Log Entry\":null,\"Rate Type\":null,\"Date Accessed\":null,\"Reliability Score\":null,\"Comments\":\"probe\",\"Source\":[]}",
+  "read_http": 200,
+  "read_raw": "{\"count\":6,\"next\":\"http://api.baserow.io/api/database/rows/table/1182943/?page=2&size=3&user_field_names=true\",\"previous\":null,\"results\":[{\"id\":1,\"order\":\"1.00000000000000000000\",\"Log Entry\":\"USD/RUB ",
+  "read_count": 6
 }
