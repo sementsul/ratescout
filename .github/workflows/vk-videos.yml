@@ -1,0 +1,40 @@
+name: VK video poster
+
+# Раз в 2 дня публикует один ролик из my-many/promo на стену VK-группы, чередуя подпись
+# ratescout.ru / my-many.ru. Секреты: VK_USER_TOKEN (пользовательский, video/wall), VK_GROUP_ID,
+# GH_PAT (коммит состояния vk_posted.json). На push этого файла — СУХОЙ прогон (не публикует).
+
+on:
+  schedule:
+    - cron: "20 9 */2 * *"      # ~12:20 МСК, раз в 2 дня
+  workflow_dispatch:
+  push:
+    paths: ['vk_video_post.py', '.github/workflows/vk-videos.yml']   # временно: сухой прогон при правке
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vk-videos
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Post next video to VK (dry on push)
+        env:
+          VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          DRY_RUN: ${{ github.event_name == 'push' && '1' || '' }}
+        run: python3 vk_video_post.py
+      - name: Commit state
+        run: |
+          git config user.name "vk-video-bot"
+          git config user.email "vk-video-bot@users.noreply.github.com"
+          git add vk_posted.json vk_dryrun.json 2>/dev/null || true
+          git commit -m "chore: vk video state [skip ci]" || echo "нет изменений"
+          git push
