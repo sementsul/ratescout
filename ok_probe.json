@@ -1,0 +1,10 @@
+{
+  "has": {
+    "token": true,
+    "secret": true,
+    "group": true,
+    "token_len": 84
+  },
+  "user_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL",
+  "group_error": "OK 100: PARAM : Parameter access_token specified but application is not EXTERNAL"
+}
