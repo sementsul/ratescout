@@ -1,7 +1,9 @@
 name: OK probe
 
-# Разовая проверка OK.ru: подпись+токен (users.getCurrentUser) и доступ к группе (group.getInfo).
-# Результат в ok_probe.json (читаю снаружи). Секреты: OK_ACCESS_TOKEN, OK_APP_SECRET, OK_GROUP_ID.
+# Разовая проверка OK.ru (СЕССИОННЫЙ режим): подпись+session_key (users.getCurrentUser)
+# и доступ к группе (group.getInfo). Пробуем обе схемы подписи (session_key в базе / нет).
+# Результат в ok_probe.json (читаю снаружи). Секреты: OK_SESSION_KEY, OK_SESSION_SECRET, OK_GROUP_ID.
+# Публичное: OK_APP_KEY (можно как секрет/переменную; по умолчанию зашит в ok_api.py).
 # Триггер — изменение ok_api.py/этого файла + ручной запуск.
 
 on:
@@ -23,20 +25,27 @@ jobs:
         env:
           OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
           OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
+          OK_APP_KEY: ${{ secrets.OK_APP_KEY }}
           OK_GROUP_ID: ${{ secrets.OK_GROUP_ID }}
         run: |
           python3 - <<'PY'
           import json, ok_api
-          out = {"has": {"token": bool(ok_api.TOKEN), "secret": bool(ok_api.APP_SECRET),
-                         "group": bool(ok_api.GROUP), "token_len": len(ok_api.TOKEN)}}
-          try:
-              out["user"] = ok_api.call("users.getCurrentUser", fields="uid,name")
-          except Exception as e:
-              out["user_error"] = str(e)
-          try:
-              out["group"] = ok_api.call("group.getInfo", uids=ok_api.GROUP, fields="name,members_count")
-          except Exception as e:
-              out["group_error"] = str(e)
+          out = {"has": {"session_key": bool(ok_api.SESSION_KEY), "session_secret": bool(ok_api.SESSION_SECRET),
+                         "app_key": ok_api.APP_KEY, "group": bool(ok_api.GROUP),
+                         "sk_len": len(ok_api.SESSION_KEY)}}
+          for mode in (False, True):
+              ok_api.INCLUDE_SK = mode
+              tag = "sk_in_base" if mode else "sk_excluded"
+              r = {}
+              try:
+                  r["user"] = ok_api.call("users.getCurrentUser", fields="uid,name")
+              except Exception as e:
+                  r["user_error"] = str(e)
+              try:
+                  r["group"] = ok_api.call("group.getInfo", uids=ok_api.GROUP, fields="name,members_count")
+              except Exception as e:
+                  r["group_error"] = str(e)
+              out[tag] = r
           json.dump(out, open("ok_probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
           print(json.dumps(out, ensure_ascii=False, indent=2))
           PY

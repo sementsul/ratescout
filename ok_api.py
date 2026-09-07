@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""OK.ru (Одноклассники) API-клиент: подписанные вызовы + загрузка фото/видео + пост в группу.
+"""OK.ru (Одноклассники) API-клиент — СЕССИОННЫЙ режим (вечный session_key), без OAuth/EXTERNAL.
 
-Секреты из env: OK_ACCESS_TOKEN, OK_APP_SECRET, OK_GROUP_ID. Публичные (можно зашить): OK_APP_KEY/OK_APP_ID.
-Подпись OK: sig = md5( concat(отсортированные 'k=v', КРОМЕ access_token и sig) + md5(access_token + app_secret) ).
+Секреты из env: OK_SESSION_KEY, OK_SESSION_SECRET, OK_GROUP_ID. Публичное: OK_APP_KEY (application key).
+Подпись OK (session): sig = md5( concat(отсортированные 'k=v', КРОМЕ session_key и sig) + session_secret_key ).
+Если OK вернёт ошибку подписи — пробуем вариант с session_key в базе (SIG_INCLUDE_SK=1).
 """
 import hashlib
 import json
@@ -11,11 +12,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-APP_ID = os.environ.get("OK_APP_ID", "512003337250")
 APP_KEY = os.environ.get("OK_APP_KEY", "CDCNOHMGDIHBABABA")
-APP_SECRET = os.environ.get("OK_APP_SECRET", "")
-TOKEN = os.environ.get("OK_ACCESS_TOKEN", "")
+# session_key/секрет кладём в существующие секреты OK_ACCESS_TOKEN / OK_APP_SECRET (fallback-имена)
+SESSION_KEY = os.environ.get("OK_SESSION_KEY") or os.environ.get("OK_ACCESS_TOKEN", "")
+SESSION_SECRET = os.environ.get("OK_SESSION_SECRET") or os.environ.get("OK_APP_SECRET", "")
 GROUP = os.environ.get("OK_GROUP_ID", "")
+INCLUDE_SK = os.environ.get("SIG_INCLUDE_SK") == "1"
 API = "https://api.ok.ru/fb.do"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
@@ -25,16 +27,19 @@ def _md5(s):
 
 
 def call(method, **params):
-    """Подписанный вызов OK API. Бросает RuntimeError на error_code."""
+    """Подписанный сессионный вызов OK API. Бросает RuntimeError на error_code."""
     p = {k: ("" if v is None else str(v)) for k, v in params.items()}
     p["application_key"] = APP_KEY
     p["method"] = method
     p["format"] = "json"
-    base = "".join(f"{k}={p[k]}" for k in sorted(p))          # без access_token и sig
-    sig = _md5(base + _md5(TOKEN + APP_SECRET))
+    sign = dict(p)
+    if INCLUDE_SK:
+        sign["session_key"] = SESSION_KEY
+    base = "".join(f"{k}={sign[k]}" for k in sorted(sign))
+    sig = _md5(base + SESSION_SECRET)
     q = dict(p)
     q["sig"] = sig
-    q["access_token"] = TOKEN
+    q["session_key"] = SESSION_KEY
     req = urllib.request.Request(API, data=urllib.parse.urlencode(q).encode(),
                                  method="POST", headers={"User-Agent": UA})
     try:
