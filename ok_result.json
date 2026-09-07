@@ -1,6 +1,8 @@
 {
-  "ok": false,
-  "error": "OK 100: PARAM : Invalid parameter attachment value  : [{\"media\": [{\"type\": \"text\", \"text\": \"MyMany — база выгодных цепочек обмена (арбитраж).\\nЗарабатывай на разнице курсов, всё посчитано: https://my-many.ru/\\n\\n#арбитраж #обмен #криптовалюта #mymany\"}, {\"type\": \"movie\", \"movieId\": \"15599247034895\"}]}]",
-  "next": "5trr__10_.mp4",
-  "kind": "видео"
+  "ok": true,
+  "posted": "5trr__10_.mp4",
+  "kind": "видео",
+  "domain": "my-many.ru",
+  "topic": "159133855977487",
+  "forced": true
 }
