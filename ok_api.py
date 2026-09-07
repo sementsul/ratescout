@@ -114,6 +114,6 @@ def post_group(text, photo_token=None, video_id=None, gid=None):
     if photo_token:
         media.append({"type": "photo", "list": [{"id": photo_token}]})
     if video_id:
-        media.append({"type": "movie", "movieId": str(video_id)})
+        media.append({"type": "movie", "list": [{"id": video_id}]})   # рабочий формат (проверено пробником)
     return call("mediatopic.post", type="GROUP_THEME", gid=gid,
                 attachment=json.dumps({"media": media}, ensure_ascii=False))
