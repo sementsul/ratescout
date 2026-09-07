@@ -16,7 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-APP_KEY = os.environ.get("OK_APP_KEY") or "CDCNOHMGDIHBABABA"
+APP_KEY = os.environ.get("OK_APP_KEY") or "CNGHOCOGDIHBABABA"   # RateScout (внешнее), app_id 512005105260
 TOKEN = os.environ.get("OK_ACCESS_TOKEN", "")
 SESSION_SECRET = os.environ.get("OK_APP_SECRET", "")   # именно session_secret_key
 GROUP = os.environ.get("OK_GROUP_ID", "")
