@@ -45,8 +45,7 @@ jobs:
           print(json.dumps(out, ensure_ascii=False, indent=2))
           PY
       # Разовый тест реального поста (картинка ✅ / видео — по FORCE_TEST=1 при ручном запуске)
-      - name: Real post test (only on manual dispatch)
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Real post test (force a video)
         env:
           OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
           OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
