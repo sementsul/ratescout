@@ -1,7 +1,6 @@
 {
-  "ok": true,
-  "posted": "061z4q.jpg",
-  "kind": "картинка",
-  "domain": "ratescout.ru",
-  "topic": "159133853356047"
+  "ok": false,
+  "error": "OK 10: PERMISSION_DENIED : User must grant an access to permission 'VIDEO_CONTENT'",
+  "next": "5trr__10_.mp4",
+  "kind": "видео"
 }
