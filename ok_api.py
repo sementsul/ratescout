@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""OK.ru (Одноклассники) API-клиент — СЕССИОННЫЙ режим (вечный session_key), без OAuth/EXTERNAL.
+"""OK.ru (Одноклассники) API-клиент — схема «ВЕЧНОГО access_token» (внешнее OAuth-приложение).
 
-Секреты из env: OK_SESSION_KEY, OK_SESSION_SECRET, OK_GROUP_ID. Публичное: OK_APP_KEY (application key).
-Подпись OK (session): sig = md5( concat(отсортированные 'k=v', КРОМЕ session_key и sig) + session_secret_key ).
-Если OK вернёт ошибку подписи — пробуем вариант с session_key в базе (SIG_INCLUDE_SK=1).
+apiok выдаёт пару: вечный access_token + session_secret_key. Подпись:
+    sig = md5( concat(отсортированные 'k=v', КРОМЕ access_token и sig) + session_secret_key )
+в запрос кладём access_token + application_key + sig. НЕ путать с обычным OAuth
+(там было бы md5(access_token+application_secret_key)) — здесь секрет = session_secret_key.
+
+env: OK_ACCESS_TOKEN (вечный токен), OK_APP_SECRET (session_secret_key), OK_GROUP_ID.
+Публичное: OK_APP_KEY (application key). Секреты — только из GitHub Secrets, в коде их нет.
 """
 import hashlib
 import json
@@ -12,12 +16,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-APP_KEY = os.environ.get("OK_APP_KEY", "CDCNOHMGDIHBABABA")
-# session_key/секрет кладём в существующие секреты OK_ACCESS_TOKEN / OK_APP_SECRET (fallback-имена)
-SESSION_KEY = os.environ.get("OK_SESSION_KEY") or os.environ.get("OK_ACCESS_TOKEN", "")
-SESSION_SECRET = os.environ.get("OK_SESSION_SECRET") or os.environ.get("OK_APP_SECRET", "")
+APP_KEY = os.environ.get("OK_APP_KEY") or "CDCNOHMGDIHBABABA"
+TOKEN = os.environ.get("OK_ACCESS_TOKEN", "")
+SESSION_SECRET = os.environ.get("OK_APP_SECRET", "")   # именно session_secret_key
 GROUP = os.environ.get("OK_GROUP_ID", "")
-INCLUDE_SK = os.environ.get("SIG_INCLUDE_SK") == "1"
 API = "https://api.ok.ru/fb.do"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
@@ -27,19 +29,16 @@ def _md5(s):
 
 
 def call(method, **params):
-    """Подписанный сессионный вызов OK API. Бросает RuntimeError на error_code."""
+    """Подписанный вызов OK API (вечный токен). Бросает RuntimeError на error_code."""
     p = {k: ("" if v is None else str(v)) for k, v in params.items()}
     p["application_key"] = APP_KEY
     p["method"] = method
     p["format"] = "json"
-    sign = dict(p)
-    if INCLUDE_SK:
-        sign["session_key"] = SESSION_KEY
-    base = "".join(f"{k}={sign[k]}" for k in sorted(sign))
+    base = "".join(f"{k}={p[k]}" for k in sorted(p))    # без access_token и sig
     sig = _md5(base + SESSION_SECRET)
     q = dict(p)
+    q["access_token"] = TOKEN
     q["sig"] = sig
-    q["session_key"] = SESSION_KEY
     req = urllib.request.Request(API, data=urllib.parse.urlencode(q).encode(),
                                  method="POST", headers={"User-Agent": UA})
     try:
