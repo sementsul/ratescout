@@ -44,11 +44,17 @@ jobs:
           json.dump(out, open("ok_probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
           print(json.dumps(out, ensure_ascii=False, indent=2))
           PY
+      - name: Real post test (first promo item)
+        env:
+          OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
+          OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
+          OK_GROUP_ID: ${{ secrets.OK_GROUP_ID }}
+        run: python3 ok_video_post.py || true
       - name: Commit result
         run: |
           git config user.name "ok-bot"
           git config user.email "ok-bot@users.noreply.github.com"
-          git add ok_probe.json 2>/dev/null || true
-          git commit -m "ci: ok probe [skip ci]" || { echo "нет изменений"; exit 0; }
+          git add ok_probe.json ok_result.json ok_posted.json 2>/dev/null || true
+          git commit -m "ci: ok probe + real post test [skip ci]" || { echo "нет изменений"; exit 0; }
           git pull --rebase --autostash origin main || true
           git push origin HEAD:main
