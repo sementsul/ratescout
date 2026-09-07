@@ -53,3 +53,67 @@ def call(method, **params):
     if isinstance(d, dict) and d.get("error_code"):
         raise RuntimeError(f"OK {d.get('error_code')}: {d.get('error_msg')}")
     return d
+
+
+def _multipart(fields):
+    """fields: list of (name, filename|None, ctype|None, data-bytes|str). Возвращает (boundary, body)."""
+    import uuid
+    b = uuid.uuid4().hex
+    out = b""
+    for name, filename, ctype, data in fields:
+        head = f'--{b}\r\nContent-Disposition: form-data; name="{name}"'
+        if filename:
+            head += f'; filename="{filename}"'
+        head += "\r\n"
+        if ctype:
+            head += f"Content-Type: {ctype}\r\n"
+        head += "\r\n"
+        out += head.encode() + (data if isinstance(data, bytes) else str(data).encode()) + b"\r\n"
+    out += f"--{b}--\r\n".encode()
+    return b, out
+
+
+def _upload(url, fields):
+    b, body = _multipart(fields)
+    req = urllib.request.Request(url, data=body, method="POST", headers={
+        "Content-Type": "multipart/form-data; boundary=" + b, "User-Agent": UA})
+    try:
+        with urllib.request.urlopen(req, timeout=600) as r:
+            raw = r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", "replace")
+    try:
+        return json.loads(raw)
+    except Exception:                            # noqa: BLE001
+        return {"_raw": raw[:400]}
+
+
+def upload_photo(img_bytes, gid=None):
+    """Грузит фото в группу, возвращает token для mediatopic."""
+    gid = gid or GROUP
+    up = call("photosV2.getUploadUrl", gid=gid, count=1)
+    pid = up["photo_ids"][0]
+    resp = _upload(up["upload_url"], [(pid, "p.jpg", "image/jpeg", img_bytes)])
+    return resp["photos"][pid]["token"]
+
+
+def upload_video(path, name="RateScout", gid=None):
+    """Грузит видео в группу, возвращает video_id."""
+    gid = gid or GROUP
+    sz = os.path.getsize(path)
+    up = call("video.getUploadUrl", gid=gid, file_name=name, file_size=sz)
+    with open(path, "rb") as f:
+        _upload(up["upload_url"], [("file", name + ".mp4", "video/mp4", f.read())])
+    return up["video_id"]
+
+
+def post_group(text, photo_token=None, video_id=None, gid=None):
+    """Публикует пост в ленту группы через mediatopic.post."""
+    gid = gid or GROUP
+    media = [{"type": "text", "text": text}]
+    if photo_token:
+        media.append({"type": "photo", "list": [{"id": photo_token}]})
+    if video_id:
+        media.append({"type": "movie", "movieId": str(video_id)})
+    return call("mediatopic.post", type="GROUP_THEME", gid=gid,
+                attachment=json.dumps({"media": media}, ensure_ascii=False))

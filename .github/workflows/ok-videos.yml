@@ -1,0 +1,47 @@
+name: OK video poster
+
+# Раз в 2 дня публикует один ролик/картинку из my-many/promo в ленту OK-группы, чередуя подпись
+# ratescout.ru / my-many.ru, круговая очередь. Секреты: OK_ACCESS_TOKEN, OK_APP_SECRET, OK_GROUP_ID,
+# GH_PAT (коммит состояния ok_posted.json). Ручной запуск с dry_run — сухой прогон.
+
+on:
+  schedule:
+    - cron: "40 9 1-31/2 * *"     # ~12:40 МСК, по нечётным дням (со сдвигом от VK)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Сухой прогон (не публиковать)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ok-videos
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Post next media to OK
+        env:
+          OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
+          OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
+          OK_GROUP_ID: ${{ secrets.OK_GROUP_ID }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: python3 ok_video_post.py
+      - name: Commit state
+        run: |
+          git config user.name "ok-video-bot"
+          git config user.email "ok-video-bot@users.noreply.github.com"
+          git add ok_dryrun.json 2>/dev/null || true
+          git add ok_posted.json 2>/dev/null || true
+          git add ok_result.json 2>/dev/null || true
+          git commit -m "chore: ok video state [skip ci]" || { echo "нет изменений"; exit 0; }
+          git pull --rebase --autostash origin main || true
+          git push origin HEAD:main

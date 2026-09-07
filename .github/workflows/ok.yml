@@ -1,0 +1,35 @@
+name: OK daily digest
+
+# Раз в день постит дневную сводку курсов в ленту OK-группы (данные — с боевого сайта, daily.json).
+# Секреты (Settings → Secrets and variables → Actions):
+#   OK_ACCESS_TOKEN — вечный access_token приложения RateScout
+#   OK_APP_SECRET   — session_secret_key (им подписываются запросы)
+#   OK_GROUP_ID     — числовой id группы OK
+# Без секретов воркфлоу отработает «в сухую» (ничего не опубликует).
+
+on:
+  schedule:
+    - cron: "16 9 * * *"      # ~12:16 МСК (рядом с VK-дайджестом)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ok-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Post daily digest to OK
+        env:
+          OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
+          OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
+          OK_GROUP_ID: ${{ secrets.OK_GROUP_ID }}
+        run: python3 ok_daily.py
