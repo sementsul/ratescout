@@ -4,7 +4,7 @@
     "session_secret": true,
     "app_key": "CNGHOCOGDIHBABABA",
     "group": true,
-    "token_len": 86
+    "token_len": 85
   },
   "user": {
     "uid": "598805286927",

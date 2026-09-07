@@ -1,6 +1,6 @@
 {
   "ok": false,
-  "error": "OK 10: PERMISSION_DENIED : User must grant an access to permission 'VIDEO_CONTENT'",
+  "error": "OK 100: PARAM : Invalid parameter attachment value  : [{\"media\": [{\"type\": \"text\", \"text\": \"MyMany — база выгодных цепочек обмена (арбитраж).\\nЗарабатывай на разнице курсов, всё посчитано: https://my-many.ru/\\n\\n#арбитраж #обмен #криптовалюта #mymany\"}, {\"type\": \"movie\", \"movieId\": \"15599247034895\"}]}]",
   "next": "5trr__10_.mp4",
   "kind": "видео"
 }
