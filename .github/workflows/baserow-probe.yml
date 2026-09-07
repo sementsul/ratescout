@@ -36,8 +36,12 @@ jobs:
               except Exception as e:
                   return -1,{"exc":str(e)}
           out={"token_len":len(T)}
+          # диагностика типа токена: /rows/ (database token) и /fields/ (schema)
           s,fields=req("GET",f"{BASE}/fields/table/{TABLE}/")
           out["fields_http"]=s
+          out["fields_body"]=fields if not isinstance(fields,list) else "OK-list"
+          rs0,rb0=req("GET",f"{BASE}/rows/table/{TABLE}/?user_field_names=true&size=1")
+          out["rows_get_http"]=rs0; out["rows_get_body"]=rb0
           flist=fields if isinstance(fields,list) else []
           out["fields_before"]=[{"name":f.get("name"),"type":f.get("type")} for f in flist]
           existing={f.get("name") for f in flist}
@@ -63,7 +67,7 @@ jobs:
               tf=next((f.get("name") for f in (fields2 if isinstance(fields2,list) else []) if f.get("type") in ("text","long_text")),None)
               if tf: row[tf]="probe"
           ws,wr=req("POST",f"{BASE}/rows/table/{TABLE}/?user_field_names=true",row)
-          out["write_http"]=ws; out["wrote"]=row; out["write_resp_id"]=wr.get("id") if isinstance(wr,dict) else None
+          out["write_http"]=ws; out["wrote"]=row; out["write_body"]=wr
           rs,rr=req("GET",f"{BASE}/rows/table/{TABLE}/?user_field_names=true&size=3")
           out["read_http"]=rs; out["read_count"]=rr.get("count") if isinstance(rr,dict) else None
           open("baserow_probe.json","w",encoding="utf-8").write(json.dumps(out,ensure_ascii=False,indent=2))
