@@ -48,21 +48,40 @@ def _req(method, path, data=None, token=None, as_json=False):
         return code, {"_raw": raw[:400]}
 
 
+def _phone_variants(u):
+    """Разные написания одного логина/телефона (RuTube придирчив к формату)."""
+    digits = "".join(c for c in u if c.isdigit())
+    out = [u]
+    if digits:
+        out += ["+" + digits, digits]
+        if digits.startswith("7") and len(digits) == 11:
+            out.append("8" + digits[1:])          # 8XXXXXXXXXX
+            out.append("+7" + digits[1:])
+        if digits.startswith("8") and len(digits) == 11:
+            out.append("+7" + digits[1:])
+            out.append("7" + digits[1:])
+    seen, uniq = set(), []
+    for v in out:
+        if v not in seen:
+            seen.add(v)
+            uniq.append(v)
+    return uniq
+
+
 def auth(verbose=False):
-    """Перебирает варианты полей/кодировки, возвращает (token, meta) или (None, попытки)."""
+    """Поле — `username` (подтверждено пробой). Перебираем написания логина + form/json."""
     global _token
     tries = []
-    for fields in ({"login": USER, "password": PASS},
-                   {"username": USER, "password": PASS},
-                   {"phone": USER, "password": PASS}):
+    for uname in _phone_variants(USER):
         for as_json in (True, False):
-            code, d = _req("POST", "/accounts/token_auth/", fields, as_json=as_json)
+            code, d = _req("POST", "/accounts/token_auth/",
+                           {"username": uname, "password": PASS}, as_json=as_json)
             tok = d.get("token") if isinstance(d, dict) else None
-            tries.append({"field": list(fields)[0], "json": as_json, "code": code,
+            tries.append({"username": uname, "json": as_json, "code": code,
                           "got_token": bool(tok), "resp": None if tok else d})
             if tok:
                 _token = tok
-                return tok, {"field": list(fields)[0], "json": as_json, "tries": tries}
+                return tok, {"username": uname, "json": as_json, "tries": tries}
     return None, {"tries": tries}
 
 
