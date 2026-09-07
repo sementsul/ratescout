@@ -1,0 +1,43 @@
+{
+  "token_len": 32,
+  "fields_http": 403,
+  "fields_before": [],
+  "create_fields": [
+    {
+      "name": "date",
+      "http": 403,
+      "err": null
+    },
+    {
+      "name": "site",
+      "http": 403,
+      "err": null
+    },
+    {
+      "name": "source",
+      "http": 403,
+      "err": null
+    },
+    {
+      "name": "metric",
+      "http": 403,
+      "err": null
+    },
+    {
+      "name": "value",
+      "http": 403,
+      "err": null
+    },
+    {
+      "name": "note",
+      "http": 403,
+      "err": null
+    }
+  ],
+  "fields_after": [],
+  "write_http": 403,
+  "wrote": {},
+  "write_resp_id": null,
+  "read_http": 403,
+  "read_count": null
+}
