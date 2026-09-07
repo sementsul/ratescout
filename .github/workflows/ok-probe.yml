@@ -44,7 +44,9 @@ jobs:
           json.dump(out, open("ok_probe.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
           print(json.dumps(out, ensure_ascii=False, indent=2))
           PY
-      - name: Real post test (force a video)
+      # Разовый тест реального поста (картинка ✅ / видео — по FORCE_TEST=1 при ручном запуске)
+      - name: Real post test (only on manual dispatch)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           OK_ACCESS_TOKEN: ${{ secrets.OK_ACCESS_TOKEN }}
           OK_APP_SECRET: ${{ secrets.OK_APP_SECRET }}
