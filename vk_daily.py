@@ -63,10 +63,11 @@ def main():
     if page:
         # цепляем СТРАНИЦУ (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
         # суточный cache-buster — иначе VK покажет вчерашнюю закэшированную карточку.
-        sep = "&" if "?" in page else "?"
-        # cache-buster по минутам: каждый запуск = новый URL → VK перечитывает превью заново (не кэширует старое)
+        # VK кэширует превью по пути (query часто режет) и мог запомнить ранние неудачные попытки по /obzor/sutki/.
+        # Даём ЯВНО другой путь — .../index.html (тот же контент и og:image-график) + поминутный бустер.
+        base = page.rstrip("/") + "/index.html"
         stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M")
-        att = f"{page}{sep}vkc={stamp}"
+        att = f"{base}?vkc={stamp}"
         print(f"картинка: прикрепляю карточку страницы обзора → {att}")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
