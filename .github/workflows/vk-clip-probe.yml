@@ -21,12 +21,12 @@ jobs:
           VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
           FORCE_NAME: "5trr__10_.mp4"
-        run: python3 vk_clip_post.py || true
+        run: python3 vk_clip_post.py 2>&1 | tee vk_clip_log.txt; true
       - name: Commit result
         run: |
           git config user.name "vk-clip-bot"
           git config user.email "vk-clip-bot@users.noreply.github.com"
-          git add vk_clip_result.json vk_clip_posted.json 2>/dev/null || true
+          git add vk_clip_result.json vk_clip_posted.json vk_clip_log.txt 2>/dev/null || true
           git commit -m "ci: vk clip probe [skip ci]" || { echo "нет изменений"; exit 0; }
           git pull --rebase --autostash origin main || true
           git push origin HEAD:main
