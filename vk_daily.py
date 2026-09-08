@@ -2,30 +2,27 @@
 """Автопостинг дневной сводки на стену VK-группы (тот же daily.json, что у Telegram/Дзена).
 
 Токен и id группы — ТОЛЬКО из окружения (GitHub Secrets), в коде их нет:
-  VK_TOKEN     — токен сообщества с правами «Стена» и «Фотографии» (Управление сообществом → API → создать токен)
+  VK_TOKEN     — токен сообщества с правом «Стена» (Управление сообществом → API → создать токен)
   VK_GROUP_ID  — числовой id сообщества (без минуса)
 Без секретов — сухой прогон (печатает текст, не публикует). Запуск раз в день (vk.yml).
 
-VK wall-посты не поддерживают инлайн-кнопки — поэтому это текст (со ссылками) + картинка.
+Картинка: график прикрепляем ССЫЛКОЙ (attachments=URL) — VK сам рисует карточку-превью.
+Почему не загружаем фото напрямую: для photos.getWallUploadServer нужен ПОЛЬЗОВАТЕЛЬСКИЙ токен с scope
+photos, а VK для новых приложений больше не выдаёт бессрочный (offline) user-токен (живёт 24ч) — для крона
+без участия человека это не годится. Токен же СООБЩЕСТВА (VK_TOKEN) не протухает, но фото грузить не умеет,
+зато принимает ссылку-вложение. Поэтому — ссылка-карточка. (см. UC-73a в docs/ratescout.usecases.md)
 """
 import json
 import os
 import sys
-import time
 import urllib.parse
 import urllib.request
-import uuid
 
 VK_TOKEN = os.environ.get("VK_TOKEN")
-VK_USER = os.environ.get("VK_USER_TOKEN")     # пользовательский — умеет грузить ФОТО (сообщество не может)
 VK_GROUP = os.environ.get("VK_GROUP_ID")
 SRC = os.environ.get("DAILY_JSON_URL", "https://ratescout.ru/daily.json")
 API = "https://api.vk.com/method/"
 V = "5.199"
-
-# Фото на стену грузим ПОЛЬЗОВАТЕЛЬСКИМ токеном (сообщество не умеет). Свежий VK ID access берём из refresh —
-# общий helper vk_token.fresh_user_token() (см. модуль). Фолбэк — статичный VK_USER_TOKEN.
-from vk_token import fresh_user_token  # noqa: E402
 
 
 def vk(method, params, token=None):
@@ -39,25 +36,6 @@ def vk(method, params, token=None):
     if "error" in res:
         raise RuntimeError(res["error"].get("error_msg", res["error"]))
     return res["response"]
-
-
-def upload_photo(img, tok):
-    up = vk("photos.getWallUploadServer", {"group_id": VK_GROUP}, token=tok)
-    boundary = uuid.uuid4().hex
-    body = (f"--{boundary}\r\n".encode()
-            + b'Content-Disposition: form-data; name="photo"; filename="d.png"\r\n'
-            + b"Content-Type: image/png\r\n\r\n" + img + b"\r\n"
-            + f"--{boundary}--\r\n".encode())
-    req = urllib.request.Request(up["upload_url"], data=body,
-                                 headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
-    with urllib.request.urlopen(req, timeout=90) as r:
-        ur = json.load(r)
-    # upload-сервер при неудаче отдаёт photo:"[]" (не исключение) — ловим явно, иначе saveWallPhoto молча вернёт мусор
-    if not isinstance(ur, dict) or str(ur.get("photo", "")) in ("", "[]"):
-        raise RuntimeError(f"upload-сервер вернул без фото: {str(ur)[:200]}")
-    saved = vk("photos.saveWallPhoto", {"group_id": VK_GROUP, "server": ur["server"],
-                                        "photo": ur["photo"], "hash": ur["hash"]}, token=tok)[0]
-    return f'photo{saved["owner_id"]}_{saved["id"]}'
 
 
 def main():
@@ -81,40 +59,12 @@ def main():
         return 0
     att = ""
     if d.get("image"):
-        # свежий пользовательский токен для загрузки фото: сперва VK ID refresh (вечный), иначе — статичный VK_USER_TOKEN
-        photo_tok = None
-        try:
-            photo_tok = fresh_user_token()        # None, если refresh-секретов нет
-        except Exception as e:                    # noqa: BLE001
-            print(f"❗ обновление токена из VK ID refresh не удалось ({type(e).__name__}: {e}) — пробую VK_USER_TOKEN")
-        if photo_tok:
-            print("фото: получил свежий VK ID access-токен из refresh")
-        else:
-            photo_tok = VK_USER
-            if photo_tok:
-                print("фото: гружу статичным VK_USER_TOKEN (refresh-секретов нет). "
-                      "⚠️ VK ID access-токен живёт ~1ч — заведи VK_REFRESH_TOKEN/VK_DEVICE_ID, чтобы не протухал.")
-        if not photo_tok:
-            print("❗ нет пользовательского токена (ни VK_REFRESH_TOKEN, ни VK_USER_TOKEN) — фото не загрузить, "
-                  "токен СООБЩЕСТВА фото на стену грузить не умеет → пост будет только текстом.")
-        for attempt in range(1, 4):              # 3 попытки: отсекаем разовые сбои сети/upload-сервера
-            if not photo_tok:
-                break
-            try:
-                img = urllib.request.urlopen(d["image"], timeout=90).read()
-                att = upload_photo(img, photo_tok)
-                print(f"✅ фото загружено (попытка {attempt}): {att}")
-                break
-            except Exception as e:               # noqa: BLE001
-                print(f"❗ фото не загрузилось (попытка {attempt}/3): {type(e).__name__}: {e}")
-                if attempt < 3:
-                    time.sleep(2)
-        if not att:
-            print("❗❗ фото так и не прикрепилось — пост уйдёт ТОЛЬКО ТЕКСТОМ. Причина — в строках ❗ выше.")
+        att = d["image"]                     # график прикрепляем ССЫЛКОЙ — VK нарисует карточку-превью
+        print(f"картинка: прикрепляю ссылкой-карточкой → {att}")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
-    if att:                                  # фото только если реально загрузилось (нужен user-токен);
-        params["attachments"] = att          # иначе просто текст — VK сам сделает превью из первой ссылки
+    if att:
+        params["attachments"] = att          # URL-вложение: community-токен это умеет, фото-загрузка не нужна
     try:
         res = vk("wall.post", params)
         print(f"опубликовано, post_id={res.get('post_id')}")
