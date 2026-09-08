@@ -16,6 +16,8 @@ import urllib.parse
 import urllib.request
 import uuid
 
+from vk_token import fresh_user_token   # свежий VK ID access из refresh (общий helper)
+
 TOKEN = os.environ.get("VK_USER_TOKEN")
 GROUP = os.environ.get("VK_GROUP_ID")
 DRY = os.environ.get("DRY_RUN") == "1"
@@ -126,6 +128,7 @@ def upload_image(path):
 
 
 def main():
+    global TOKEN
     media = list_media()
     if not media:
         print("в promo нет медиа.")
@@ -139,6 +142,17 @@ def main():
     kind = "видео" if name.lower().endswith(VID_EXT) else "картинка"
     print(f"медиа всего: {len(media)} | цикл-пост #{count} | след.[{idx}]: {name} ({kind}) | домен: {who}")
     print(f"подпись:\n{caption}\n")
+    if not DRY:                                  # для реальной публикации берём свежий VK ID access из refresh
+        try:
+            fresh = fresh_user_token()           # None, если refresh-секретов нет
+        except Exception as e:                   # noqa: BLE001
+            fresh = None
+            print(f"❗ обновление токена из VK ID refresh не удалось ({type(e).__name__}: {e}) — пробую VK_USER_TOKEN")
+        if fresh:
+            TOKEN = fresh
+            print("токен: свежий VK ID access из refresh")
+        elif TOKEN:
+            print("токен: статичный VK_USER_TOKEN (refresh-секретов нет; VK ID access живёт ~1ч → может протухнуть).")
     if DRY or not TOKEN or not GROUP:
         print("СУХОЙ ПРОГОН — не публикую." if DRY else "VK_USER_TOKEN/VK_GROUP_ID не заданы — сухой прогон.")
         json.dump({"total": len(media), "count": count, "next": name, "kind": kind, "domain": who,

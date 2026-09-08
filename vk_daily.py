@@ -23,40 +23,9 @@ SRC = os.environ.get("DAILY_JSON_URL", "https://ratescout.ru/daily.json")
 API = "https://api.vk.com/method/"
 V = "5.199"
 
-# VK ID: «вечный» refresh-токен → свежий access (vk1.a…, TTL ~1ч) на каждый запуск (как blogger_daily.py).
-# Токен сообщества фото на стену грузить не умеет → фото грузим этим свежим пользовательским токеном.
-VK_REFRESH = os.environ.get("VK_REFRESH_TOKEN")
-VK_DEVICE = os.environ.get("VK_DEVICE_ID")
-VK_CLIENT_ID = os.environ.get("VK_CLIENT_ID", "54178608")
-VK_ID_TOKEN = "https://id.vk.com/oauth2/auth"
-# при ротации refresh пишем новый сюда — workflow сохранит его в секрет (gh secret set); в лог/output не попадает
-VK_REFRESH_OUT = os.environ.get("VK_REFRESH_OUT")
-UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-
-
-def refresh_user_token():
-    """Свежий VK ID access-токен (vk1.a…) из VK_REFRESH_TOKEN+VK_DEVICE_ID. None — если refresh-секретов нет."""
-    if not (VK_REFRESH and VK_DEVICE):
-        return None
-    data = urllib.parse.urlencode({
-        "grant_type": "refresh_token", "refresh_token": VK_REFRESH, "client_id": VK_CLIENT_ID,
-        "device_id": VK_DEVICE, "scope": "video photos wall groups"}).encode()
-    req = urllib.request.Request(VK_ID_TOKEN, data=data,
-                                 headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        res = json.load(r)
-    tok = res.get("access_token")
-    if not tok:
-        raise RuntimeError(f"VK ID refresh не дал access_token: {str(res)[:200]}")
-    new_refresh = res.get("refresh_token")
-    if new_refresh and new_refresh != VK_REFRESH and VK_REFRESH_OUT:   # ротация → отдать новый на сохранение
-        try:
-            with open(VK_REFRESH_OUT, "w", encoding="utf-8") as f:
-                f.write(new_refresh)
-            print("ℹ️ VK ID refresh ротировался — новый передан workflow на сохранение в секрет.")
-        except Exception as e:                                        # noqa: BLE001
-            print(f"⚠️ refresh ротировался, но записать новый не смог ({e}) — завтра может протухнуть.")
-    return tok
+# Фото на стену грузим ПОЛЬЗОВАТЕЛЬСКИМ токеном (сообщество не умеет). Свежий VK ID access берём из refresh —
+# общий helper vk_token.fresh_user_token() (см. модуль). Фолбэк — статичный VK_USER_TOKEN.
+from vk_token import fresh_user_token  # noqa: E402
 
 
 def vk(method, params, token=None):
@@ -114,13 +83,13 @@ def main():
     if d.get("image"):
         # свежий пользовательский токен для загрузки фото: сперва VK ID refresh (вечный), иначе — статичный VK_USER_TOKEN
         photo_tok = None
-        if VK_REFRESH and VK_DEVICE:
-            try:
-                photo_tok = refresh_user_token()
-                print("фото: получил свежий VK ID access-токен из refresh")
-            except Exception as e:               # noqa: BLE001
-                print(f"❗ обновление токена из VK ID refresh не удалось ({type(e).__name__}: {e}) — пробую VK_USER_TOKEN")
-        if not photo_tok:
+        try:
+            photo_tok = fresh_user_token()        # None, если refresh-секретов нет
+        except Exception as e:                    # noqa: BLE001
+            print(f"❗ обновление токена из VK ID refresh не удалось ({type(e).__name__}: {e}) — пробую VK_USER_TOKEN")
+        if photo_tok:
+            print("фото: получил свежий VK ID access-токен из refresh")
+        else:
             photo_tok = VK_USER
             if photo_tok:
                 print("фото: гружу статичным VK_USER_TOKEN (refresh-секретов нет). "

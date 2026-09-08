@@ -24,6 +24,8 @@ concurrency:
 jobs:
   post:
     runs-on: ubuntu-latest
+    env:
+      VK_REFRESH_OUT: ${{ runner.temp }}/vk_new_refresh   # сюда постер кладёт новый refresh при ротации
     steps:
       - uses: actions/checkout@v5
         with:
@@ -32,8 +34,23 @@ jobs:
         env:
           VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          VK_REFRESH_TOKEN: ${{ secrets.VK_REFRESH_TOKEN }}
+          VK_DEVICE_ID: ${{ secrets.VK_DEVICE_ID }}
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: python3 vk_video_post.py
+      - name: Persist rotated VK refresh token (if any)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -s "$VK_REFRESH_OUT" ]; then
+            gh secret set VK_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" --body "$(cat "$VK_REFRESH_OUT")" \
+              && echo "✅ VK_REFRESH_TOKEN обновлён в секретах" \
+              || echo "⚠️ не удалось сохранить новый refresh (проверь доступ GH_PAT к secrets)"
+            rm -f "$VK_REFRESH_OUT"
+          else
+            echo "refresh не ротировался (или refresh-секретов нет) — сохранять нечего."
+          fi
       - name: Commit state
         run: |
           git config user.name "vk-video-bot"

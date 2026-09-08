@@ -657,8 +657,10 @@ user-токена. Проверено: пост опубликован (post_id=
   вернул новый refresh — постер пишет его в файл `VK_REFRESH_OUT`, а шаг workflow `gh secret set VK_REFRESH_TOKEN` (через `GH_PAT`)
   сохраняет в секрет (токен в лог/output не попадает); без ротации/без `GH_PAT` — шаг no-op с предупреждением. **Радиус:**
   `vk_daily.py` (`refresh_user_token`, `upload_photo(tok)`, блок фото в `main`, новые env), `.github/workflows/vk.yml`
-  (проброс `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`, `VK_REFRESH_OUT`, шаг сохранения ротации через `GH_PAT`). СОСЕДИ: `vk_video_post.py`
-  использует тот же статичный `VK_USER_TOKEN` — ту же refresh-обвязку туда ещё НЕ вносил (следующий заход). **Проверка:** py+прогон
+  (проброс `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`, `VK_REFRESH_OUT`, шаг сохранения ротации через `GH_PAT`).
+  Логику токена вынес в общий модуль **`vk_token.py`** (`fresh_user_token()`) и подключил его к **`vk_video_post.py`**
+  тоже — у видео-постера была та же болезнь «не работает» (статичный `vk1.a.` протухал ~1ч); `vk-videos.yml` теперь тоже
+  пробрасывает `VK_REFRESH_TOKEN`/`VK_DEVICE_ID` + шаг сохранения ротации. **Проверка:** py+прогон обоих постеров
   ок; ветка refresh реально стучится в VK ID (фейк `device_id` → `device_id is invalid` = запрос валиден); фолбэк/логи `❗` работают.
   **🔴 Нужны секреты `VK_REFRESH_TOKEN`+`VK_DEVICE_ID` (из `vk_id_bootstrap.py`, заводит владелец) + `GH_PAT` для ротации.**
   **Статус:** ✅ код запушен; заработает после заведения секретов (зона токенов — владелец/ПМ).
