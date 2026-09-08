@@ -64,7 +64,9 @@ def main():
         # цепляем СТРАНИЦУ (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
         # суточный cache-buster — иначе VK покажет вчерашнюю закэшированную карточку.
         sep = "&" if "?" in page else "?"
-        att = f"{page}{sep}vkc={datetime.date.today().isoformat()}"
+        # cache-buster по минутам: каждый запуск = новый URL → VK перечитывает превью заново (не кэширует старое)
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M")
+        att = f"{page}{sep}vkc={stamp}"
         print(f"картинка: прикрепляю карточку страницы обзора → {att}")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
