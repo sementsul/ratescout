@@ -12,16 +12,16 @@
   4) скрипт меняет code→refresh и (если есть gh) сам пишет секреты VK_REFRESH_TOKEN/VK_DEVICE_ID,
      иначе печатает их у тебя на экране (в чат НЕ кидай).
 
-Запуск:  python3 vk_id_bootstrap.py
+Запуск (ничего указывать не надо):  python3 vk_id_bootstrap.py
 
-Перед запуском (ОДИН раз) в dev.vk.com у приложения (по умолч. 54178608):
+По умолчанию настроено на веб-приложение VK ID app_id=54760537 и redirect https://ratescout.ru/.
+Перед запуском (ОДИН раз) в dev.vk.com у приложения 54760537 (тип «Веб-сайт») проверь:
    • приложение включено;
-   • в «Доверенные redirect URI» добавь РОВНО тот адрес, что в VK_REDIRECT (по умолч. https://oauth.vk.com/blank.html).
-   Если приложение — VK Mini App и заглушку не принимает («Ошибка загрузки») — заведи приложение типа
-   «Веб-сайт»/standalone, добавь туда этот redirect и запусти с VK_CLIENT_ID=<новый id>.
+   • Базовый домен: ratescout.ru
+   • Доверенный redirect URI: https://ratescout.ru/  (ровно так, со слэшем)
 
-Настройки через env (по желанию):
-   VK_CLIENT_ID (54178608), VK_REDIRECT (https://oauth.vk.com/blank.html), GH_REPO (sementsul/ratescout)
+Переопределить при желании через env:
+   VK_CLIENT_ID (54760537), VK_REDIRECT (https://ratescout.ru/), GH_REPO (sementsul/ratescout)
 """
 import base64
 import hashlib
@@ -33,8 +33,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-CLIENT_ID = os.environ.get("VK_CLIENT_ID", "54178608")
-REDIRECT = os.environ.get("VK_REDIRECT", "https://oauth.vk.com/blank.html")
+CLIENT_ID = os.environ.get("VK_CLIENT_ID", "54760537")            # веб-приложение VK ID (app id — не секрет)
+REDIRECT = os.environ.get("VK_REDIRECT", "https://ratescout.ru/")  # свой домен = доверенный redirect у приложения
 SCOPE = "video photos wall groups"
 AUTH = "https://id.vk.com/authorize"
 TOKEN = "https://id.vk.com/oauth2/auth"
@@ -118,17 +118,20 @@ def main():
     rotated = ("refresh_token" in r2 and r2["refresh_token"] != refresh)
     latest = r2.get("refresh_token", refresh)
 
-    # пробуем записать секреты сами (gh CLI); иначе — печатаем для ручного добавления
+    # пробуем записать секреты сами (gh CLI); иначе — печатаем для ручного добавления.
+    # VK_CLIENT_ID тоже кладём в секреты: refresh «привязан» к приложению — CI обязан обновлять его тем же id.
     ok_r = set_secret("VK_REFRESH_TOKEN", latest)
     ok_d = set_secret("VK_DEVICE_ID", device_id)
+    ok_c = set_secret("VK_CLIENT_ID", CLIENT_ID)
     print()
-    if ok_r and ok_d:
-        print(f"✅ Секреты VK_REFRESH_TOKEN и VK_DEVICE_ID записаны в репозиторий {REPO} автоматически (gh).")
+    if ok_r and ok_d and ok_c:
+        print(f"✅ Секреты VK_REFRESH_TOKEN, VK_DEVICE_ID, VK_CLIENT_ID записаны в репозиторий {REPO} автоматически (gh).")
     else:
         print("gh не сработал (не установлен/не залогинен/нет прав). Добавь секреты ВРУЧНУЮ")
         print(f"(GitHub → {REPO} → Settings → Secrets and variables → Actions):")
         print("  VK_REFRESH_TOKEN =", latest)
         print("  VK_DEVICE_ID     =", device_id)
+        print("  VK_CLIENT_ID     =", CLIENT_ID, "(это app id, не секрет — но CI берёт его отсюда)")
     print("\nrefresh ротируется:", "ДА (постер сам сохраняет новый через шаг workflow)" if rotated
           else "нет (можно хранить статично)")
     print("\nГотово. Запусти Actions → «VK daily digest» — в посте должна появиться картинка.")

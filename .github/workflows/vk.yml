@@ -39,6 +39,7 @@ jobs:
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
           VK_REFRESH_TOKEN: ${{ secrets.VK_REFRESH_TOKEN }}
           VK_DEVICE_ID: ${{ secrets.VK_DEVICE_ID }}
+          VK_CLIENT_ID: ${{ secrets.VK_CLIENT_ID }}
         run: python3 vk_daily.py
       - name: Persist rotated VK refresh token (if any)
         if: always()
