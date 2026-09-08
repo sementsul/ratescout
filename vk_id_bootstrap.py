@@ -29,10 +29,21 @@ import hashlib
 import json
 import os
 import secrets
+import ssl
 import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
+
+# Контекст TLS: берём корневые сертификаты из certifi, если он есть (частая беда Python на Windows —
+# нет локального хранилища CA → SSLCertVerificationError). Если certifi нет — обычный дефолтный контекст,
+# а при провале проверки в post() делаем разовый фолбэк без проверки (с предупреждением).
+try:
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:                                                 # noqa: BLE001
+    _SSL_CTX = ssl.create_default_context()
+_SSL_INSECURE = None                                              # ленивый небезопасный контекст (последний фолбэк)
 
 CLIENT_ID = os.environ.get("VK_CLIENT_ID", "54760537")            # веб-приложение VK ID (app id — не секрет)
 REDIRECT = os.environ.get("VK_REDIRECT", "https://ratescout.ru/")  # свой домен = доверенный redirect у приложения
@@ -50,11 +61,28 @@ def b64url(b):
 def post(data):
     req = urllib.request.Request(TOKEN, data=urllib.parse.urlencode(data).encode(),
                                  headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+
+    def _do(ctx):
+        with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
             return json.load(r)
+
+    try:
+        return _do(_SSL_CTX)
     except urllib.error.HTTPError as e:
         return {"_http": e.code, "_body": e.read().decode("utf-8", "replace")}
+    except ssl.SSLCertVerificationError:
+        # на машине нет корневых CA (частая беда Python на Windows) — разово повторяем без проверки сертификата
+        global _SSL_INSECURE
+        if _SSL_INSECURE is None:
+            print("⚠️ TLS: Python не может проверить сертификат (нет корневых CA на этой машине). "
+                  "Повторяю запрос БЕЗ проверки сертификата. Для чистоты потом выполни: pip install certifi", flush=True)
+            _SSL_INSECURE = ssl.create_default_context()
+            _SSL_INSECURE.check_hostname = False
+            _SSL_INSECURE.verify_mode = ssl.CERT_NONE
+        try:
+            return _do(_SSL_INSECURE)
+        except urllib.error.HTTPError as e:
+            return {"_http": e.code, "_body": e.read().decode("utf-8", "replace")}
 
 
 def parse_pasted(text):
