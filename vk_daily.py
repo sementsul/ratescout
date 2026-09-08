@@ -16,6 +16,7 @@ import datetime
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -61,25 +62,39 @@ def main():
     att = ""
     page = d.get("url")                      # страница обзора: её og:image = дневной график (см. build.py render_review)
     if page:
-        # цепляем СТРАНИЦУ (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
-        # суточный cache-buster — иначе VK покажет вчерашнюю закэшированную карточку.
-        # VK кэширует превью по пути (query часто режет) и мог запомнить ранние неудачные попытки по /obzor/sutki/.
-        # Даём ЯВНО другой путь — .../index.html (тот же контент и og:image-график) + поминутный бустер.
-        base = page.rstrip("/") + "/index.html"
-        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M")
-        att = f"{base}?vkc={stamp}"
+        # Цепляем СТРАНИЦУ обзора (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
+        # URL СТАБИЛЬНЫЙ в пределах суток (?vkc=<дата>): VK парсит ссылку асинхронно — на первой попытке превью
+        # ещё нет ("No photo given"), поэтому НЕ бустим поминутно (иначе VK каждый раз начинает заново), а даём ему
+        # обойти страницу и повторяем публикацию с паузой (ниже). index.html — чистый путь без старого кэша.
+        day = datetime.date.today().isoformat()
+        att = f"{page.rstrip('/')}/index.html?vkc={day}"
         print(f"картинка: прикрепляю карточку страницы обзора → {att}")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:
         params["attachments"] = att          # URL-вложение: community-токен это умеет, фото-загрузка не нужна
-    try:
-        res = vk("wall.post", params)
-        print(f"опубликовано, post_id={res.get('post_id')}")
-        return 0
-    except Exception as e:                        # noqa: BLE001
-        print(f"ошибка публикации в VK: {e}")
-        return 1
+    # VK парсит превью ссылки асинхронно → первая попытка часто "link_photo_sizing_rule / No photo given".
+    # Повторяем ту же публикацию с паузой, пока VK не подготовит карточку; не вышло за N попыток — постим без карточки.
+    for attempt in range(1, 7):
+        try:
+            res = vk("wall.post", params)
+            tag = "" if "attachments" in params else " (без карточки)"
+            print(f"опубликовано (попытка {attempt}){tag}, post_id={res.get('post_id')}")
+            return 0
+        except Exception as e:                    # noqa: BLE001
+            msg_e = str(e)
+            retriable = "attachments" in params and ("link_photo_sizing" in msg_e or "No photo given" in msg_e)
+            if retriable and attempt < 6:
+                print(f"❗ VK ещё готовит превью ссылки (попытка {attempt}/6): {msg_e} — жду 20с и повторяю")
+                time.sleep(20)
+                continue
+            if retriable:                         # исчерпали попытки — не роняем пост, публикуем текстом
+                print("❗❗ VK так и не подготовил карточку — публикую БЕЗ картинки (текст выходит).")
+                params.pop("attachments", None)
+                continue
+            print(f"ошибка публикации в VK: {e}")
+            return 1
+    return 1
 
 
 if __name__ == "__main__":
