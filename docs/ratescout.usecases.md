@@ -751,6 +751,14 @@ user-токена. Проверено: пост опубликован (post_id=
   (`head`, `render_review` — влияет и на соц-превью страницы обзора в целом), `vk_daily.py`. Сайт пересобирает `deploy.yml`
   на push. Проверка: `ast.parse` OK (build.py, vk_daily.py). Порядок теста: push → дождаться `deploy.yml` (обзор получит новый
   og:image) → запустить «VK daily digest» → карточка с графиком. Статус: 🔄 ждём прогон + скрин поста.
+  **Обновление #10 2026-09-08 (квадрат VK отбил → landscape 1200×630):** прогон дал ту же `link_photo_sizing_rule. No photo
+  given` уже на странице — причина: `daily-24h.png` **квадрат 1080×1080**, а VK для превью-ссылок требует «широкую»
+  (~1200×630, как общая `og-image.png`, которую VK ест). Фикс в `build.py`: хелпер `make_og_card()` делает из квадрата
+  landscape 1200×630 (квадрат по центру на чёрном фоне); `write_daily_digest` пишет `daily-24h-og.png` и `daily-24h-en-og.png`;
+  `render_review` для `sutki` ставит `og:image` на `-og`-версию (1200×630). `vk_daily.py` без изменений (цепляет ту же
+  страницу обзора). Проверка: `ast.parse` OK; `make_og_card` прогнан на живом `daily-24h.png` → на выходе валидный 1200×630 RGB.
+  РАДИУС: `build.py` (make_og_card, write_daily_digest ×2, render_review). Порядок: push → `deploy.yml` соберёт `-og.png` и
+  обновит og:image обзора → запустить «VK daily digest». Статус: 🔄 ждём прогон + скрин.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка

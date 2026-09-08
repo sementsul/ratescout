@@ -3022,8 +3022,9 @@ def render_review(lang, sid, days, ru_word, en_word):
     og_img, ogw, ogh = None, 1200, 630
     if sid == "sutki":
         suffix = "-en" if lang == "en" else ""
-        og_img = f"{BASE_URL}/assets/daily-24h{suffix}.png?d={rc['date']}"
-        ogw = ogh = 1080
+        # landscape 1200×630 (VK отбивает квадрат: link_photo_sizing_rule) — см. make_og_card
+        og_img = f"{BASE_URL}/assets/daily-24h{suffix}-og.png?d={rc['date']}"
+        ogw, ogh = 1200, 630
     write(lang, path, head(lang, title, rc["desc"], path, og_image=og_img, og_w=ogw, og_h=ogh) + body)
 
 
@@ -3328,6 +3329,18 @@ def _spark_draw(dr, pts, box, color):
         dr.line(xy, fill=color, width=3, joint="curve")
 
 
+def make_og_card(src_path, out_path, W=1200, H=630):
+    """1200×630-карточка для соцсетей/VK из квадратной картинки (квадрат по центру на чёрном фоне).
+    VK для превью-ссылок отбивает квадрат/портрет (link_photo_sizing_rule) — ему нужен landscape ~1200×630."""
+    src = Image.open(src_path).convert("RGB")
+    nh = H
+    nw = max(1, round(src.width * H / src.height))
+    src = src.resize((nw, nh))
+    canvas = Image.new("RGB", (W, H), (11, 11, 11))
+    canvas.paste(src, ((W - nw) // 2, (H - nh) // 2))
+    canvas.save(out_path, "PNG")
+
+
 def make_daily_image(out_path, date, gainers, losers, lang="ru"):
     """Картинка для Telegram: топ роста/падения за сутки с 24ч-графиками (без emoji — DejaVu их не рисует)."""
     lab = (("[⇄] Крипторынок за сутки", "▲ Топ роста", "▼ Топ падения", "Полный обзор: ratescout.ru/obzor/sutki")
@@ -3524,6 +3537,8 @@ def write_daily_digest():
     img_url = ""
     if COVERS_OK:
         make_daily_image(os.path.join(DIST, "assets", "daily-24h.png"), now, gainers, losers)
+        make_og_card(os.path.join(DIST, "assets", "daily-24h.png"),
+                     os.path.join(DIST, "assets", "daily-24h-og.png"))   # 1200×630 для VK-карточки
         img_url = f"{BASE_URL}/assets/daily-24h.png"
     lines = [f"📊 Крипторынок за сутки · {now}", ""]
     lines.append("📈 Топ роста:")
@@ -3609,6 +3624,8 @@ def write_daily_digest_en():
     img_url = ""
     if COVERS_OK:
         make_daily_image(os.path.join(DIST, "assets", "daily-24h-en.png"), now, gainers, losers, lang="en")
+        make_og_card(os.path.join(DIST, "assets", "daily-24h-en.png"),
+                     os.path.join(DIST, "assets", "daily-24h-en-og.png"))   # 1200×630 для VK-карточки
         img_url = f"{BASE_URL}/assets/daily-24h-en.png"
     lines = [f"📊 Crypto market · 24h · {now}", "", "📈 Top gainers:"]
     lines += [f"• {CUR[s]['ticker']} +{p:.1f}%" for s, p in gainers]
