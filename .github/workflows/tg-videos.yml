@@ -1,0 +1,46 @@
+name: TG video poster
+
+# Раз в 2 дня публикует один ролик/картинку из my-many/promo в Telegram-канал, чередуя подпись
+# ratescout.ru / my-many.ru, круговая очередь. Секреты: TELEGRAM_TOKEN, TELEGRAM_CHANNEL, GH_PAT
+# (коммит состояния tg_posted.json). Ручной запуск с dry_run — сухой прогон.
+
+on:
+  schedule:
+    - cron: "0 10 2-30/2 * *"     # ~13:00 МСК, по чётным дням (сдвиг от VK/OK)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Сухой прогон (не публиковать)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tg-videos
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Post next media to Telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: python3 tg_video_post.py
+      - name: Commit state
+        run: |
+          git config user.name "tg-video-bot"
+          git config user.email "tg-video-bot@users.noreply.github.com"
+          git add tg_dryrun.json 2>/dev/null || true
+          git add tg_posted.json 2>/dev/null || true
+          git add tg_result.json 2>/dev/null || true
+          git commit -m "chore: tg video state [skip ci]" || { echo "нет изменений"; exit 0; }
+          git pull --rebase --autostash origin main || true
+          git push origin HEAD:main
