@@ -3022,8 +3022,9 @@ def render_review(lang, sid, days, ru_word, en_word):
     og_img, ogw, ogh = None, 1200, 630
     if sid == "sutki":
         suffix = "-en" if lang == "en" else ""
-        # landscape 1200×630 (VK отбивает квадрат: link_photo_sizing_rule) — см. make_og_card
-        og_img = f"{BASE_URL}/assets/daily-24h{suffix}-og.png?d={rc['date']}"
+        # landscape 1200×630 (VK отбивает квадрат: link_photo_sizing_rule) — см. make_og_card.
+        # URL БЕЗ query: VK определяет тип по расширению — .png?d=… он считает «не картинкой» → No photo given.
+        og_img = f"{BASE_URL}/assets/daily-24h{suffix}-og.png"
         ogw, ogh = 1200, 630
     write(lang, path, head(lang, title, rc["desc"], path, og_image=og_img, og_w=ogw, og_h=ogh) + body)
 

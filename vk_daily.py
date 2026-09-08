@@ -73,28 +73,31 @@ def main():
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:
         params["attachments"] = att          # URL-вложение: community-токен это умеет, фото-загрузка не нужна
-    # VK парсит превью ссылки асинхронно → первая попытка часто "link_photo_sizing_rule / No photo given".
-    # Повторяем ту же публикацию с паузой, пока VK не подготовит карточку; не вышло за N попыток — постим без карточки.
-    for attempt in range(1, 7):
+    # VK парсит превью ссылки асинхронно → первая попытка может дать "link_photo_sizing_rule / No photo given".
+    # Повторяем публикацию с паузой; исчерпали попытки с карточкой — публикуем БЕЗ неё (пост не роняем).
+    for attempt in range(1, 5):
         try:
             res = vk("wall.post", params)
-            tag = "" if "attachments" in params else " (без карточки)"
-            print(f"опубликовано (попытка {attempt}){tag}, post_id={res.get('post_id')}")
+            print(f"опубликовано (попытка {attempt}), post_id={res.get('post_id')}")
             return 0
         except Exception as e:                    # noqa: BLE001
             msg_e = str(e)
-            retriable = "attachments" in params and ("link_photo_sizing" in msg_e or "No photo given" in msg_e)
-            if retriable and attempt < 6:
-                print(f"❗ VK ещё готовит превью ссылки (попытка {attempt}/6): {msg_e} — жду 20с и повторяю")
+            if "attachments" in params and ("link_photo_sizing" in msg_e or "No photo given" in msg_e):
+                print(f"❗ VK ещё готовит превью ссылки (попытка {attempt}/4): {msg_e} — жду 20с и повторяю")
                 time.sleep(20)
-                continue
-            if retriable:                         # исчерпали попытки — не роняем пост, публикуем текстом
-                print("❗❗ VK так и не подготовил карточку — публикую БЕЗ картинки (текст выходит).")
-                params.pop("attachments", None)
                 continue
             print(f"ошибка публикации в VK: {e}")
             return 1
-    return 1
+    # карточка так и не собралась — публикуем текстом (без картинки), чтобы пост вышел
+    print("❗❗ VK так и не подготовил карточку — публикую БЕЗ картинки (текст выходит).")
+    params.pop("attachments", None)
+    try:
+        res = vk("wall.post", params)
+        print(f"опубликовано без карточки, post_id={res.get('post_id')}")
+        return 0
+    except Exception as e:                        # noqa: BLE001
+        print(f"ошибка публикации в VK: {e}")
+        return 1
 
 
 if __name__ == "__main__":
