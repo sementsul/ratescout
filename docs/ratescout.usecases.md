@@ -649,8 +649,19 @@ user-токена. Проверено: пост опубликован (post_id=
   в `main`). СОСЕДИ: `vk_video_post.py` использует тот же `VK_USER_TOKEN` (не трогал). **Первопричина (гипотеза):** «вечный»
   токен = VK ID refresh (`vk_id_bootstrap.py`, `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`), но постеры refresh НЕ используют — читают
   `VK_USER_TOKEN` напрямую; VK ID access-токен ~1ч → протухает. Настоящее решение (следующий заход, зона токенов = человек/ПМ):
-  вшить обновление access-токена из refresh в постер. **Проверка фикса:** синтаксис ок, сухой прогон печатает подпись/не падает;
-  точная причина — из `❗`-строки в логе `vk.yml` (ручной Run). **Статус:** ⏳ диагностика усилена и запушена; корневой фикс токена — ждёт шага владельца (bootstrap → секреты).
+  вшить обновление access-токена из refresh в постер.
+- ✅ **Корневой фикс (2026-09-08):** `vk_daily.py` теперь берёт свежий `vk1.a.` из VK ID refresh: `refresh_user_token()` →
+  POST `id.vk.com/oauth2/auth` `grant_type=refresh_token` (`VK_REFRESH_TOKEN`+`VK_DEVICE_ID`+`client_id=54178608`, scope
+  `video photos wall groups`) — как `blogger_daily.py` для Blogger. Этим токеном грузится фото (`upload_photo(img, tok)`).
+  Фолбэк на статичный `VK_USER_TOKEN`, если refresh-секретов нет (с предупреждением про TTL ~1ч). **Ротация refresh:** если VK ID
+  вернул новый refresh — постер пишет его в файл `VK_REFRESH_OUT`, а шаг workflow `gh secret set VK_REFRESH_TOKEN` (через `GH_PAT`)
+  сохраняет в секрет (токен в лог/output не попадает); без ротации/без `GH_PAT` — шаг no-op с предупреждением. **Радиус:**
+  `vk_daily.py` (`refresh_user_token`, `upload_photo(tok)`, блок фото в `main`, новые env), `.github/workflows/vk.yml`
+  (проброс `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`, `VK_REFRESH_OUT`, шаг сохранения ротации через `GH_PAT`). СОСЕДИ: `vk_video_post.py`
+  использует тот же статичный `VK_USER_TOKEN` — ту же refresh-обвязку туда ещё НЕ вносил (следующий заход). **Проверка:** py+прогон
+  ок; ветка refresh реально стучится в VK ID (фейк `device_id` → `device_id is invalid` = запрос валиден); фолбэк/логи `❗` работают.
+  **🔴 Нужны секреты `VK_REFRESH_TOKEN`+`VK_DEVICE_ID` (из `vk_id_bootstrap.py`, заводит владелец) + `GH_PAT` для ротации.**
+  **Статус:** ✅ код запушен; заработает после заведения секретов (зона токенов — владелец/ПМ).
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка

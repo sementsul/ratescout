@@ -2,9 +2,12 @@ name: VK daily digest
 
 # Раз в день постит дневную сводку курсов на стену VK-группы (данные — с боевого сайта, daily.json).
 # Секреты (Settings → Secrets and variables → Actions):
-#   VK_TOKEN      — токен сообщества (Стена) для wall.post
-#   VK_USER_TOKEN — пользовательский токен для загрузки ФОТО (сообщество фото грузить не может)
-#   VK_GROUP_ID  — числовой id сообщества (без минуса)
+#   VK_TOKEN         — токен сообщества (Стена) для wall.post
+#   VK_GROUP_ID      — числовой id сообщества (без минуса)
+#   VK_REFRESH_TOKEN — «вечный» VK ID refresh (из vk_id_bootstrap.py) → из него берётся свежий access для ЗАГРУЗКИ ФОТО
+#   VK_DEVICE_ID     — device_id из того же bootstrap (нужен для refresh)
+#   VK_USER_TOKEN    — (fallback) статичный пользовательский токен, если refresh-секретов нет; VK ID access живёт ~1ч
+#   GH_PAT           — (опц.) для сохранения нового refresh в секрет, если VK ID его ротирует
 # Без секретов воркфлоу отработает «в сухую» (ничего не опубликует).
 
 on:
@@ -22,6 +25,8 @@ concurrency:
 jobs:
   post:
     runs-on: ubuntu-latest
+    env:
+      VK_REFRESH_OUT: ${{ runner.temp }}/vk_new_refresh   # сюда постер кладёт новый refresh при ротации
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -32,4 +37,23 @@ jobs:
           VK_TOKEN: ${{ secrets.VK_TOKEN }}
           VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
           VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          VK_REFRESH_TOKEN: ${{ secrets.VK_REFRESH_TOKEN }}
+          VK_DEVICE_ID: ${{ secrets.VK_DEVICE_ID }}
         run: python3 vk_daily.py
+      - name: Persist rotated VK refresh token (if any)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -s "$VK_REFRESH_OUT" ]; then
+            if [ -z "$GH_TOKEN" ]; then
+              echo "⚠️ VK refresh ротировался, но GH_PAT не задан — новый refresh НЕ сохранён (завтра может протухнуть)."
+            else
+              gh secret set VK_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" --body "$(cat "$VK_REFRESH_OUT")" \
+                && echo "✅ VK_REFRESH_TOKEN обновлён в секретах" \
+                || echo "⚠️ не удалось сохранить новый refresh (проверь, что у GH_PAT есть доступ к secrets репо)"
+            fi
+            rm -f "$VK_REFRESH_OUT"
+          else
+            echo "refresh не ротировался (или refresh-секретов нет) — сохранять нечего."
+          fi
