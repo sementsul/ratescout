@@ -103,6 +103,7 @@ def main():
     print("   (в нём будут code= и device_id=) и вставь сюда.\n")
 
     pasted = input("Вставь адрес (или строку с code=...&device_id=...): ").strip()
+    print(f"(принято символов: {len(pasted)}; секрет введён: {'да' if client_secret else 'нет'})", flush=True)
     p = parse_pasted(pasted)
     code = p.get("code")
     device_id = p.get("device_id", "")
@@ -122,7 +123,14 @@ def main():
         ex["client_secret"] = client_secret
     r = post(ex)
     if "refresh_token" not in r:
-        print("\n❌ Обмен code→токены не удался:", json.dumps(r, ensure_ascii=False)[:500])
+        body = json.dumps(r, ensure_ascii=False)[:800]
+        print("\n❌ Обмен code→токены не удался:", body, flush=True)
+        try:                                      # дублируем ошибку в файл — в ней НЕТ токенов, безопасно
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vk_debug.txt"),
+                      "w", encoding="utf-8") as f:
+                f.write("Обмен code->токен не удался. Ответ VK:\n" + body + "\n")
+        except Exception:                         # noqa: BLE001
+            pass
         if not client_secret:
             print("Похоже, приложение типа «Веб-сайт» — ему нужен «Защищённый ключ» (client_secret). "
                   "Запусти снова и вставь его в скрытый запрос.")
@@ -177,7 +185,19 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    finally:                                      # окно консоли (особенно на Windows) не должно закрыться,
+    except Exception:                             # noqa: BLE001
+        # ВАЖНО: печатаем ошибку ДО паузы, иначе traceback уходит ниже «Нажми Enter» и его не видно;
+        # плюс дублируем в файл vk_debug.txt (в тексте ошибки токенов нет)
+        import traceback
+        tb = traceback.format_exc()
+        print("\n❌ Скрипт упал с ошибкой:\n" + tb, flush=True)
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vk_debug.txt"),
+                      "w", encoding="utf-8") as f:
+                f.write(tb)
+        except Exception:                         # noqa: BLE001
+            pass
+    finally:                                      # окно консоли (особенно на Windows) не закрываем,
         try:                                      # пока не увидишь результат
             input("\n— Нажми Enter, чтобы закрыть окно —")
         except EOFError:
