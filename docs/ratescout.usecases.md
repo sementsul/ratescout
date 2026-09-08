@@ -684,6 +684,14 @@ user-токена. Проверено: пост опубликован (post_id=
   **`VK_CLIENT_ID`**, а `vk.yml`/`vk-videos.yml` пробрасывают его в постеры (`vk_token.fresh_user_token` обновляет токен тем же
   app_id). 🔴 client_secret/сервисный токен НЕ нужны — flow на PKCE. РАДИУС доп.: `vk_token.py` (дефолт client_id→54760537),
   оба workflow (+`VK_CLIENT_ID`).
+  **Обновление #2 2026-09-08 (Windows-грабли):** на Windows окно консоли закрывалось сразу после обмена — владелец не успевал
+  скопировать напечатанные секреты (а `code` одноразовый, `expires_in=600` → повторно уже не сработает). Фикс: `main()` обёрнут
+  в `try/finally` c `input("— Enter, чтобы закрыть окно —")` (окно живёт), и при отсутствии `gh` секреты дублируются в локальный
+  файл `vk_secrets.txt` (добавлен в `.gitignore`; после переноса в GitHub Secrets — удалить). Порядок для владельца: `git pull` →
+  `python3 vk_id_bootstrap.py` → ссылка на телефон → «Разрешить» → вставить адрес с `?code=` в терминал → взять 3 значения из
+  окна/`vk_secrets.txt` → GitHub → Settings → Secrets and variables → Actions → создать `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`/`VK_CLIENT_ID`
+  → удалить файл → Actions «VK daily digest» Run. РАДИУС доп.: `vk_id_bootstrap.py` (пауза+файл), `.gitignore` (+`vk_secrets.txt`).
+  Проверка: `ast.parse` OK. Статус: ✅ код; ждём, что владелец доведёт до `✅ Токены получены` и заведёт секреты.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка
