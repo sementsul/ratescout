@@ -12,6 +12,7 @@ photos, а VK для новых приложений больше не выда�
 без участия человека это не годится. Токен же СООБЩЕСТВА (VK_TOKEN) не протухает, но фото грузить не умеет,
 зато принимает ссылку-вложение. Поэтому — ссылка-карточка. (см. UC-73a в docs/ratescout.usecases.md)
 """
+import datetime
 import json
 import os
 import sys
@@ -58,9 +59,13 @@ def main():
         print(msg)
         return 0
     att = ""
-    if d.get("image"):
-        att = d["image"]                     # график прикрепляем ССЫЛКОЙ — VK нарисует карточку-превью
-        print(f"картинка: прикрепляю ссылкой-карточкой → {att}")
+    page = d.get("url")                      # страница обзора: её og:image = дневной график (см. build.py render_review)
+    if page:
+        # цепляем СТРАНИЦУ (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
+        # суточный cache-buster — иначе VK покажет вчерашнюю закэшированную карточку.
+        sep = "&" if "?" in page else "?"
+        att = f"{page}{sep}vkc={datetime.date.today().isoformat()}"
+        print(f"картинка: прикрепляю карточку страницы обзора → {att}")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:

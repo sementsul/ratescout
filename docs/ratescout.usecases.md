@@ -742,6 +742,15 @@ user-токена. Проверено: пост опубликован (post_id=
   `vk_video_post.py`/`vk-videos.yml` НЕ трогали — у видео своя история (video.save тоже требует user-токен; отдельная
   задача). Секреты VK_REFRESH_TOKEN/VK_DEVICE_ID/VK_CLIENT_ID/VK_CLIENT_SECRET для дневной сводки больше не нужны.
   Проверка: `ast.parse` OK, `vk.yml` валиден (pyyaml), env постера = [VK_TOKEN, VK_GROUP_ID]. Статус: 🔄 ждём прогон.
+  **Обновление #9 2026-09-08 (голый png VK не берёт → страница обзора с og:image):** прямой URL `daily-24h.png` в
+  `attachments` VK отбил (`link_photo_sizing_rule. No photo given`) — как вложение он хочет СТРАНИЦУ, а не картинку.
+  Решение: цепляем страницу обзора «за сутки» (`d["url"]` = `/obzor/sutki/`), а её `og:image` сделали = дневной график
+  `daily-24h.png` (1080×1080). В `build.py`: `head()` получил параметры `og_w/og_h` (были жёстко 1200×630 — врали для
+  квадрата), `render_review` для `sid=="sutki"` ставит `og:image`=график с суточным cache-buster `?d=<дата>`. В `vk_daily.py`:
+  `attachments` = страница обзора + суточный `?vkc=<ISO-дата>` (иначе VK кэширует вчерашнюю карточку). РАДИУС: `build.py`
+  (`head`, `render_review` — влияет и на соц-превью страницы обзора в целом), `vk_daily.py`. Сайт пересобирает `deploy.yml`
+  на push. Проверка: `ast.parse` OK (build.py, vk_daily.py). Порядок теста: push → дождаться `deploy.yml` (обзор получит новый
+  og:image) → запустить «VK daily digest» → карточка с графиком. Статус: 🔄 ждём прогон + скрин поста.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка

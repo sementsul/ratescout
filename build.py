@@ -1743,7 +1743,7 @@ def hreflangs(path):
     return "\n".join(tags)
 
 
-def head(lang, title, desc, path, extra="", og_image=None):
+def head(lang, title, desc, path, extra="", og_image=None, og_w=1200, og_h=630):
     canonical = f"{BASE_URL}{PREF[lang]}{path}"
     og = og_image or f"{BASE_URL}/assets/og-image.png"
     # нет версии на другом языке → запрещаем авто-редирект (LANGREDIR) на несуществующую страницу
@@ -1770,8 +1770,8 @@ def head(lang, title, desc, path, extra="", og_image=None):
 <meta property="og:url" content="{canonical}">
 <meta property="og:site_name" content="{S['name']}">
 <meta property="og:image" content="{og}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:width" content="{og_w}">
+<meta property="og:image:height" content="{og_h}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
@@ -3017,7 +3017,14 @@ def render_review(lang, sid, days, ru_word, en_word):
 </div>
 {crumbs}
 {footer(lang)}"""
-    write(lang, path, head(lang, title, rc["desc"], path) + body)
+    # У обзора «за сутки» соц-превью = дневной график (1080×1080), с суточным cache-buster,
+    # чтобы VK/соцсети не показывали вчерашнюю закэшированную карточку. Так же его цепляет автопост в VK.
+    og_img, ogw, ogh = None, 1200, 630
+    if sid == "sutki":
+        suffix = "-en" if lang == "en" else ""
+        og_img = f"{BASE_URL}/assets/daily-24h{suffix}.png?d={rc['date']}"
+        ogw = ogh = 1080
+    write(lang, path, head(lang, title, rc["desc"], path, og_image=og_img, og_w=ogw, og_h=ogh) + body)
 
 
 def cover_url(slug, lang):
