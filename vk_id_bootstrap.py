@@ -24,6 +24,7 @@
    VK_CLIENT_ID (54760537), VK_REDIRECT (https://ratescout.ru/), GH_REPO (sementsul/ratescout)
 """
 import base64
+import getpass
 import hashlib
 import json
 import os
@@ -75,6 +76,17 @@ def set_secret(name, val):
 
 
 def main():
+    # Приложение типа «Веб-сайт» у VK ID — confidential client: на обмене кода нужен client_secret
+    # («Защищённый ключ» из настроек приложения). Вводишь сам, скрыто; в чат/логи не попадёт.
+    client_secret = os.environ.get("VK_CLIENT_SECRET")
+    if not client_secret:
+        try:
+            client_secret = getpass.getpass(
+                'Вставь «Защищённый ключ» (client_secret) приложения и Enter '
+                '(ввод скрыт; если приложение публичное — просто Enter): ').strip()
+        except Exception:                         # noqa: BLE001
+            client_secret = ""
+
     verifier = b64url(secrets.token_bytes(48))
     challenge = b64url(hashlib.sha256(verifier.encode()).digest())
     state = secrets.token_hex(8)
@@ -104,34 +116,48 @@ def main():
         print("\n❌ Нет device_id в адресе — без него токен не обновить. Проверь тип приложения (нужен не Mini App).")
         return
 
-    r = post({"grant_type": "authorization_code", "code": code, "code_verifier": verifier,
-              "client_id": CLIENT_ID, "device_id": device_id, "redirect_uri": REDIRECT, "state": state})
+    ex = {"grant_type": "authorization_code", "code": code, "code_verifier": verifier,
+          "client_id": CLIENT_ID, "device_id": device_id, "redirect_uri": REDIRECT, "state": state}
+    if client_secret:
+        ex["client_secret"] = client_secret
+    r = post(ex)
     if "refresh_token" not in r:
         print("\n❌ Обмен code→токены не удался:", json.dumps(r, ensure_ascii=False)[:500])
+        if not client_secret:
+            print("Похоже, приложение типа «Веб-сайт» — ему нужен «Защищённый ключ» (client_secret). "
+                  "Запусти снова и вставь его в скрытый запрос.")
         return
     refresh = r["refresh_token"]
     print("\n✅ Токены получены. access живёт", r.get("expires_in"), "сек.")
 
     # тест ротации: обновим один раз и посмотрим, поменялся ли refresh
-    r2 = post({"grant_type": "refresh_token", "refresh_token": refresh, "client_id": CLIENT_ID,
-               "device_id": device_id, "scope": SCOPE})
+    rf = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": CLIENT_ID,
+          "device_id": device_id, "scope": SCOPE}
+    if client_secret:
+        rf["client_secret"] = client_secret
+    r2 = post(rf)
     rotated = ("refresh_token" in r2 and r2["refresh_token"] != refresh)
     latest = r2.get("refresh_token", refresh)
 
-    # пробуем записать секреты сами (gh CLI); иначе — печатаем для ручного добавления.
-    # VK_CLIENT_ID тоже кладём в секреты: refresh «привязан» к приложению — CI обязан обновлять его тем же id.
-    ok_r = set_secret("VK_REFRESH_TOKEN", latest)
-    ok_d = set_secret("VK_DEVICE_ID", device_id)
-    ok_c = set_secret("VK_CLIENT_ID", CLIENT_ID)
+    # пробуем записать секреты сами (gh CLI); иначе — печатаем/пишем в файл для ручного добавления.
+    # VK_CLIENT_ID тоже в секреты: refresh «привязан» к приложению — CI обязан обновлять его тем же id.
+    # VK_CLIENT_SECRET нужен, если приложение «Веб-сайт» (confidential) — иначе CI не обновит токен.
+    ok = set_secret("VK_REFRESH_TOKEN", latest) and set_secret("VK_DEVICE_ID", device_id) \
+        and set_secret("VK_CLIENT_ID", CLIENT_ID) \
+        and (set_secret("VK_CLIENT_SECRET", client_secret) if client_secret else True)
     print()
-    if ok_r and ok_d and ok_c:
-        print(f"✅ Секреты VK_REFRESH_TOKEN, VK_DEVICE_ID, VK_CLIENT_ID записаны в репозиторий {REPO} автоматически (gh).")
+    if ok:
+        names = "VK_REFRESH_TOKEN, VK_DEVICE_ID, VK_CLIENT_ID" + (", VK_CLIENT_SECRET" if client_secret else "")
+        print(f"✅ Секреты ({names}) записаны в репозиторий {REPO} автоматически (gh).")
     else:
         # gh нет — сохраняем в локальный файл (в .gitignore), чтобы значения не потерялись при закрытии окна
         fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vk_secrets.txt")
+        lines = [f"VK_REFRESH_TOKEN={latest}", f"VK_DEVICE_ID={device_id}", f"VK_CLIENT_ID={CLIENT_ID}"]
+        if client_secret:
+            lines.append(f"VK_CLIENT_SECRET={client_secret}")
         try:
             with open(fn, "w", encoding="utf-8") as f:
-                f.write(f"VK_REFRESH_TOKEN={latest}\nVK_DEVICE_ID={device_id}\nVK_CLIENT_ID={CLIENT_ID}\n")
+                f.write("\n".join(lines) + "\n")
             saved_to = f"\nТакже сохранил их в файл: {fn} (после переноса — УДАЛИ этот файл)."
         except Exception as e:                    # noqa: BLE001
             saved_to = f"\n(в файл записать не смог: {e} — скопируй из окна)"
@@ -140,6 +166,8 @@ def main():
         print("  VK_REFRESH_TOKEN =", latest)
         print("  VK_DEVICE_ID     =", device_id)
         print("  VK_CLIENT_ID     =", CLIENT_ID, "(это app id, не секрет — но CI берёт его отсюда)")
+        if client_secret:
+            print("  VK_CLIENT_SECRET = <тот «Защищённый ключ», что ты вводил> (нужен CI для обновления токена)")
         print(saved_to)
     print("\nrefresh ротируется:", "ДА (постер сам сохраняет новый через шаг workflow)" if rotated
           else "нет (можно хранить статично)")

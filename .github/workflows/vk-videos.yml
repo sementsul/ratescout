@@ -37,6 +37,7 @@ jobs:
           VK_REFRESH_TOKEN: ${{ secrets.VK_REFRESH_TOKEN }}
           VK_DEVICE_ID: ${{ secrets.VK_DEVICE_ID }}
           VK_CLIENT_ID: ${{ secrets.VK_CLIENT_ID }}
+          VK_CLIENT_SECRET: ${{ secrets.VK_CLIENT_SECRET }}
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: python3 vk_video_post.py
       - name: Persist rotated VK refresh token (if any)

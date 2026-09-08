@@ -692,6 +692,15 @@ user-токена. Проверено: пост опубликован (post_id=
   окна/`vk_secrets.txt` → GitHub → Settings → Secrets and variables → Actions → создать `VK_REFRESH_TOKEN`/`VK_DEVICE_ID`/`VK_CLIENT_ID`
   → удалить файл → Actions «VK daily digest» Run. РАДИУС доп.: `vk_id_bootstrap.py` (пауза+файл), `.gitignore` (+`vk_secrets.txt`).
   Проверка: `ast.parse` OK. Статус: ✅ код; ждём, что владелец доведёт до `✅ Токены получены` и заведёт секреты.
+  **Обновление #3 2026-09-08 (client_secret для «Веб-сайт»):** обмен `code`→токен падал молча (файл не создавался) —
+  приложение VK ID типа **«Веб-сайт» = confidential client**, на обмене требует `client_secret` («Защищённый ключ»),
+  а скрипт слал только PKCE (проверено по докам VK ID/OAuth 2.1). Фикс: `vk_id_bootstrap.py` спрашивает `client_secret`
+  скрытым вводом (`getpass`, env `VK_CLIENT_SECRET`) и шлёт его в обмен и в тест-ротацию; `vk_token.py` добавляет
+  `client_secret` в refresh-запрос, если задан `VK_CLIENT_SECRET`; оба workflow (`vk.yml`, `vk-videos.yml`) пробрасывают
+  `VK_CLIENT_SECRET` из секретов. bootstrap теперь и в gh/файл/печать кладёт `VK_CLIENT_SECRET`. 🔴 «Защищённый ключ»
+  вводит ВЛАДЕЛЕЦ (скрытый ввод + GitHub Secret), в чат/код не попадает; засвеченный в переписке ключ — перевыпустить.
+  РАДИУС доп.: `vk_id_bootstrap.py`, `vk_token.py`, `vk.yml`, `vk-videos.yml` (+`VK_CLIENT_SECRET`). Проверка: `ast.parse` OK,
+  отступы yaml сверены. Статус: ✅ код; боевой прогон — за владельцем (нужен «Защищённый ключ» его приложения).
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка

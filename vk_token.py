@@ -31,10 +31,13 @@ def fresh_user_token():
     if not (refresh and device):
         return None
     client_id = os.environ.get("VK_CLIENT_ID", "54760537")   # тот же app, что выдал refresh (иначе refresh не примут)
+    client_secret = os.environ.get("VK_CLIENT_SECRET")       # нужен, если приложение «Веб-сайт» (confidential client)
     out = os.environ.get("VK_REFRESH_OUT")
-    data = urllib.parse.urlencode({
-        "grant_type": "refresh_token", "refresh_token": refresh, "client_id": client_id,
-        "device_id": device, "scope": "video photos wall groups"}).encode()
+    params = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": client_id,
+              "device_id": device, "scope": "video photos wall groups"}
+    if client_secret:
+        params["client_secret"] = client_secret
+    data = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(VK_ID_TOKEN, data=data,
                                  headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
     with urllib.request.urlopen(req, timeout=30) as r:
