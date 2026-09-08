@@ -11,6 +11,7 @@ VK wall-посты не поддерживают инлайн-кнопки — �
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 import uuid
@@ -48,6 +49,9 @@ def upload_photo(img):
                                  headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
     with urllib.request.urlopen(req, timeout=90) as r:
         ur = json.load(r)
+    # upload-сервер при неудаче отдаёт photo:"[]" (не исключение) — ловим явно, иначе saveWallPhoto молча вернёт мусор
+    if not isinstance(ur, dict) or str(ur.get("photo", "")) in ("", "[]"):
+        raise RuntimeError(f"upload-сервер вернул без фото: {str(ur)[:200]}")
     saved = vk("photos.saveWallPhoto", {"group_id": VK_GROUP, "server": ur["server"],
                                         "photo": ur["photo"], "hash": ur["hash"]}, token=tok)[0]
     return f'photo{saved["owner_id"]}_{saved["id"]}'
@@ -74,11 +78,24 @@ def main():
         return 0
     att = ""
     if d.get("image"):
-        try:
-            img = urllib.request.urlopen(d["image"], timeout=90).read()
-            att = upload_photo(img)
-        except Exception as e:                   # noqa: BLE001 — токен сообщества не может грузить фото
-            print(f"фото в VK не загрузилось ({e}) — прикреплю ссылку-карточку")
+        # какой токен реально пойдёт на загрузку фото (ловит случай «вечный токен лежит не в VK_USER_TOKEN»)
+        if VK_USER:
+            print("фото: гружу пользовательским VK_USER_TOKEN")
+        else:
+            print("❗ VK_USER_TOKEN ПУСТ → фолбэк на VK_TOKEN (токен СООБЩЕСТВА фото на стену грузить НЕ умеет). "
+                  "Вечный пользовательский токен должен лежать в секрете VK_USER_TOKEN.")
+        for attempt in range(1, 4):              # 3 попытки: отсекаем разовые сбои сети/upload-сервера
+            try:
+                img = urllib.request.urlopen(d["image"], timeout=90).read()
+                att = upload_photo(img)
+                print(f"✅ фото загружено (попытка {attempt}): {att}")
+                break
+            except Exception as e:               # noqa: BLE001
+                print(f"❗ фото не загрузилось (попытка {attempt}/3): {type(e).__name__}: {e}")
+                if attempt < 3:
+                    time.sleep(2)
+        if not att:
+            print("❗❗ фото так и не прикрепилось — пост уйдёт ТОЛЬКО ТЕКСТОМ. Причина — в строках ❗ выше.")
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:                                  # фото только если реально загрузилось (нужен user-токен);
