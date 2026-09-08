@@ -714,6 +714,12 @@ user-токена. Проверено: пост опубликован (post_id=
   фолбэк на запрос БЕЗ проверки сертификата с предупреждением (+совет `pip install certifi`). Постеры в CI это не касается
   (у GitHub Actions CA есть). РАДИУС: `vk_id_bootstrap.py` (`post()` + TLS-контекст). Проверка: `ast.parse` OK.
   Статус: ✅ код; ждём боевой прогон владельца до `✅ Токены получены`.
+  **Обновление #6 2026-09-08 (workflow был невалиден):** GitHub ругался `Invalid workflow file … Unrecognized named-value:
+  'runner'` — `VK_REFRESH_OUT: ${{ runner.temp }}/…` стоял в **job-level env**, где контекст `runner` недоступен (доступен
+  только в step). Из-за этого оба VK-workflow не запускались («раньше работал, теперь нет» — регресс от моей же правки
+  ротации refresh). Фикс: перенёс `VK_REFRESH_OUT` из job-env в env обоих шагов (постер + persist) в `vk.yml` и
+  `vk-videos.yml`. Проверка: pyyaml-парсер — оба валидны, `runner.` в job-env отсутствует, только в step-env. РАДИУС:
+  `.github/workflows/vk.yml`, `.github/workflows/vk-videos.yml`. Статус: ✅ исправлено; после пуша workflow снова запускается.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка
