@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+vk_secrets.txt          # bootstrap кладёт сюда VK_REFRESH_TOKEN/VK_DEVICE_ID (перенёс в Secrets — удали)
 
 # генерится в CI (fetch_rates.py) — не коммитим
 rates.json

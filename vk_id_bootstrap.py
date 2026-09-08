@@ -127,15 +127,30 @@ def main():
     if ok_r and ok_d and ok_c:
         print(f"✅ Секреты VK_REFRESH_TOKEN, VK_DEVICE_ID, VK_CLIENT_ID записаны в репозиторий {REPO} автоматически (gh).")
     else:
-        print("gh не сработал (не установлен/не залогинен/нет прав). Добавь секреты ВРУЧНУЮ")
-        print(f"(GitHub → {REPO} → Settings → Secrets and variables → Actions):")
+        # gh нет — сохраняем в локальный файл (в .gitignore), чтобы значения не потерялись при закрытии окна
+        fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vk_secrets.txt")
+        try:
+            with open(fn, "w", encoding="utf-8") as f:
+                f.write(f"VK_REFRESH_TOKEN={latest}\nVK_DEVICE_ID={device_id}\nVK_CLIENT_ID={CLIENT_ID}\n")
+            saved_to = f"\nТакже сохранил их в файл: {fn} (после переноса — УДАЛИ этот файл)."
+        except Exception as e:                    # noqa: BLE001
+            saved_to = f"\n(в файл записать не смог: {e} — скопируй из окна)"
+        print("gh не установлен — добавь секреты ВРУЧНУЮ")
+        print(f"(GitHub → {REPO} → Settings → Secrets and variables → Actions → New repository secret):")
         print("  VK_REFRESH_TOKEN =", latest)
         print("  VK_DEVICE_ID     =", device_id)
         print("  VK_CLIENT_ID     =", CLIENT_ID, "(это app id, не секрет — но CI берёт его отсюда)")
+        print(saved_to)
     print("\nrefresh ротируется:", "ДА (постер сам сохраняет новый через шаг workflow)" if rotated
           else "нет (можно хранить статично)")
     print("\nГотово. Запусти Actions → «VK daily digest» — в посте должна появиться картинка.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:                                      # окно консоли (особенно на Windows) не должно закрыться,
+        try:                                      # пока не увидишь результат
+            input("\n— Нажми Enter, чтобы закрыть окно —")
+        except EOFError:
+            pass
