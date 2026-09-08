@@ -1,0 +1,8 @@
+{
+  "videos": 92,
+  "has_token": true,
+  "has_group": true,
+  "ok": false,
+  "error": "Unknown method passed",
+  "trace": "Traceback (most recent call last):\n  File \"<stdin>\", line 9, in <module>\n  File \"/home/runner/work/ratescout/ratescout/vk_video_post.py\", line 54, in vk\n    raise RuntimeError(res[\"error\"].get(\"error_msg\", res[\"error\"]))\nRuntimeError: Unknown method passed\n"
+}
