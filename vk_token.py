@@ -33,18 +33,29 @@ def fresh_user_token():
     client_id = os.environ.get("VK_CLIENT_ID", "54760537")   # тот же app, что выдал refresh (иначе refresh не примут)
     client_secret = os.environ.get("VK_CLIENT_SECRET")       # нужен, если приложение «Веб-сайт» (confidential client)
     out = os.environ.get("VK_REFRESH_OUT")
-    params = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": client_id,
-              "device_id": device, "scope": "video photos wall groups"}
+    base = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": client_id, "device_id": device}
     if client_secret:
-        params["client_secret"] = client_secret
-    data = urllib.parse.urlencode(params).encode()
-    req = urllib.request.Request(VK_ID_TOKEN, data=data,
-                                 headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        res = json.load(r)
+        base["client_secret"] = client_secret
+
+    def _try(extra):
+        p = dict(base)
+        p.update(extra)
+        req = urllib.request.Request(VK_ID_TOKEN, data=urllib.parse.urlencode(p).encode(),
+                                     headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r)
+
+    # VK ID при refresh наш sc="video photos wall groups" отклонял (invalid_scope: scope is missing).
+    # По OAuth2 scope при refresh необязателен (сохраняются исходные права) — пробуем БЕЗ scope, потом СО scope.
+    res = _try({})
+    if not res.get("access_token"):
+        first = str(res)[:200]
+        res = _try({"scope": "video photos wall groups"})
+        if res.get("access_token"):
+            print("ℹ️ refresh без scope не прошёл, сработал со scope.")
+        else:
+            raise RuntimeError(f"VK ID refresh не дал access_token. Без scope: {first} | Со scope: {str(res)[:200]}")
     tok = res.get("access_token")
-    if not tok:
-        raise RuntimeError(f"VK ID refresh не дал access_token: {str(res)[:200]}")
     new_refresh = res.get("refresh_token")
     if new_refresh and new_refresh != refresh and out:        # ротация → отдать новый на сохранение
         try:

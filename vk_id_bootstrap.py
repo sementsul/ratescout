@@ -164,14 +164,16 @@ def main():
                   "Запусти снова и вставь его в скрытый запрос.")
         return
     refresh = r["refresh_token"]
-    print("\n✅ Токены получены. access живёт", r.get("expires_in"), "сек.")
+    print("\n✅ Токены получены. access живёт", r.get("expires_in"), "сек. Выданный VK scope:", r.get("scope"))
 
-    # тест ротации: обновим один раз и посмотрим, поменялся ли refresh
-    rf = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": CLIENT_ID,
-          "device_id": device_id, "scope": SCOPE}
+    # тест ротации: обновим один раз (как в CI — БЕЗ scope; VK отклонял scope на refresh с invalid_scope)
+    rf = {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": CLIENT_ID, "device_id": device_id}
     if client_secret:
         rf["client_secret"] = client_secret
     r2 = post(rf)
+    if not r2.get("access_token"):                # фолбэк со scope, если без него не вышло
+        rf["scope"] = SCOPE
+        r2 = post(rf)
     rotated = ("refresh_token" in r2 and r2["refresh_token"] != refresh)
     latest = r2.get("refresh_token", refresh)
 

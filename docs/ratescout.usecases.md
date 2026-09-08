@@ -720,6 +720,14 @@ user-токена. Проверено: пост опубликован (post_id=
   ротации refresh). Фикс: перенёс `VK_REFRESH_OUT` из job-env в env обоих шагов (постер + persist) в `vk.yml` и
   `vk-videos.yml`. Проверка: pyyaml-парсер — оба валидны, `runner.` в job-env отсутствует, только в step-env. РАДИУС:
   `.github/workflows/vk.yml`, `.github/workflows/vk-videos.yml`. Статус: ✅ исправлено; после пуша workflow снова запускается.
+  **Обновление #7 2026-09-08 (refresh: invalid_scope):** с заведёнными секретами refresh-путь включился, но VK ID на
+  refresh-запросе отвечал `invalid_scope: scope is missing` — наш `scope="video photos wall groups"` он на этом гранте не
+  принимает (на обмене `code`→токен scope мы не шлём — там ок). По OAuth2 scope при refresh необязателен. Фикс в
+  `vk_token.py`: refresh пробуется СНАЧАЛА без `scope` (сохраняет исходные права), при неудаче — со `scope` (логируем какой
+  сработал); в `vk_id_bootstrap.py` тест-ротация тоже без scope + печать выданного VK `scope`. РАДИУС: `vk_token.py`
+  (оба постера используют его), `vk_id_bootstrap.py`. Проверка: `ast.parse` OK; боевая проверялка — прогон workflow владельцем.
+  ⚠️ Параллельно на загрузке фото ловится `Flood control` (лимит частоты VK от многих тест-прогонов) — лечится паузой между
+  запусками, к токену отношения не имеет. Статус: 🔄 ждём чистый прогон (пауза от Flood control) с `фото: получил свежий VK ID access-токен из refresh`.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка
