@@ -2006,7 +2006,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
-                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Одноклассники</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="https://www.yell.ru/moscow/com/ratescout-ru_14524615/" target="_blank" rel="noopener me">Yell.ru</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a>')
+                 f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Одноклассники</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="https://www.yell.ru/moscow/com/ratescout-ru_14524615/" target="_blank" rel="noopener me">Yell.ru</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a> · <a href="/usloviya/">Условия использования</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Владелец сайта: {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}.</span>")
@@ -2016,7 +2016,7 @@ def footer(lang):
                 "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
                  f'<a href="/en/earn/">Earn with BestChange</a> · '
-                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a>')
+                 f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a> · <a href="/en/usloviya/">Terms of Service</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -4354,8 +4354,31 @@ def compliance_pages(lang):
    Вебвизор (запись действий на странице в обезличенном виде; поля с чувствительными данными маскируются).
    Cookie можно отключить в браузере.</p>
 <h2>Права</h2><p>Запрос сведений, уточнение или удаление данных, отзыв согласия — на {S.get('owner_email','')}.
-   Обработка — по 152-ФЗ. Актуальная редакция — на этой странице.</p>""",
+   Обработка — по 152-ФЗ. Актуальная редакция — на этой странице.</p>
+<h2>Приложение автопубликации (соцсети, TikTok)</h2>
+<p>Приложение RateScout публикует <b>собственный контент владельца</b> (сводки курсов, графики, видеообзоры) в
+   подключённые владельцем аккаунты соцсетей через их официальные API. Оно использует доступ к аккаунту
+   <b>исключительно</b> для публикации контента владельца и <b>не собирает, не хранит и не передаёт</b> персональные
+   данные третьих лиц. Токены доступа хранятся в защищённых секретах и используются только для публикации; отозвать
+   доступ можно в настройках соцсети в любой момент.</p>""",
                     "Политика")
+        render_page(lang, "usloviya", "Условия использования",
+                    f"Условия использования сайта {S['domain']} и приложения автопубликации RateScout.",
+                    f"""<h1>Условия использования</h1>
+<p>Используя сайт {S['domain']} и связанные приложения RateScout, вы принимаете настоящие Условия. Оператор:
+   {S.get('owner_status','')} {S.get('owner','')}, ИНН {S.get('owner_inn','')}, контакт {S.get('owner_email','')}.</p>
+<h2>Сервис</h2><p>RateScout — независимый информационный сервис мониторинга курсов. Данные справочные, не оферта и
+   не финансовая/инвестиционная рекомендация. Решения об обмене — самостоятельно и на свой риск. 18+.</p>
+<h2>Приложение автопубликации</h2><p>Приложение RateScout публикует <b>собственный контент владельца</b> (сводки
+   курсов, графики, видеообзоры) в подключённые владельцем аккаунты социальных сетей (включая TikTok) через их
+   официальные API. Доступ к аккаунту используется <b>только</b> для публикации контента, предоставленного владельцем;
+   персональные данные третьих лиц не собираются и не передаются. Доступ можно отозвать в настройках соцсети в любой момент.</p>
+<h2>Допустимое использование</h2><ul><li>соблюдать правила соцсетей и законодательство;</li>
+   <li>не использовать сервис для спама, обмана или незаконных операций.</li></ul>
+<h2>Ответственность</h2><p>Сервис предоставляется «как есть», без гарантий бесперебойности и точности. Владелец не несёт
+   ответственности за решения, принятые на основе справочных данных.</p>
+<h2>Изменения</h2><p>Актуальная редакция Условий — на этой странице. Вопросы: {S.get('owner_email','')}.</p>""",
+                    "Условия")
     else:
         render_page(lang, "o-servise", "What is BestChange",
                     "BestChange — an exchange office monitor: reference information about crypto and currency exchange rates.",
@@ -4431,8 +4454,30 @@ def compliance_pages(lang):
 <h2>Analytics</h2><p>Yandex.Metrica and Google Analytics are used (anonymised data). Metrica includes Webvisor
    (records on-page actions anonymously; fields with sensitive data are masked). Cookies can be disabled in the browser.</p>
 <h2>Rights</h2><p>To request, correct or delete data, or withdraw consent — email {S.get('owner_email','')}.
-   The current version is on this page.</p>""",
+   The current version is on this page.</p>
+<h2>Auto-publishing app (social networks, TikTok)</h2>
+<p>The RateScout application publishes the <b>owner's own content</b> (rate digests, charts, video reviews) to social
+   accounts connected by the owner via their official APIs. It uses account access <b>solely</b> to publish the owner's
+   content and <b>does not collect, store or share</b> personal data of third parties. Access tokens are kept in secure
+   secrets and used only for publishing; access can be revoked anytime in the social network's settings.</p>""",
                     "Privacy")
+        render_page(lang, "usloviya", "Terms of Service",
+                    f"Terms of Service for {S['domain']} and the RateScout auto-publishing app.",
+                    f"""<h1>Terms of Service</h1>
+<p>By using {S['domain']} and related RateScout applications you accept these Terms. Operator: {S.get('owner','')}
+   (self-employed, RU tax ID {S.get('owner_inn','')}), contact {S.get('owner_email','')}.</p>
+<h2>Service</h2><p>RateScout is an independent exchange-rate monitoring service. Information is for reference only, not an
+   offer and not financial or investment advice. You decide to exchange on your own and at your own risk. 18+.</p>
+<h2>Auto-publishing app</h2><p>The RateScout application publishes the <b>owner's own content</b> (rate digests, charts,
+   video reviews) to social accounts connected by the owner (including TikTok) via their official APIs. Account access is
+   used <b>only</b> to publish content provided by the owner; personal data of third parties is not collected or shared.
+   Access can be revoked at any time in the respective social network's settings.</p>
+<h2>Acceptable use</h2><ul><li>comply with the social networks' rules and applicable law;</li>
+   <li>do not use the service for spam, fraud or illegal operations.</li></ul>
+<h2>Liability</h2><p>The service is provided "as is", without warranties of availability or accuracy. The owner is not
+   liable for decisions made on the basis of reference data.</p>
+<h2>Changes</h2><p>The current version of the Terms is on this page. Questions: {S.get('owner_email','')}.</p>""",
+                    "Terms")
 
 
 def build_catalog_js():
@@ -4681,7 +4726,7 @@ def static_files():
         if GLOSSARY:
             items.append(u_entry(pr + "/slovar/", "weekly", "0.6"))
             items += [u_entry(pr + f"/slovar/{t['slug']}/", "monthly", "0.5") for t in GLOSSARY]
-        items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "redakciya")]
+        items += [u_entry(pr + f"/{u}/", "monthly", "0.4") for u in ("o-servise", "aml", "raskrytie", "politika", "usloviya", "redakciya")]
         if lg == "en":
             items.append(u_entry(pr + "/earn/", "monthly", "0.5"))  # EN-only: партнёрка BestChange для не-РФ
     open(os.path.join(DIST, "sitemap.xml"), "w", encoding="utf-8").write(
