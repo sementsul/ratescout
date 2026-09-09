@@ -1,8 +1,6 @@
 {
-  "ok": true,
-  "posted": "5trr__10_.mp4",
-  "kind": "видео",
-  "domain": "my-many.ru",
-  "topic": "159133855977487",
-  "forced": true
+  "ok": false,
+  "error": "OK 401: AUTH_LOGIN : LOGOUT_ALL",
+  "next": "46flbt.jpg",
+  "kind": "картинка"
 }
