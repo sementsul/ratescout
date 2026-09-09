@@ -786,6 +786,19 @@ user-токена. Проверено: пост опубликован (post_id=
   цикл переписан (4 попытки с карточкой, затем гарантированная публикация БЕЗ карточки → текст выходит всегда, не exit 1).
   РАДИУС: `build.py` (render_review og:image), `vk_daily.py` (цикл). Порядок: push → дождаться `deploy.yml` (обзор получит
   чистый og:image) → запустить «VK daily digest». Статус: 🔄 ждём прогон.
+  **Обновление #15 2026-09-09 — ИТОГ: вернулись к загрузке ФОТО (бессрочный токен через Kate Mobile).** Ссылка-карточка
+  оказалась тупиком: VK стабильно отдавал `link_photo_sizing_rule. No photo given` на любой вариант (голый png, квадрат,
+  landscape 1200×630, чистый og:image без query, новый путь, ретраи с паузой) — при том что страница и og:image технически
+  безупречны (VK-краулер читает 200, картинка `image/png` 1200×630). Вывод: `wall.post attachments=<внешняя ссылка>` у VK
+  карточку-фото тут не собирает. РЕШЕНИЕ: получили **бессрочный пользовательский токен** через доверенное приложение
+  **Kate Mobile** (`client_id=2685278`, `scope=photos,video,wall,groups,offline` → `expires_in=0`) — у своих приложений VK
+  `offline` убрал, а VK ID даёт только «логин»; Kate Mobile отдаёт вечный токен с `photos`. 🔶 ПРИНЯТЫЙ РИСК: это «серый»
+  приём (чужой `client_id`), формально против правил VK, редко → ограничение аккаунта. Пересмотреть если: VK забанит токен/выдачу.
+  `vk_daily.py` переписан обратно на `upload_photo(img, VK_USER_TOKEN)` (photos.getWallUploadServer → multipart →
+  photos.saveWallPhoto) + 3 попытки (Flood control), фолбэк — текст; `vk.yml` вернул `VK_USER_TOKEN` в env. Тот же токен чинит
+  и видео-постер (`vk_video_post.py`). Картинка в `build.py` (`make_og_card`, og:image обзора = график) оставлена — полезна для
+  соц-превью страницы обзора. РАДИУС: `vk_daily.py`, `.github/workflows/vk.yml`. СОСЕДИ: `vk_video_post.py` — тот же `VK_USER_TOKEN`.
+  Проверка: `ast.parse` OK, `vk.yml` валиден (env = VK_TOKEN/VK_USER_TOKEN/VK_GROUP_ID). Статус: 🔄 ждём прогон с фото.
 
 ## UC-74 — VK-группа добавлена в перелинковку каналов
 Ко взаимному кросс-линку Дзен↔Telegram добавлена VK-группа `vk.com/ratescout`: в подписи TG/VK-постов строка

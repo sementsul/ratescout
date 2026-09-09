@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 """Автопостинг дневной сводки на стену VK-группы (тот же daily.json, что у Telegram/Дзена).
 
-Токен и id группы — ТОЛЬКО из окружения (GitHub Secrets), в коде их нет:
-  VK_TOKEN     — токен сообщества с правом «Стена» (Управление сообществом → API → создать токен)
-  VK_GROUP_ID  — числовой id сообщества (без минуса)
-Без секретов — сухой прогон (печатает текст, не публикует). Запуск раз в день (vk.yml).
+Секреты (GitHub Secrets), в коде их нет:
+  VK_TOKEN      — токен СООБЩЕСТВА с правом «Стена» (для wall.post от имени группы)
+  VK_USER_TOKEN — ПОЛЬЗОВАТЕЛЬСКИЙ токен с правом photos (грузит фото на стену; сообщество это не умеет).
+                  Бессрочный — получен через доверенное приложение (Kate Mobile, client_id 2685278, scope …offline),
+                  т.к. у своих приложений VK offline убрал, а VK ID даёт только «логин» без photos/wall.
+  VK_GROUP_ID   — числовой id сообщества (без минуса)
+Без VK_TOKEN/VK_GROUP_ID — сухой прогон (печатает текст). Запуск раз в день (vk.yml).
 
-Картинка: график прикрепляем ССЫЛКОЙ (attachments=URL) — VK сам рисует карточку-превью.
-Почему не загружаем фото напрямую: для photos.getWallUploadServer нужен ПОЛЬЗОВАТЕЛЬСКИЙ токен с scope
-photos, а VK для новых приложений больше не выдаёт бессрочный (offline) user-токен (живёт 24ч) — для крона
-без участия человека это не годится. Токен же СООБЩЕСТВА (VK_TOKEN) не протухает, но фото грузить не умеет,
-зато принимает ссылку-вложение. Поэтому — ссылка-карточка. (см. UC-73a в docs/ratescout.usecases.md)
+Картинку (daily-24h.png) грузим photos.getWallUploadServer ПОЛЬЗОВАТЕЛЬСКИМ токеном → wall.post с attachments=photo…
+от имени сообщества. Нет user-токена / фото не загрузилось → пост уходит текстом (не роняем).
 """
-import datetime
 import json
 import os
 import sys
 import time
 import urllib.parse
 import urllib.request
+import uuid
 
-VK_TOKEN = os.environ.get("VK_TOKEN")
+VK_TOKEN = os.environ.get("VK_TOKEN")          # сообщество — для wall.post
+VK_USER = os.environ.get("VK_USER_TOKEN")      # пользовательский — для загрузки ФОТО (сообщество не умеет)
 VK_GROUP = os.environ.get("VK_GROUP_ID")
 SRC = os.environ.get("DAILY_JSON_URL", "https://ratescout.ru/daily.json")
 API = "https://api.vk.com/method/"
@@ -38,6 +39,26 @@ def vk(method, params, token=None):
     if "error" in res:
         raise RuntimeError(res["error"].get("error_msg", res["error"]))
     return res["response"]
+
+
+def upload_photo(img, tok):
+    """Грузим фото на стену сообщества ПОЛЬЗОВАТЕЛЬСКИМ токеном (у него есть photos). Возвращает 'photo<owner>_<id>'."""
+    up = vk("photos.getWallUploadServer", {"group_id": VK_GROUP}, token=tok)
+    boundary = uuid.uuid4().hex
+    body = (f"--{boundary}\r\n".encode()
+            + b'Content-Disposition: form-data; name="photo"; filename="d.png"\r\n'
+            + b"Content-Type: image/png\r\n\r\n" + img + b"\r\n"
+            + f"--{boundary}--\r\n".encode())
+    req = urllib.request.Request(up["upload_url"], data=body,
+                                 headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
+    with urllib.request.urlopen(req, timeout=90) as r:
+        ur = json.load(r)
+    # upload-сервер при неудаче отдаёт photo:"[]" (не исключение) — ловим явно, иначе saveWallPhoto вернёт мусор
+    if not isinstance(ur, dict) or str(ur.get("photo", "")) in ("", "[]"):
+        raise RuntimeError(f"upload-сервер вернул без фото: {str(ur)[:200]}")
+    saved = vk("photos.saveWallPhoto", {"group_id": VK_GROUP, "server": ur["server"],
+                                        "photo": ur["photo"], "hash": ur["hash"]}, token=tok)[0]
+    return f'photo{saved["owner_id"]}_{saved["id"]}'
 
 
 def main():
@@ -59,41 +80,32 @@ def main():
         print("VK_TOKEN/VK_GROUP_ID не заданы — сухой прогон (не публикую).\n--- пост ---")
         print(msg)
         return 0
+
     att = ""
-    page = d.get("url")                      # страница обзора: её og:image = дневной график (см. build.py render_review)
-    if page:
-        # Цепляем СТРАНИЦУ обзора (не голый png — его VK как вложение не берёт: link_photo_sizing_rule).
-        # URL СТАБИЛЬНЫЙ в пределах суток (?vkc=<дата>): VK парсит ссылку асинхронно — на первой попытке превью
-        # ещё нет ("No photo given"), поэтому НЕ бустим поминутно (иначе VK каждый раз начинает заново), а даём ему
-        # обойти страницу и повторяем публикацию с паузой (ниже). index.html — чистый путь без старого кэша.
-        day = datetime.date.today().isoformat()
-        att = f"{page.rstrip('/')}/index.html?vkc={day}"
-        print(f"картинка: прикрепляю карточку страницы обзора → {att}")
+    if d.get("image"):
+        if not VK_USER:
+            print("❗ нет VK_USER_TOKEN — фото не загрузить (сообщество фото на стену не умеет). Пост уйдёт текстом.")
+        else:
+            for attempt in range(1, 4):          # 3 попытки: отсекаем разовые сбои сети/Flood control
+                try:
+                    img = urllib.request.urlopen(d["image"], timeout=90).read()
+                    att = upload_photo(img, VK_USER)
+                    print(f"✅ фото загружено (попытка {attempt}): {att}")
+                    break
+                except Exception as e:           # noqa: BLE001
+                    print(f"❗ фото не загрузилось (попытка {attempt}/3): {type(e).__name__}: {e}")
+                    if attempt < 3:
+                        time.sleep(5)
+            if not att:
+                print("❗❗ фото так и не прикрепилось — пост уйдёт ТОЛЬКО ТЕКСТОМ (причина — в строках ❗ выше).")
+
     print(f"длина сообщения VK: {len(msg)} символов (со списком, если full_list есть)")
     params = {"owner_id": "-" + str(VK_GROUP), "from_group": 1, "message": msg}
     if att:
-        params["attachments"] = att          # URL-вложение: community-токен это умеет, фото-загрузка не нужна
-    # VK парсит превью ссылки асинхронно → первая попытка может дать "link_photo_sizing_rule / No photo given".
-    # Повторяем публикацию с паузой; исчерпали попытки с карточкой — публикуем БЕЗ неё (пост не роняем).
-    for attempt in range(1, 5):
-        try:
-            res = vk("wall.post", params)
-            print(f"опубликовано (попытка {attempt}), post_id={res.get('post_id')}")
-            return 0
-        except Exception as e:                    # noqa: BLE001
-            msg_e = str(e)
-            if "attachments" in params and ("link_photo_sizing" in msg_e or "No photo given" in msg_e):
-                print(f"❗ VK ещё готовит превью ссылки (попытка {attempt}/4): {msg_e} — жду 20с и повторяю")
-                time.sleep(20)
-                continue
-            print(f"ошибка публикации в VK: {e}")
-            return 1
-    # карточка так и не собралась — публикуем текстом (без картинки), чтобы пост вышел
-    print("❗❗ VK так и не подготовил карточку — публикую БЕЗ картинки (текст выходит).")
-    params.pop("attachments", None)
+        params["attachments"] = att
     try:
         res = vk("wall.post", params)
-        print(f"опубликовано без карточки, post_id={res.get('post_id')}")
+        print(f"опубликовано{'' if att else ' (без фото)'}, post_id={res.get('post_id')}")
         return 0
     except Exception as e:                        # noqa: BLE001
         print(f"ошибка публикации в VK: {e}")
