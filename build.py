@@ -1663,7 +1663,8 @@ def trust_bar(lang):
                  f'и приведены для справки (не оферта).')
         facts = (f'<span>Валют: <b>{nc}</b></span><span>Направлений: <b>{nd}</b></span>'
                  f'<span>{updated_str(lang)}</span>'
-                 f'<span><a href="{PREF[lang]}/redakciya/">Методика и источник данных →</a></span>')
+                 f'<span><a href="{PREF[lang]}/redakciya/">Методика и источник данных →</a></span>'
+                 f'<span>Реклама. Рекламодатель: ИП Зуборев Н.С. erid: 2VtzqvK5m96</span>')
     else:
         intro = (f'<b>RateScout</b> is a free directory of crypto and cash exchange rates '
                  f'based on <b>BestChange</b> exchange-monitoring data. It tracks <b>{nc}</b> currencies '
