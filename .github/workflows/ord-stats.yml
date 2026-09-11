@@ -1,0 +1,53 @@
+name: ORD stats to ERIR (monthly)
+
+# Ежемесячная подача статистики показов в VK ОРД (ЕРИР) по данным Метрики.
+# По документам ОРД: статистика за календарный месяц — в течение 30 дней
+# после его конца. Крон — 3-го числа 04:20 UTC за прошлый месяц.
+# Prod-запись идёт в ЕРИР по-настоящему; ручной запуск по умолчанию dry-run.
+
+on:
+  schedule:
+    - cron: "20 4 3 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run (не отправлять в ОРД)"
+        type: boolean
+        default: true
+      month:
+        description: "Месяц YYYY-MM (пусто = прошлый)"
+        required: false
+        default: ""
+      sandbox:
+        description: "Песочница api-sandbox (не уходит в ЕРИР)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ord-stats
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Send shows to VK ORD
+        env:
+          ORD_API_TOKEN: ${{ secrets.ORD_API_TOKEN }}
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_METRIKA_COUNTER: ${{ secrets.YANDEX_METRIKA_COUNTER }}
+          ORD_CREATIVE_ID: ${{ secrets.ORD_CREATIVE_ID }}
+          ORD_PAD_ID: ${{ secrets.ORD_PAD_ID }}
+          ORD_MONTH: ${{ github.event.inputs.month }}
+          ORD_SANDBOX: ${{ github.event.inputs.sandbox == 'true' && '1' || '' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '' || '1' }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then export DRY_RUN=""; fi
+          python3 ord_stats.py
