@@ -39,6 +39,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Send shows to VK ORD
+        id: send
         env:
           ORD_API_TOKEN: ${{ secrets.ORD_API_TOKEN }}
           YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
@@ -51,3 +52,28 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "schedule" ]; then export DRY_RUN=""; fi
           python3 ord_stats.py
+      - name: Notify Telegram
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "Telegram не настроен — пропускаю уведомление."
+            exit 0
+          fi
+          MONTH="${{ steps.send.outputs.ord_month }}"
+          SHOWS="${{ steps.send.outputs.ord_shows }}"
+          if [ "${{ steps.send.outcome }}" = "success" ]; then
+            if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
+              MSG="✅ ОРД: статистика за ${MONTH} отправлена в ЕРИР (показы: ${SHOWS})."
+            else
+              MSG="🧪 ОРД dry-run за ${MONTH}: показы ${SHOWS}, в ЕРИР ничего не отправлено."
+            fi
+          else
+            MSG="🔴 ОРД: НЕ удалось отправить статистику за ${MONTH}. Смотри лог: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "text=${MSG}" \
+            -o /dev/null -w "telegram sendMessage: %{http_code}\n"

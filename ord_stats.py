@@ -38,6 +38,18 @@ def mask(s):
     return (s[:4] + '...' + s[-4:]) if len(s) > 12 else '***'
 
 
+OUT = {}  # для GITHUB_OUTPUT (месяц/показы — их подхватит TG-уведомление)
+
+
+def emit_outputs():
+    path = os.environ.get('GITHUB_OUTPUT', '')
+    if not path:
+        return
+    with open(path, 'a', encoding='utf-8') as f:
+        for k in ('ord_month', 'ord_shows'):
+            f.write(f'{k}={OUT.get(k, "")}\n')
+
+
 def http_json(url, token=None, payload=None, timeout=60):
     data = json.dumps(payload).encode() if payload is not None else None
     headers = {'User-Agent': 'ratescout-ord/1.0'}
@@ -102,11 +114,13 @@ def main():
     d1 = f'{year:04d}-{month:02d}-01'
     d2 = f'{year:04d}-{month:02d}-{last_day:02d}'
     month_key = f'{year:04d}-{month:02d}-01'
+    OUT['ord_month'] = f'{year:04d}-{month:02d}'
 
     shows = metrika_pageviews(ya_token, counter, d1, d2)
     if shows is None:
         print('ERROR: не удалось получить pageviews — ничего не отправляю');
         return 1
+    OUT['ord_shows'] = shows
     print(f'metrika counter={counter} period={d1}..{d2} pageviews={shows}')
 
     item = {'creative_external_id': creative, 'pad_external_id': pad,
@@ -148,4 +162,9 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    code = main()
+    try:
+        emit_outputs()
+    except Exception:  # noqa: BLE001
+        pass
+    sys.exit(code)
