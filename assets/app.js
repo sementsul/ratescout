@@ -3,6 +3,8 @@
 (function () {
   var C = window.__CATALOG__;
   var REF = window.__REF__ || "1116359";
+  var ERID = window.__ERID__ || "2VtzqvK5m96";
+  function bcQs(qs) { return qs + "&erid=" + ERID; }
 
   // ---- поиск по валютам (на всех страницах) ----
   (function () {
@@ -120,7 +122,7 @@
   fill(elFrom, defFrom);
   fill(elTo, defTo);
 
-  function deep(frm, to) { return "https://www.bestchange.ru/" + frm + "-to-" + to + ".html?p=" + REF; }
+  function deep(frm, to) { return "https://www.bestchange.ru/" + frm + "-to-" + to + ".html?" + bcQs("p=" + REF); }
 
   var OPEN = conv.getAttribute("data-open") || "Открыть";
   var APPROX = conv.getAttribute("data-approx") || "≈";
@@ -159,7 +161,7 @@
   function update() {
     var f = elFrom.value, t = elTo.value;
     if (f === t) {
-      elGo.href = "https://www.bestchange.ru/?p=" + REF;
+      elGo.href = "https://www.bestchange.ru/?" + bcQs("p=" + REF);
       elGo.setAttribute("target", "_blank"); elGo.setAttribute("rel", "nofollow noopener sponsored");
       elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return;
     }

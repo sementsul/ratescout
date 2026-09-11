@@ -135,11 +135,20 @@ def cat_page(lang, cat):
     return f"{PREF[lang]}/kategoriya/{CAT_SLUG.get(cat, 'prochee')}/"
 
 
+def _bc_qs(base_qs):
+    """Добавить erid к query-строке BestChange: ?p= -> ?p=&erid=, без дублей."""
+    sep = "&" if base_qs else "?"
+    if "erid=" in base_qs:
+        return base_qs
+    return f"{base_qs}{sep}erid={ERID}"
+
+
 def bc_link(frm, to):
     f, t = CUR.get(frm, {}), CUR.get(to, {})
     if f.get("num") or t.get("num"):
-        return f"https://www.bestchange.ru/index.php?mt=rates&from={f.get(&erid=2VtzqvK5m96'id')}&to={t.get('id')}&p={REF}&erid={ERID}"
-    return f"https://www.bestchange.ru/{frm}-to-{to}.html?p={REF}&erid={ERID}"
+        qs = f"mt=rates&from={f.get('id')}&to={t.get('id')}&p={REF}"
+        return f"https://www.bestchange.ru/index.php?{_bc_qs(qs)}"
+    return f"https://www.bestchange.ru/{frm}-to-{to}.html?{_bc_qs(f'p={REF}')}"
 
 
 def cpage(lang, slug):
@@ -4245,7 +4254,10 @@ def geo_ref_script(elem_id, base):
         '"Asia/Sakhalin","Asia/Srednekolymsk","Asia/Kamchatka","Asia/Anadyr"];'
         'var tz=(Intl.DateTimeFormat().resolvedOptions().timeZone)||"";'
         'var a=document.getElementById("' + elem_id + '");'
-        'if(a&&tz&&R.indexOf(tz)===-1){a.href="' + base + '?p=' + str(REF) + '";a.rel="nofollow noopener sponsored";}'
+        'if(a&&tz&&R.indexOf(tz)===-1){var b="' + base + '";'
+        'if(b.indexOf("erid=")===-1){b+=((b.indexOf("?")===-1)?"?":"&")+"erid=' + ERID + '";}'
+        'b+=((b.indexOf("?")===-1)?"?":"&")+"p=' + str(REF) + '";'
+        'a.href=b;a.rel="nofollow noopener sponsored";}'
         '}catch(e){}})();</script>')
 
 
@@ -4484,7 +4496,8 @@ def compliance_pages(lang):
 def build_catalog_js():
     cur = {slug: {"n": i["name"], "t": i["ticker"], "c": i["category"]} for slug, i in CUR.items()}
     return "window.__CATALOG__=" + json.dumps({"order": CATS, "cur": cur}, ensure_ascii=False) + \
-           ";window.__REF__=" + json.dumps(REF) + ";"
+           ";window.__REF__=" + json.dumps(REF) + ";" + \
+           "window.__ERID__=" + json.dumps(ERID) + ";"
 
 
 def write_catalog_js(js):
@@ -5408,7 +5421,7 @@ def make_monitor_json():
             ser_out[_s] = [[d, 1.0] for d, _v in _axis]
     os.makedirs(os.path.join(DIST, "data"), exist_ok=True)
     with open(os.path.join(DIST, "data", "monitor.json"), "w", encoding="utf-8") as f:
-        json.dump({"unit": "USDT", "ref": REF, "cur": cur, "cats": cats, "pairs": pairs,
+        json.dump({"unit": "USDT", "ref": REF, "erid": ERID, "cur": cur, "cats": cats, "pairs": pairs,
                    "popular": POPULAR, "trending": TRENDING, "yandex": YANDEX_Q, "metrika": METRIKA_Q, "series": ser_out},
                   f, ensure_ascii=False, separators=(",", ":"))
     print("✅ data/monitor.json: %d валют, %d кат., %d пар, %d GSC-напр., %d трендов, %d Яндекс-запр., %d Метрика-фраз"

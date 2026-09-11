@@ -122,10 +122,11 @@
   var PREF = EN ? "/en" : "";
   var PAIRS = {}; // "from-to" -> 1 (ядровые пары со страницей /obmen/)
   function curUrl(slug) { return PREF + "/valuta/" + slug + "/"; }
+  function bcErid() { return (DATA && DATA.erid) || "2VtzqvK5m96"; }
   function bcLink(a, b) {
     var fa = DATA.cur[a] || {}, fb = DATA.cur[b] || {};
-    if (fa.num || fb.num) return "https://www.bestchange.ru/index.php?mt=rates&from=" + (fa.id || "") + "&to=" + (fb.id || "") + "&p=" + DATA.ref;
-    return "https://www.bestchange.ru/" + a + "-to-" + b + ".html?p=" + DATA.ref;
+    if (fa.num || fb.num) return "https://www.bestchange.ru/index.php?mt=rates&from=" + (fa.id || "") + "&to=" + (fb.id || "") + "&p=" + DATA.ref + "&erid=" + bcErid();
+    return "https://www.bestchange.ru/" + a + "-to-" + b + ".html?p=" + DATA.ref + "&erid=" + bcErid();
   }
   function pairUrl(a, b) { return PAIRS[a + "-" + b] ? PREF + "/obmen/" + a + "-" + b + "/" : bcLink(a, b); }
   function pairHasPage(a, b) { return !!PAIRS[a + "-" + b]; }
