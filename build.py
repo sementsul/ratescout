@@ -2014,7 +2014,8 @@ def footer(lang):
     if lang == "ru":
         disc = ("RateScout — независимый информационный сервис мониторинга курсов. Мы не обменный пункт и не "
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
-                "по партнёрской программе мы можем получать вознаграждение. Это не реклама от имени BestChange.")
+                "по партнёрской программе мы можем получать вознаграждение. Реклама. Рекламодатель: ИП Зуборев Н.С. "
+                "erid: 2VtzqvK5m96")
         links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
                  f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Одноклассники</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="https://www.yell.ru/moscow/com/ratescout-ru_14524615/" target="_blank" rel="noopener me">Yell.ru</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a> · <a href="/usloviya/">Условия использования</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
