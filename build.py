@@ -66,6 +66,7 @@ CATS = CAT["categories"]
 S = SITE
 BASE_URL = f"https://{S['domain']}"
 REF = S["ref"]
+ERID = "2VtzqvK5m96"
 INDEXNOW_KEY = "b394aeced6a92ed48a09e2bd30099905"  # публичный ключ IndexNow (ключ-файл на сайте)
 
 LANGS = ["ru", "en"]
@@ -137,8 +138,8 @@ def cat_page(lang, cat):
 def bc_link(frm, to):
     f, t = CUR.get(frm, {}), CUR.get(to, {})
     if f.get("num") or t.get("num"):
-        return f"https://www.bestchange.ru/index.php?mt=rates&from={f.get('id')}&to={t.get('id')}&p={REF}"
-    return f"https://www.bestchange.ru/{frm}-to-{to}.html?p={REF}"
+        return f"https://www.bestchange.ru/index.php?mt=rates&from={f.get(&erid=2VtzqvK5m96'id')}&to={t.get('id')}&p={REF}&erid={ERID}"
+    return f"https://www.bestchange.ru/{frm}-to-{to}.html?p={REF}&erid={ERID}"
 
 
 def cpage(lang, slug):
@@ -2060,7 +2061,7 @@ def converter_html(lang, preset_from="", rates=None):
   <label>{tr(lang,'get')}<select id="cTo"></select></label>
   {amt}
   {res}
-  <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
+  <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}&erid={ERID}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
 </div>{rjson}"""
 
 
@@ -4274,11 +4275,11 @@ def aml_checker(lang):
     }
     disc = ((f"Базовая проверка: формат адреса, санкционный список OFAC ({cnt} адресов, обновляется автоматически) "
              "и базовые ончейн-данные. Это НЕ полноценный AML-скоринг — миксеры, скам и даркнет не проверяются. "
-             'Для <a id="amlFull" href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">полной AML-проверки</a> '
+             'Для <a id="amlFull" href="https://www.bestchange.ru/report/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">полной AML-проверки</a> '
              'воспользуйтесь специализированными сервисами. Результат справочный.') if ru else
             (f"Basic check: address format, OFAC sanctions list ({cnt} addresses, auto-updated) and basic on-chain "
              "data. This is NOT a full AML score — mixers, scams and darknet are not checked. "
-             'For a <a id="amlFull" href="https://www.bestchange.ru/report/" target="_blank" rel="nofollow noopener">'
+             'For a <a id="amlFull" href="https://www.bestchange.ru/report/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">'
              'full AML check</a> use specialized services. For reference only.'))
     h = "Проверить адрес" if ru else "Check an address"
     form = (f'<h2 id="check">{h}</h2>'
@@ -4291,7 +4292,7 @@ def aml_checker(lang):
             '<div id="amlResult" style="margin-top:12px"></div>'
             f'<p class="updnote">{disc}</p></div>')
     # Гео-переключение реф-метки: HTML-ссылка нейтральная по умолчанию, ?p= только для не-РФ пояса.
-    geo_js = geo_ref_script("amlFull", "https://www.bestchange.ru/report/")
+    geo_js = geo_ref_script("amlFull", "https://www.bestchange.ru/report/?erid=2VtzqvK5m96")
     return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>" + geo_js
 
 
@@ -4408,10 +4409,10 @@ def compliance_pages(lang):
 <li>traffic and arbitrage specialists;</li>
 <li>anyone with an audience interested in crypto and currency exchange.</li></ul>
 <h2>Join the program</h2>
-<p><a id="bcPartner" class="cta" href="https://www.bestchange.ru/partner/" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
+<p><a id="bcPartner" class="cta" href="https://www.bestchange.ru/partner/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
 <p class="updnote">RateScout is an independent information service and a BestChange affiliate. The button leads to the
    official BestChange affiliate program. For reference only; not a job offer or financial advice.</p>"""
-                    + geo_ref_script("bcPartner", "https://www.bestchange.ru/partner/"),
+                    + geo_ref_script("bcPartner", "https://www.bestchange.ru/partner/?erid=2VtzqvK5m96"),
                     "Earn with BestChange")
         render_page(lang, "aml", "Crypto address AML check — why and how",
                     "AML check: how to verify a crypto address for links to fraud and sanctions before exchanging.",
