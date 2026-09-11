@@ -143,12 +143,18 @@ def _bc_qs(base_qs):
     return f"{base_qs}{sep}erid={ERID}"
 
 
-def bc_link(frm, to):
+def bc_host(lang="ru"):
+    """Домен BestChange по языку: EN — международное зеркало .com."""
+    return "https://www.bestchange.com" if lang == "en" else "https://www.bestchange.ru"
+
+
+def bc_link(frm, to, lang="ru"):
     f, t = CUR.get(frm, {}), CUR.get(to, {})
+    host = bc_host(lang)
     if f.get("num") or t.get("num"):
         qs = f"mt=rates&from={f.get('id')}&to={t.get('id')}&p={REF}"
-        return f"https://www.bestchange.ru/index.php?{_bc_qs(qs)}"
-    return f"https://www.bestchange.ru/{frm}-to-{to}.html?{_bc_qs(f'p={REF}')}"
+        return f"{host}/index.php?{_bc_qs(qs)}"
+    return f"{host}/{frm}-to-{to}.html?{_bc_qs(f'p={REF}')}"
 
 
 def cpage(lang, slug):
@@ -2083,7 +2089,7 @@ def converter_html(lang, preset_from="", rates=None):
   <label>{tr(lang,'get')}<select id="cTo"></select></label>
   {amt}
   {res}
-  <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}&erid={ERID}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
+  <a class="cta" id="cGo" href="{bc_host(lang)}/?p={REF}&erid={ERID}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
   {ad_mark(lang)}
 </div>{rjson}"""
 
@@ -2274,7 +2280,7 @@ def rate_table(slug, info, lang, incoming=False, n=12):
         return rate_of(o, slug) if incoming else rate_of(slug, o)
 
     def _link(o):
-        return bc_link(o, slug) if incoming else bc_link(slug, o)
+        return bc_link(o, slug, lang) if incoming else bc_link(slug, o, lang)
     rated, unrated = [], []
     for ts, ti in CUR.items():
         if ts == slug:
@@ -2415,7 +2421,7 @@ def render_buy(slug, info, lang):
         q2, a2 = f"Where to get {name} for rubles?", f"Pick a direction with a ruble source (card/SBP/cash) → {ticker} in the list below."
         back = f'<a href="{cpage(lang, slug)}">Exchange {name} (sell / all directions) →</a>'
         note = "Best rate among exchangers; reserve is the total. " + updated_str(lang)
-    get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug)}" target="_blank" '
+    get_btn = (f'<a class="cta cta-get" href="{bc_link(get_src, slug, lang)}" target="_blank" '
                f'rel="nofollow noopener sponsored">{tr(lang,"get_cta")} {name} →</a>')
     faq = jsonld({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
         {"@type": "Question", "name": q1, "acceptedAnswer": {"@type": "Answer", "text": a1}},
@@ -2776,7 +2782,7 @@ def render_pair(f, t, lang):
     {trust_bar(lang)}
     <div class="rate-box">
       {rate_line}
-      <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
+      <a class="cta" href="{bc_link(f, t, lang)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
       {ad_mark(lang)}
     </div>
     {ctx_html}
@@ -4186,7 +4192,7 @@ def render_bank_hub(to_slug, lang):
         guide = f'<a href="{PREF[lang]}/blog/kak-obmenyat-usdt-na-rubli/">Step-by-step cash-out guide</a>'
     trs = ""
     for cnt, fs, fi, r in rows:
-        trs += (f'<tr><td class="d"><a href="{bc_link(fs, to_slug)}" target="_blank" rel="nofollow noopener sponsored">'
+        trs += (f'<tr><td class="d"><a href="{bc_link(fs, to_slug, lang)}" target="_blank" rel="nofollow noopener sponsored">'
                 f'{fi["name"]} <span>{fi["ticker"]}</span></a></td>'
                 f'<td class="num"><b>{fmt_rate(r["rate"])}</b></td><td class="num">{cnt}</td>'
                 f'<td class="num">{fmt_rate(r.get("reserve", 0))}</td></tr>')
@@ -4309,7 +4315,7 @@ def aml_checker(lang):
              'воспользуйтесь специализированными сервисами. Результат справочный.') if ru else
             (f"Basic check: address format, OFAC sanctions list ({cnt} addresses, auto-updated) and basic on-chain "
              "data. This is NOT a full AML score — mixers, scams and darknet are not checked. "
-             'For a <a id="amlFull" href="https://www.bestchange.ru/report/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">'
+             'For a <a id="amlFull" href="https://www.bestchange.com/report/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">'
              'full AML check</a> use specialized services. For reference only.'))
     h = "Проверить адрес" if ru else "Check an address"
     form = (f'<h2 id="check">{h}</h2>'
@@ -4322,7 +4328,9 @@ def aml_checker(lang):
             '<div id="amlResult" style="margin-top:12px"></div>'
             f'<p class="updnote">{disc}</p>{ad_mark(lang)}</div>')
     # Гео-переключение реф-метки: HTML-ссылка нейтральная по умолчанию, ?p= только для не-РФ пояса.
-    geo_js = geo_ref_script("amlFull", "https://www.bestchange.ru/report/?erid=2VtzqvK5m96")
+    _geo_base = ("https://www.bestchange.com/report/?erid=2VtzqvK5m96" if lang == "en"
+                 else "https://www.bestchange.ru/report/?erid=2VtzqvK5m96")
+    geo_js = geo_ref_script("amlFull", _geo_base)
     return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>" + geo_js
 
 
@@ -4438,11 +4446,11 @@ def compliance_pages(lang):
 <li>traffic and arbitrage specialists;</li>
 <li>anyone with an audience interested in crypto and currency exchange.</li></ul>
 <h2>Join the program</h2>
-<p><a id="bcPartner" class="cta" href="https://www.bestchange.ru/partner/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
+<p><a id="bcPartner" class="cta" href="https://www.bestchange.com/partner/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
 <p class="updnote admark">Advertising. Advertiser: IE Zuborev N.S. erid: 2VtzqvK5m96</p>
 <p class="updnote">RateScout is an independent information service and a BestChange affiliate. The button leads to the
    official BestChange affiliate program. For reference only; not a job offer or financial advice.</p>"""
-                    + geo_ref_script("bcPartner", "https://www.bestchange.ru/partner/?erid=2VtzqvK5m96"),
+                    + geo_ref_script("bcPartner", "https://www.bestchange.com/partner/?erid=2VtzqvK5m96"),
                     "Earn with BestChange")
         render_page(lang, "aml", "Crypto address AML check — why and how",
                     "AML check: how to verify a crypto address for links to fraud and sanctions before exchanging.",
@@ -5111,6 +5119,8 @@ def render_chains(lang, chains):
         "updated": L("Обновлено:", "Updated:"),
     }, ensure_ascii=False)
     js = CHAINS_JS.replace("__DATA__", data).replace("__L__", labels)
+    if lang == "en":
+        js = js.replace("www.bestchange.ru", "www.bestchange.com")
     title = L(f"Цепочки обмена валют — арбитраж и доходность | {S['name']}",
               f"Currency exchange chains — arbitrage & profit | {S['name']}")
     desc = L("Выгодные цепочки обмена валют (2/3/4 звена) по данным BestChange: доходность и оценка риска, "
