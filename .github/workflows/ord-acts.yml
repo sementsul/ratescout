@@ -1,0 +1,94 @@
+name: ORD acts to ERIR (monthly)
+
+# Ежемесячный акт в VK ОРД (ЕРИР) с разаллокацией: договор → креатив → площадка.
+# По документам ОРД «Создать полный акт (v3)» уходит в ЕРИР сразу (без draft).
+# Крон — 5-го числа 04:40 UTC (после статистики 3-го числа).
+# Сумму скрипт сам не знает: ORD_AMOUNT (+ORD_VAT_RATE) или ord-amounts.json.
+# Без суммы — ничего не отправляет, шлёт TG-напоминание.
+# Ручной запуск по умолчанию dry-run; sandbox — песочница (не ЕРИР).
+
+on:
+  schedule:
+    - cron: "40 4 5 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run (не отправлять в ОРД)"
+        type: boolean
+        default: true
+      month:
+        description: "Месяц YYYY-MM (пусто = прошлый)"
+        required: false
+        default: ""
+      amount:
+        description: "Сумма акта с НДС (пусто = из ord-amounts.json)"
+        required: false
+        default: ""
+      vat_rate:
+        description: "Ставка НДС"
+        required: false
+        default: "0"
+      sandbox:
+        description: "Песочница api-sandbox (не уходит в ЕРИР)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ord-acts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Send act to VK ORD
+        id: send
+        env:
+          ORD_API_TOKEN: ${{ secrets.ORD_API_TOKEN }}
+          YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
+          YANDEX_METRIKA_COUNTER: ${{ secrets.YANDEX_METRIKA_COUNTER }}
+          ORD_CONTRACT_ID: ${{ secrets.ORD_CONTRACT_ID }}
+          ORD_CREATIVE_ID: ${{ secrets.ORD_CREATIVE_ID }}
+          ORD_PAD_ID: ${{ secrets.ORD_PAD_ID }}
+          ORD_MONTH: ${{ github.event.inputs.month }}
+          ORD_AMOUNT: ${{ github.event.inputs.amount }}
+          ORD_VAT_RATE: ${{ github.event.inputs.vat_rate }}
+          ORD_SANDBOX: ${{ github.event.inputs.sandbox == 'true' && '1' || '' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '' || '1' }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then export DRY_RUN=""; fi
+          python3 ord_act.py
+      - name: Notify Telegram
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "Telegram не настроен — пропускаю уведомление."
+            exit 0
+          fi
+          MONTH="${{ steps.send.outputs.ord_month }}"
+          SHOWS="${{ steps.send.outputs.ord_shows }}"
+          AMOUNT="${{ steps.send.outputs.ord_amount }}"
+          RESULT="${{ steps.send.outputs.ord_result }}"
+          if [ "${{ steps.send.outcome }}" != "success" ] || [ "$RESULT" = "fail" ]; then
+            MSG="🔴 ОРД-акт: НЕ удалось создать акт за ${MONTH}. Смотри лог: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          elif [ "$RESULT" = "need_amount" ]; then
+            MSG="🟡 ОРД-акт за ${MONTH} (показы: ${SHOWS}): нет суммы — укажите ORD_AMOUNT и перезапустите. В ЕРИР ничего не отправлено."
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
+            MSG="✅ ОРД-акт за ${MONTH} отправлен в ЕРИР (показы: ${SHOWS}, сумма: ${AMOUNT})."
+          else
+            MSG="🧪 ОРД-акт dry-run за ${MONTH}: показы ${SHOWS}, сумма ${AMOUNT}, в ЕРИР ничего не отправлено."
+          fi
+          curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" \
+            --data-urlencode "text=${MSG}" \
+            -o /dev/null -w "telegram sendMessage: %{http_code}\n"
