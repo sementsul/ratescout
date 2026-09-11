@@ -1672,7 +1672,8 @@ def trust_bar(lang):
                  f'and provided for reference (not an offer).')
         facts = (f'<span>Currencies: <b>{nc}</b></span><span>Directions: <b>{nd}</b></span>'
                  f'<span>{updated_str(lang)}</span>'
-                 f'<span><a href="{PREF[lang]}/redakciya/">Methodology &amp; data source →</a></span>')
+                 f'<span><a href="{PREF[lang]}/redakciya/">Methodology &amp; data source →</a></span>'
+                 f'<span>Advertising. Advertiser: IE Zuborev N.S. erid: 2VtzqvK5m96</span>')
     return (f'<section class="trustbar dosborder">'
             f'<p class="answer tb-intro">{intro}</p>'
             f'<div class="tb-facts">{facts}</div></section>')
@@ -2025,7 +2026,8 @@ def footer(lang):
     else:
         disc = ("RateScout is an independent rate-monitoring service. We are not an exchange office and do not "
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
-                "affiliate program we may earn a commission. This is not advertising on behalf of BestChange.")
+                "affiliate program we may earn a commission. Advertising. Advertiser: IE Zuborev N.S. "
+                "erid: 2VtzqvK5m96")
         links = (f'<a href="/en/o-servise/">About</a> · <a href="/en/aml/">AML check</a> · '
                  f'<a href="/en/earn/">Earn with BestChange</a> · '
                  f'<a href="/en/vidzhet/">Site widget</a> · <a href="/en/redakciya/">Editorial</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="/en/raskrytie/">Disclosure</a> · <a href="/en/politika/">Privacy policy</a> · <a href="/en/usloviya/">Terms of Service</a>')
