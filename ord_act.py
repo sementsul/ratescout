@@ -70,7 +70,7 @@ def split_vat(including, rate):
     inc = Decimal(str(including))
     r = Decimal(str(rate or '0'))
     if r == 0:
-        return q2(inc), '0', '0.00', '0.00'
+        return q2(inc), '0', q2(inc), '0.00'
     excl = (inc / (1 + r / 100)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     return q2(inc), q2(r), str(excl), q2(inc - excl)
 
