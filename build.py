@@ -1679,6 +1679,15 @@ def trust_bar(lang):
             f'<div class="tb-facts">{facts}</div></section>')
 
 
+def ad_mark(lang):
+    """Подпись у каждого рекламного блока (ст. 18.1 38-ФЗ): пометка + рекламодатель + erid."""
+    if lang == "ru":
+        return ('<p class="updnote admark">Реклама. Рекламодатель: ИП Зуборев Н.С. '
+                'erid: 2VtzqvK5m96</p>')
+    return ('<p class="updnote admark">Advertising. Advertiser: IE Zuborev N.S. '
+            'erid: 2VtzqvK5m96</p>')
+
+
 METRIKA = """<!-- Yandex.Metrika counter -->
 <script type="text/javascript">
    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -2075,6 +2084,7 @@ def converter_html(lang, preset_from="", rates=None):
   {amt}
   {res}
   <a class="cta" id="cGo" href="https://www.bestchange.ru/?p={REF}&erid={ERID}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
+  {ad_mark(lang)}
 </div>{rjson}"""
 
 
@@ -2346,7 +2356,8 @@ def rate_table(slug, info, lang, incoming=False, n=12):
             f'<th>{h[0]}</th><th>{h[1]}</th><th>{h[2]}</th><th>{h[3]}</th><th>{h[4]}</th></tr></thead>'
             f'<tbody>{trs}</tbody></table></div>'
             f'<p class="rtnores updnote" hidden>{nores}</p>'
-            f'<p class="updnote">{note}</p>')
+            f'<p class="updnote">{note}</p>'
+            f'{ad_mark(lang)}')
 
 
 
@@ -2427,6 +2438,7 @@ def render_buy(slug, info, lang):
     <p>{intro}</p>
     {trust_bar(lang)}
     <p class="getcta">{get_btn}</p>
+    {ad_mark(lang)}
     {rate_table(slug, info, lang, incoming=True)}
     <h2 class="news">{howh}</h2>
     <ol class="steps">{steps_html}</ol>
@@ -2765,6 +2777,7 @@ def render_pair(f, t, lang):
     <div class="rate-box">
       {rate_line}
       <a class="cta" href="{bc_link(f, t)}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'open_bc')}</a>
+      {ad_mark(lang)}
     </div>
     {ctx_html}
     {pair_chart(f, t, lang)}
@@ -4192,8 +4205,9 @@ def render_bank_hub(to_slug, lang):
     <h1>{h1} <span class="cnt">{len(rows)}</span></h1>
     <div class="dosblue dosborder">{intro}</div>
     <div class="rtbl-wrap"><table class="rtbl"><thead><tr>
-      <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead><tbody>{trs}</tbody></table></div>
+      <th>{th[0]}</th><th>{th[1]}</th><th>{th[2]}</th><th>{th[3]}</th></tr></thead>      <tbody>{trs}</tbody></table></div>
     <p class="updnote">{note}</p>
+    {ad_mark(lang)}
     <h2 class="news">{howh}</h2>
     <ol class="steps">{steps_html}</ol>
     {howto_ld(howh, steps)}
@@ -4306,7 +4320,7 @@ def aml_checker(lang):
             f'<button id="amlBtn" type="button" style="margin-top:8px;padding:9px 18px;background:#0000aa;'
             f'color:#fff;border:1px solid #55ffff;cursor:pointer;font-family:inherit">{i18n["btn"]}</button>'
             '<div id="amlResult" style="margin-top:12px"></div>'
-            f'<p class="updnote">{disc}</p></div>')
+            f'<p class="updnote">{disc}</p>{ad_mark(lang)}</div>')
     # Гео-переключение реф-метки: HTML-ссылка нейтральная по умолчанию, ?p= только для не-РФ пояса.
     geo_js = geo_ref_script("amlFull", "https://www.bestchange.ru/report/?erid=2VtzqvK5m96")
     return form + "<script>(function(){var I=" + json.dumps(i18n, ensure_ascii=False) + ";" + _AML_JS + "})();</script>" + geo_js
@@ -4425,6 +4439,7 @@ def compliance_pages(lang):
 <li>anyone with an audience interested in crypto and currency exchange.</li></ul>
 <h2>Join the program</h2>
 <p><a id="bcPartner" class="cta" href="https://www.bestchange.ru/partner/?erid=2VtzqvK5m96" target="_blank" rel="nofollow noopener">Join the BestChange affiliate program &rarr;</a></p>
+<p class="updnote admark">Advertising. Advertiser: IE Zuborev N.S. erid: 2VtzqvK5m96</p>
 <p class="updnote">RateScout is an independent information service and a BestChange affiliate. The button leads to the
    official BestChange affiliate program. For reference only; not a job offer or financial advice.</p>"""
                     + geo_ref_script("bcPartner", "https://www.bestchange.ru/partner/?erid=2VtzqvK5m96"),
@@ -5130,6 +5145,7 @@ def render_chains(lang, chains):
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
   <p class="updnote">{updated_str(lang)} · {L('данные','data')} BestChange</p>
+  {ad_mark(lang)}
   <div class="ch-ctl">
     <span class="rsrange" id="chModes"></span>
     <span class="ch-sort">{L('Сортировка', 'Sort')}:
@@ -5639,6 +5655,7 @@ def render_monitor(lang):
     body = f"""
   <h1>{h1}</h1>
   <p class="lead">{lead}</p>
+  {ad_mark(lang)}
   <div class="mon-mode">
     <button id="modeTerm" class="on" type="button">⊞ {L('Терминал','Terminal')}</button>
     <button id="modeClassic" type="button">{L('Классика','Classic')}</button>
