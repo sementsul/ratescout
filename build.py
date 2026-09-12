@@ -462,7 +462,7 @@ def render_home(lang):
       <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
       <li><a href="{PREF[lang]}/monitor/">{'Про-монитор' if lang=='ru' else 'Pro monitor'}</a></li>
       <li><a href="{PREF[lang]}/tsepochki/">{'💱 Цепочки обмена' if lang=='ru' else '💱 Exchange chains'}</a></li>
-      <li><a href="https://my-many.ru/?utm_source=ratescout&utm_medium=nav">{'💰 Арбитраж (MyMany)' if lang=='ru' else '💰 Arbitrage (MyMany)'}</a></li>
+      <li><a href="https://my-many.ratescout.ru/?utm_source=ratescout&utm_medium=nav">{'💰 Арбитраж (MyMany)' if lang=='ru' else '💰 Arbitrage (MyMany)'}</a></li>
       <li><a href="{PREF[lang]}/alert/">{'Оповещения о курсе' if lang=='ru' else 'Rate alerts'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
@@ -1850,7 +1850,7 @@ def mobile_drawer(lang):
             (f"{P}/grafiki/", tr(lang, 'nav_charts')),
             (f"{P}/heatmap/", "Тепловая карта" if ru else "Heatmap"),
             (f"{P}/tsepochki/", "💱 Цепочки обмена" if ru else "💱 Exchange chains"),
-            ("https://my-many.ru/?utm_source=ratescout&utm_medium=nav", "💰 Арбитраж (MyMany)" if ru else "💰 Arbitrage (MyMany)"),
+            ("https://my-many.ratescout.ru/?utm_source=ratescout&utm_medium=nav", "💰 Арбитраж (MyMany)" if ru else "💰 Arbitrage (MyMany)"),
             (f"{P}/populyarnost/", "Популярность по поиску" if ru else "Search popularity"),
             (f"{P}/halving/", "Халвинг Bitcoin" if ru else "Bitcoin halving")]),
         grp("Инструменты" if ru else "Tools", [
@@ -2618,7 +2618,7 @@ def render_currency(slug, info, lang):
       <li><a href="{PREF[lang]}/heatmap/">{'Тепловая карта' if lang=='ru' else 'Heatmap'}</a></li>
       <li><a href="{PREF[lang]}/populyarnost/">{'Популярность по поиску' if lang=='ru' else 'Search popularity'}</a></li>
       <li><a href="{PREF[lang]}/tsepochki/">{'💱 Цепочки обмена' if lang=='ru' else '💱 Exchange chains'}</a></li>
-      <li><a href="https://my-many.ru/?utm_source=ratescout&utm_medium=nav">{'💰 Арбитраж (MyMany)' if lang=='ru' else '💰 Arbitrage (MyMany)'}</a></li>
+      <li><a href="https://my-many.ratescout.ru/?utm_source=ratescout&utm_medium=nav">{'💰 Арбитраж (MyMany)' if lang=='ru' else '💰 Arbitrage (MyMany)'}</a></li>
       <li><a href="{PREF[lang]}/nastroeniya/">{tr(lang,'nav_mood')}</a></li>
       <li><a href="{PREF[lang]}/sravnenie/">{tr(lang,'nav_compare')}</a></li>
       <li><a href="{PREF[lang]}/aml/">{tr(lang,'nav_aml')}</a></li>
@@ -5165,7 +5165,7 @@ def render_chains(lang, chains):
   <div id="chWrap" class="dosborder"><table id="chTbl"><thead></thead><tbody></tbody></table></div>
   <p class="mon-note" id="chUpd"></p>
   <div class="ch-disc dosborder">{disc}</div>
-  <div class="ch-cta"><a href="https://my-many.ru/?utm_source=ratescout&utm_medium=chains_cta">{L('Арбитраж', 'Arbitrage')}</a></div>
+  <div class="ch-cta"><a href="https://my-many.ratescout.ru/?utm_source=ratescout&utm_medium=chains_cta">{L('Арбитраж', 'Arbitrage')}</a></div>
 """ + CHAINS_CSS + "<script>" + js + "</script>"
     render_page(lang, "tsepochki", title, desc, body, h1)
 
