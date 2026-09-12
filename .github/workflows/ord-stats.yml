@@ -64,11 +64,12 @@ jobs:
           fi
           MONTH="${{ steps.send.outputs.ord_month }}"
           SHOWS="${{ steps.send.outputs.ord_shows }}"
+          SHOWS_MM="${{ steps.send.outputs.ord_shows_mm }}"
           if [ "${{ steps.send.outcome }}" = "success" ]; then
             if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
-              MSG="✅ ОРД: статистика за ${MONTH} отправлена в ЕРИР (показы: ${SHOWS})."
+              MSG="✅ ОРД: статистика за ${MONTH} отправлена в ЕРИР (ratescout: ${SHOWS}, mymany: ${SHOWS_MM})."
             else
-              MSG="🧪 ОРД dry-run за ${MONTH}: показы ${SHOWS}, в ЕРИР ничего не отправлено."
+              MSG="🧪 ОРД dry-run за ${MONTH}: ratescout ${SHOWS}, mymany ${SHOWS_MM}, в ЕРИР ничего не отправлено."
             fi
           else
             MSG="🔴 ОРД: НЕ удалось отправить статистику за ${MONTH}. Смотри лог: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

@@ -77,16 +77,17 @@ jobs:
           fi
           MONTH="${{ steps.send.outputs.ord_month }}"
           SHOWS="${{ steps.send.outputs.ord_shows }}"
+          SHOWS_MM="${{ steps.send.outputs.ord_shows_mm }}"
           AMOUNT="${{ steps.send.outputs.ord_amount }}"
           RESULT="${{ steps.send.outputs.ord_result }}"
           if [ "${{ steps.send.outcome }}" != "success" ] || [ "$RESULT" = "fail" ]; then
             MSG="🔴 ОРД-акт: НЕ удалось создать акт за ${MONTH}. Смотри лог: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           elif [ "$RESULT" = "need_amount" ]; then
-            MSG="🟡 ОРД-акт за ${MONTH} (показы: ${SHOWS}): нет суммы — укажите ORD_AMOUNT и перезапустите. В ЕРИР ничего не отправлено."
+            MSG="🟡 ОРД-акт за ${MONTH} (ratescout: ${SHOWS}, mymany: ${SHOWS_MM}): нет суммы — укажите ORD_AMOUNT и перезапустите. В ЕРИР ничего не отправлено."
           elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.dry_run }}" = "false" ]; then
-            MSG="✅ ОРД-акт за ${MONTH} отправлен в ЕРИР (показы: ${SHOWS}, сумма: ${AMOUNT})."
+            MSG="✅ ОРД-акт за ${MONTH} отправлен в ЕРИР (ratescout: ${SHOWS}, mymany: ${SHOWS_MM}, сумма: ${AMOUNT})."
           else
-            MSG="🧪 ОРД-акт dry-run за ${MONTH}: показы ${SHOWS}, сумма ${AMOUNT}, в ЕРИР ничего не отправлено."
+            MSG="🧪 ОРД-акт dry-run за ${MONTH}: ratescout ${SHOWS}, mymany ${SHOWS_MM}, сумма ${AMOUNT}, в ЕРИР ничего не отправлено."
           fi
           curl -s -m 15 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TG_CHAT}" \

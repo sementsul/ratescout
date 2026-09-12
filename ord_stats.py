@@ -46,7 +46,7 @@ def emit_outputs():
     if not path:
         return
     with open(path, 'a', encoding='utf-8') as f:
-        for k in ('ord_month', 'ord_shows'):
+        for k in ('ord_month', 'ord_shows', 'ord_shows_mm'):
             f.write(f'{k}={OUT.get(k, "")}\n')
 
 
@@ -70,9 +70,11 @@ def prev_month(today=None):
     return last_prev.year, last_prev.month
 
 
-def metrika_pageviews(token, counter, d1, d2):
+def metrika_pageviews(token, counter, d1, d2, host=None):
     params = {'ids': counter, 'metrics': 'ym:s:pageviews',
               'date1': d1, 'date2': d2, 'accuracy': 'full'}
+    if host:
+        params['filters'] = f"EXISTS(ym:pv:URL=@'{host}')"
     try:
         data = http_json(MET + '?' + urllib.parse.urlencode(params), token=token,
                          payload=None)
@@ -95,6 +97,8 @@ def main():
     counter = os.environ.get('YANDEX_METRIKA_COUNTER', '') or '111586112'
     creative = os.environ.get('ORD_CREATIVE_ID', '') or '85bcklvevfc-1k28ihvhd'
     pad = os.environ.get('ORD_PAD_ID', '') or '1ggont56t70-1k28j2dhf'
+    pad_mm = os.environ.get('ORD_PAD_MM', '') or 'i3rkh4d6kfg-1k28pbbqm'
+    mm_host = os.environ.get('ORD_MM_HOST', '') or 'my-many.ratescout.ru'
     sandbox = os.environ.get('ORD_SANDBOX', '') == '1'
     dry = os.environ.get('DRY_RUN', '') == '1'
     month_arg = os.environ.get('ORD_MONTH', '')
@@ -123,21 +127,31 @@ def main():
     OUT['ord_shows'] = shows
     print(f'metrika counter={counter} period={d1}..{d2} pageviews={shows}')
 
-    item = {'creative_external_id': creative, 'pad_external_id': pad,
-            'shows_count': shows,
-            'date_start_actual': d1, 'date_end_actual': d2}
+    shows_mm = metrika_pageviews(ya_token, counter, d1, d2, host=mm_host)
+    if shows_mm is None:
+        print('ERROR: не удалось получить pageviews поддомена — ничего не отправляю');
+        return 1
+    OUT['ord_shows_mm'] = shows_mm
+    print(f'metrika host={mm_host} pageviews={shows_mm}')
+
+    items = [{'creative_external_id': creative, 'pad_external_id': pad,
+              'shows_count': shows,
+              'date_start_actual': d1, 'date_end_actual': d2},
+             {'creative_external_id': creative, 'pad_external_id': pad_mm,
+              'shows_count': shows_mm,
+              'date_start_actual': d1, 'date_end_actual': d2}]
     print(f'ord base={"sandbox" if sandbox else "prod"} '
-          f'creative={creative} pad={pad} month={month_key} (токены скрыты)')
+          f'creative={creative} pads=[{pad}, {pad_mm}] month={month_key} (токены скрыты)')
 
     if dry:
         print('DRY_RUN=1 — payload (без отправки):')
-        print(json.dumps({'items': [item]}, ensure_ascii=False))
+        print(json.dumps({'items': items}, ensure_ascii=False))
         return 0
 
     base = ORD_SANDBOX if sandbox else ORD_PROD
     try:
         resp = http_json(base + '/v1/statistics',
-                         token=ord_token, payload={'items': [item]})
+                         token=ord_token, payload={'items': items})
     except Exception as e:  # noqa: BLE001
         print(f'ERROR ord POST /v1/statistics: {e}');
         return 1
@@ -146,18 +160,17 @@ def main():
     try:
         chk = http_json(base + '/v1/statistics/list?' + urllib.parse.urlencode(
             {'months': month_key, 'creative_external_ids': creative,
-             'pad_external_ids': pad, 'limit': 10}), token=ord_token)
+             'pad_external_ids': f'{pad},{pad_mm}', 'limit': 10}), token=ord_token)
     except Exception as e:  # noqa: BLE001
         print(f'WARN verify list failed: {e}');
         return 0
-    items = chk.get('items', [])
-    print(f'verify: найдено записей за месяц: {len(items)}')
-    for it in items:
-        if it.get('creative_external_id') == creative and it.get('pad_external_id') == pad:
-            print(f"verify ok: shows_count={it.get('shows_count')}")
-            break
-    else:
-        print('WARN verify: запись за месяц не найдена в list (проверьте позже статус ЕРИР)')
+    got = {it.get('pad_external_id') for it in chk.get('items', [])}
+    print(f'verify: найдено записей за месяц: {len(chk.get("items", []))}')
+    for p, label in ((pad, 'ratescout'), (pad_mm, 'mymany')):
+        if p in got:
+            print(f'verify ok [{label}]: запись есть')
+        else:
+            print(f'WARN verify [{label}]: запись за месяц не найдена (проверьте позже статус ЕРИР)')
     return 0
 
 

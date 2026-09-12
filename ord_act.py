@@ -44,7 +44,7 @@ def emit_outputs():
     if not path:
         return
     with open(path, 'a', encoding='utf-8') as f:
-        for k in ('ord_month', 'ord_shows', 'ord_amount', 'ord_result'):
+        for k in ('ord_month', 'ord_shows', 'ord_shows_mm', 'ord_amount', 'ord_result'):
             f.write(f'{k}={OUT.get(k, "")}\n')
 
 
@@ -75,9 +75,11 @@ def split_vat(including, rate):
     return q2(inc), q2(r), str(excl), q2(inc - excl)
 
 
-def metrika_pageviews(token, counter, d1, d2):
+def metrika_pageviews(token, counter, d1, d2, host=None):
     params = {'ids': counter, 'metrics': 'ym:s:pageviews',
               'date1': d1, 'date2': d2, 'accuracy': 'full'}
+    if host:
+        params['filters'] = f"EXISTS(ym:pv:URL=@'{host}')"
     try:
         data = http_json(MET + '?' + urllib.parse.urlencode(params), token=token)
     except Exception as e:  # noqa: BLE001
@@ -118,6 +120,8 @@ def main():
     contract = os.environ.get('ORD_CONTRACT_ID', '') or '0p9kbpb88ks-1k28icnp8'
     creative = os.environ.get('ORD_CREATIVE_ID', '') or '85bcklvevfc-1k28ihvhd'
     pad = os.environ.get('ORD_PAD_ID', '') or '1ggont56t70-1k28j2dhf'
+    pad_mm = os.environ.get('ORD_PAD_MM', '') or 'i3rkh4d6kfg-1k28pbbqm'
+    mm_host = os.environ.get('ORD_MM_HOST', '') or 'my-many.ratescout.ru'
     sandbox = os.environ.get('ORD_SANDBOX', '') == '1'
     dry = os.environ.get('DRY_RUN', '') == '1'
     month_arg = os.environ.get('ORD_MONTH', '')
@@ -146,6 +150,13 @@ def main():
     OUT['ord_shows'] = shows
     print(f'metrika counter={counter} period={d1}..{d2} pageviews={shows}')
 
+    shows_mm = metrika_pageviews(ya_token, counter, d1, d2, host=mm_host)
+    if shows_mm is None:
+        print('ERROR: не удалось получить pageviews поддомена — акт не создаю');
+        return 1
+    OUT['ord_shows_mm'] = shows_mm
+    print(f'metrika host={mm_host} pageviews={shows_mm}')
+
     including, vat_rate = load_amount(year, month)
     if not including:
         OUT['ord_result'] = 'need_amount'
@@ -155,10 +166,43 @@ def main():
         return 0
     inc, rate, excl, vat = split_vat(including, vat_rate)
     OUT['ord_amount'] = inc
-    per_event = q2(Decimal(inc) / shows) if shows else '0.00'
     ext_id = f'act-ratescout-{year:04d}{month:02d}'
     serial = f'RS-{year:04d}{month:02d}'
     act_date = today.isoformat()
+
+    # Разаллокация суммы по площадкам пропорционально показам (копейки — большей).
+    total_shows = shows + shows_mm
+    pads = [(pad, shows)]
+    if shows_mm:
+        pads.append((pad_mm, shows_mm))
+    inc_total = Decimal(inc)
+    shares, acc = [], Decimal('0')
+    for _, s in pads:
+        share = (inc_total * s / total_shows).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if total_shows else Decimal('0')
+        shares.append(share)
+        acc += share
+    shares[0] += inc_total - acc  # добивка копеек в первую площадку
+
+    def _plat_amount(inc_p):
+        e_inc, e_rate, e_excl, e_vat = split_vat(str(inc_p), rate)
+        return {'including_vat': e_inc, 'vat_rate': e_rate,
+                'excluding_vat': e_excl, 'vat': e_vat}
+
+    platforms = []
+    for (p_id, s), inc_p in zip(pads, shares):
+        per_event = q2(inc_p / s) if s else '0.00'
+        platforms.append({
+            'pad_external_id': p_id,
+            'shows_count': s,
+            'invoice_shows_count': s,
+            'amount': _plat_amount(inc_p),
+            'amount_per_event': per_event,
+            'date_start_planned': d1,
+            'date_end_planned': d2,
+            'date_start_actual': d1,
+            'date_end_actual': d2,
+            'pay_type': 'other',
+        })
 
     payload = {
         'contract_external_id': contract,
@@ -176,19 +220,7 @@ def main():
                        'excluding_vat': excl, 'vat': vat},
             'creatives': [{
                 'creative_external_id': creative,
-                'platforms': [{
-                    'pad_external_id': pad,
-                    'shows_count': shows,
-                    'invoice_shows_count': shows,
-                    'amount': {'including_vat': inc, 'vat_rate': rate,
-                               'excluding_vat': excl, 'vat': vat},
-                    'amount_per_event': per_event,
-                    'date_start_planned': d1,
-                    'date_end_planned': d2,
-                    'date_start_actual': d1,
-                    'date_end_actual': d2,
-                    'pay_type': 'other',
-                }],
+                'platforms': platforms,
             }],
         }],
     }
@@ -217,7 +249,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f'WARN verify GET failed: {e}')
     OUT['ord_result'] = 'sent'
-    print(f'SENT act {ext_id} month={OUT["ord_month"]} shows={shows} amount={inc}')
+    print(f'SENT act {ext_id} month={OUT["ord_month"]} shows={shows}+{shows_mm} amount={inc}')
     return 0
 
 
