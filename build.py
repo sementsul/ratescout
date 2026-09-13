@@ -2170,26 +2170,18 @@ document.body.insertBefore(d,document.body.firstChild);
 
 
 def header(lang, path):
-    # Общий переключатель экосистемы: RU | EN | FR (info.gf) | ES (oc.com.ar).
-    # Текущий язык — текстом, остальные — ссылками; ES ведёт на ту же страницу,
-    # если она там есть, иначе — на главную ES (es_url).
-    _fr = f"{FR_BASE}{path}"
-    _es = es_url(path)
+    # Одна кнопка по кругу экосистемы: RU -> EN -> ES (oc.com.ar) -> FR (info.gf) -> RU.
+    # ES ведёт на ту же страницу, если она там есть, иначе — на главную ES (es_url).
     if lang == "ru":
-        switch = (f'<span class="langsw cur">RU</span> · '
-                  f'<a class="langsw" data-lang="en" href="{PREF["en"]}{path}">EN</a> · '
-                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
-                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
+        _next, _href = "en", f"{PREF['en']}{path}"
+        _label = "EN"
     elif lang == "en":
-        switch = (f'<a class="langsw" data-lang="ru" href="{path}">RU</a> · '
-                  f'<span class="langsw cur">EN</span> · '
-                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
-                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
+        _next, _href = "es", es_url(path)
+        _label = "ES"
     else:  # fr internal (if ever)
-        switch = (f'<a class="langsw" data-lang="ru" href="{PREF["ru"]}{path}">RU</a> · '
-                  f'<a class="langsw" data-lang="en" href="{PREF["en"]}{path}">EN</a> · '
-                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
-                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
+        _next, _href = "ru", f"{PREF['ru']}{path}"
+        _label = "RU"
+    switch = f'<a class="langsw" data-lang="{_next}" href="{_href}">{_label}</a>'
     _tld = S["domain"][len(S["name"].lower()):] if S["domain"].lower().startswith(S["name"].lower()) else ""
     _blog_li = f'<li><a href="{PREF[lang]}/blog/">{tr(lang,"nav_blog")}</a></li>' if lang in ("ru", "en") else ""
     _obzor_li = f'<li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,"nav_reviews")}</a></li>' if lang in ("ru", "en") else ""
