@@ -66,6 +66,7 @@ CATS = CAT["categories"]
 S = SITE
 BASE_URL = f"https://{S['domain']}"
 FR_BASE = "https://ratescout.info.gf"  # FR-зеркало: кросс-доменный hreflang + баннер
+ES_BASE = "https://ratescout.oc.com.ar"  # ES-зеркало (Аргентина): кросс-доменный hreflang + баннер + переключатель
 REF = S["ref"]
 ERID = "2VtzqvK5m96"
 INDEXNOW_KEY = "b394aeced6a92ed48a09e2bd30099905"  # публичный ключ IndexNow (ключ-файл на сайте)
@@ -1967,6 +1968,43 @@ def _missing_set(lg):
     return globals().get(_NO_MISSING.get(lg, ""), set())
 
 
+# ES-экосистема (ratescout.oc.com.ar): валюты, скрытые на ES-сайте (как FR-логика).
+# Используется для hreflang/es_url — не ведём на страницы, которых там нет.
+ES_HIDE_RU = {"sberbank", "sberbank-qr-code", "tinkoff", "tinkoff-cash-in", "tinkoff-qr-codes",
+              "vtb", "gazprombank", "alfaclick", "alfabank-cash-in", "openbank", "psbank",
+              "rosbank", "rnkb", "rosselhozbank", "mts-bank", "homecredit", "ozon",
+              "russtandart", "avangard", "belarusbank"}
+# Статические разделы, существующие и на ES-сайте
+ES_STATIC = {"/", "/faq/", "/slovar/", "/o-servise/", "/aml/", "/raskrytie/", "/politika/",
+             "/usloviya/", "/redakciya/", "/vidzhet/", "/koshelki/", "/kursy/", "/napravleniya/",
+             "/grafiki/", "/svodka/", "/lidery-rynka/", "/sravnenie/", "/nastroeniya/",
+             "/halving/", "/stablecoins/", "/heatmap/", "/monitor/", "/tsepochki/",
+             "/alert/", "/populyarnost/", "/obzor/sutki/", "/obzor/nedelya/", "/obzor/mesyac/"}
+
+
+def _es_slug_of(path):
+    parts = path.strip("/").split("/")
+    return parts[-1] if parts != [""] else ""
+
+
+def es_hreflang(path):
+    """URL ES-версии страницы для hreflang. None — если страницы там нет (не рекламируем)."""
+    if path in ES_STATIC:
+        return ES_BASE + path
+    if path.startswith("/kategoriya/"):
+        return ES_BASE + path
+    if path.startswith(("/valuta/", "/kupit/")):
+        if _es_slug_of(path) in ES_HIDE_RU:
+            return None
+        return ES_BASE + path
+    return None
+
+
+def es_url(path):
+    """URL на ES-сайт для переключателя: та же страница, если она там есть, иначе главная ES."""
+    return es_hreflang(path) or (ES_BASE + "/")
+
+
 def hreflangs(path):
     # Не рекламируем alternate на язык, для которого страницы нет (иначе GSC-ошибки + 404).
     tags = []
@@ -1977,6 +2015,11 @@ def hreflangs(path):
     # кросс-домен: FR-версия на ratescout.info.gf (только если страница там есть)
     if path not in NO_FR:
         tags.append(f'<link rel="alternate" hreflang="fr" href="{FR_BASE}{path}">')
+    # кросс-домен: ES-версия (Аргентина) на ratescout.oc.com.ar — только страницы,
+    # которые там точно есть (без RU-банков, без блога/earn/na-хабов и RU-пар)
+    _es_alt = es_hreflang(path)
+    if _es_alt:
+        tags.append(f'<link rel="alternate" hreflang="es" href="{_es_alt}">')
     default_lg = next((lg for lg in LANGS if path not in _missing_set(lg)), LANGS[0])
     default = f"{BASE_URL}{PREF[default_lg]}{path}"
     tags.append(f'<link rel="alternate" hreflang="x-default" href="{default}">')
@@ -2108,20 +2151,45 @@ document.body.insertBefore(d,document.body.firstChild);
 }catch(e){}})();</script>""")
 
 
+def es_banner(lang):
+    """Баннер-предложение ES-версии для Аргентины (без авторедиректа — SEO-safe).
+    Показ только при языке браузера es, закрытие запоминается в localStorage."""
+    if lang not in ("ru", "en"):
+        return ""
+    return ("""<script>(function(){try{
+var L=(navigator.languages&&navigator.languages[0])||navigator.language||"";
+if(!/^es\\b/i.test(L))return;
+if(localStorage.getItem("rs_esbanner")==="1")return;
+var href="https://ratescout.oc.com.ar"+location.pathname+location.search+location.hash;
+var d=document.createElement("div");d.id="langbanner";
+d.innerHTML='<span>🇦🇷 Versión en español (Argentina) disponible — <a href="'+href+'">ratescout.oc.com.ar</a></span>'
++' <button type="button" aria-label="Cerrar">✕</button>';
+d.querySelector("button").onclick=function(){try{localStorage.setItem("rs_esbanner","1");}catch(e){}d.remove();};
+document.body.insertBefore(d,document.body.firstChild);
+}catch(e){}})();</script>""")
+
+
 def header(lang, path):
-    # single-button cycle: RU -> EN -> FR (info.gf) -> EN
+    # Общий переключатель экосистемы: RU | EN | FR (info.gf) | ES (oc.com.ar).
+    # Текущий язык — текстом, остальные — ссылками; ES ведёт на ту же страницу,
+    # если она там есть, иначе — на главную ES (es_url).
+    _fr = f"{FR_BASE}{path}"
+    _es = es_url(path)
     if lang == "ru":
-        _next, _href = "en", f"{PREF['en']}{path}"
-        _label = "EN"
+        switch = (f'<span class="langsw cur">RU</span> · '
+                  f'<a class="langsw" data-lang="en" href="{PREF["en"]}{path}">EN</a> · '
+                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
+                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
     elif lang == "en":
-        # strip /en prefix from path for fr external
-        _p = path  # path already without prefix
-        _next, _href = "fr", f"{FR_BASE}{_p}"
-        _label = "FR"
+        switch = (f'<a class="langsw" data-lang="ru" href="{path}">RU</a> · '
+                  f'<span class="langsw cur">EN</span> · '
+                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
+                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
     else:  # fr internal (if ever)
-        _next, _href = "ru", f"{PREF['ru']}{path}"
-        _label = "RU"
-    switch = f'<a class="langsw" data-lang="{_next}" href="{_href}">{_label}</a>' 
+        switch = (f'<a class="langsw" data-lang="ru" href="{PREF["ru"]}{path}">RU</a> · '
+                  f'<a class="langsw" data-lang="en" href="{PREF["en"]}{path}">EN</a> · '
+                  f'<a class="langsw" data-lang="fr" href="{_fr}">FR</a> · '
+                  f'<a class="langsw" data-lang="es" href="{_es}">ES</a>')
     _tld = S["domain"][len(S["name"].lower()):] if S["domain"].lower().startswith(S["name"].lower()) else ""
     _blog_li = f'<li><a href="{PREF[lang]}/blog/">{tr(lang,"nav_blog")}</a></li>' if lang in ("ru", "en") else ""
     _obzor_li = f'<li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,"nav_reviews")}</a></li>' if lang in ("ru", "en") else ""
@@ -2149,7 +2217,7 @@ def header(lang, path):
     <li><a href="{PREF[lang]}/raskrytie/">{tr(lang,'nav_disc')}</a></li>
   </ul>
 </div>
-{lang_banner(lang)}"""
+{lang_banner(lang)}{es_banner(lang)}"""
 
 
 def search_box(lang):
