@@ -2109,15 +2109,19 @@ document.body.insertBefore(d,document.body.firstChild);
 
 
 def header(lang, path):
-    _missing = {"ru": NO_RU, "en": NO_EN, "fr": NO_FR}
-    avail = [lg for lg in LANGS if lg != lang
-             and path not in _missing.get(lg, set()) and path not in _missing.get(lang, set())]
-    def _href(lg):
-        if lg == "fr":
-            return f"{FR_BASE}{path}"
-        return f"{PREF[lg]}{path}"
-    switch = (" / ".join(
-        f'<a class="langsw" data-lang="{lg}" href="{_href(lg)}">{lg.upper()}</a>' for lg in avail))
+    # single-button cycle: RU -> EN -> FR (info.gf) -> EN
+    if lang == "ru":
+        _next, _href = "en", f"{PREF['en']}{path}"
+        _label = "EN"
+    elif lang == "en":
+        # strip /en prefix from path for fr external
+        _p = path  # path already without prefix
+        _next, _href = "fr", f"{FR_BASE}{_p}"
+        _label = "FR"
+    else:  # fr internal (if ever)
+        _next, _href = "ru", f"{PREF['ru']}{path}"
+        _label = "RU"
+    switch = f'<a class="langsw" data-lang="{_next}" href="{_href}">{_label}</a>' 
     _tld = S["domain"][len(S["name"].lower()):] if S["domain"].lower().startswith(S["name"].lower()) else ""
     _blog_li = f'<li><a href="{PREF[lang]}/blog/">{tr(lang,"nav_blog")}</a></li>' if lang in ("ru", "en") else ""
     _obzor_li = f'<li><a href="{PREF[lang]}/obzor/sutki/">{tr(lang,"nav_reviews")}</a></li>' if lang in ("ru", "en") else ""
