@@ -725,7 +725,6 @@ document.addEventListener("keydown", e => {
 <b:widget id='HTML98' locked='false' title='' type='HTML' version='2' visible='false'>
 <b:widget-settings>
 <b:widget-setting name='content'></b:widget-setting>
-<b:widget-setting name='showTitle'>false</b:widget-setting>
 </b:widget-settings>
 <b:includable id='main'></b:includable>
 </b:widget>
