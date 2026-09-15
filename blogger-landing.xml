@@ -649,6 +649,8 @@ function applyLang(lang){
     b.setAttribute("aria-current", b.dataset.lang === lang ? "true" : "false");
   });
 
+  window.__rs_lang = lang;
+  if(window.__rs_paintHalving) window.__rs_paintHalving();
   // 8. Сохранение + ?lang= в URL (без перезагрузки)
   try{ localStorage.setItem("rs_lang", lang); }catch(e){}
   const url = new URL(window.location.href);
@@ -699,24 +701,37 @@ document.addEventListener("keydown", e => {
 });
 
 /* ============================================================
-   HALVING TIMER
+   HALVING TIMER — live (mempool.space block height, fallback estático)
    ============================================================ */
 (function(){
-  const target = new Date("2028-04-15T00:00:00Z").getTime();
-  const el = {
-    d:document.getElementById("d"),
-    h:document.getElementById("h"),
-    m:document.getElementById("m"),
-    s:document.getElementById("s")
+  var HALVING_BLOCK = 1050000, AVG_BLOCK_MS = 600000;
+  var el = {d:document.getElementById("d"),h:document.getElementById("h"),
+    m:document.getElementById("m"),s:document.getElementById("s")};
+  var note = document.querySelector('[data-i18n="halving.note"]');
+  var NOTE = {
+    en:"Blocks remaining: {n} → target block 1,050,000",
+    es:"Bloques restantes: {n} → bloque objetivo 1.050.000",
+    fr:"Blocs restants : {n} → bloc cible 1 050 000",
+    ru:"Осталось блоков: {n} → целевой блок 1 050 000"
   };
-  function tick(){
-    const diff = Math.max(0, target - Date.now());
+  var target = new Date("2028-04-15T00:00:00Z").getTime();
+  var remaining = null;
+  function fmt(n){return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");}
+  function lang(){return window.__rs_lang || "en";}
+  function paint(){
+    var diff = Math.max(0, target - Date.now());
     el.d.textContent = Math.floor(diff/86400000);
     el.h.textContent = String(Math.floor(diff%86400000/3600000)).padStart(2,"0");
     el.m.textContent = String(Math.floor(diff%3600000/60000)).padStart(2,"0");
     el.s.textContent = String(Math.floor(diff%60000/1000)).padStart(2,"0");
+    if(remaining !== null && note) note.textContent = (NOTE[lang()]||NOTE.en).replace("{n}", fmt(remaining));
   }
-  tick(); setInterval(tick,1000);
+  window.__rs_paintHalving = paint;
+  fetch("https://mempool.space/api/blocks/tip/height").then(function(r){return r.text();}).then(function(x){
+    var h = parseInt(x,10);
+    if(h > 0 && h < HALVING_BLOCK){ remaining = HALVING_BLOCK - h; target = Date.now() + remaining*AVG_BLOCK_MS; paint(); }
+  }).catch(function(){});
+  paint(); setInterval(paint,1000);
 })();
 //]]></script>
 
