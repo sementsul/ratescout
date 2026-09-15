@@ -1,0 +1,44 @@
+name: Send bot ping URL to owner (one-off)
+
+# РАЗОВЫЙ воркер: отправляет BOT_PING_URL в личный чат владельца.
+# После использования УДАЛИТЬ этот файл (он не должен жить в репо).
+# Запуск: только вручную (workflow_dispatch).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: send-botping-url
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send URL to owner chat
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+          BOT_PING_URL: ${{ secrets.BOT_PING_URL }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.parse, urllib.request
+          tok, chat = os.environ["TG_TOKEN"], os.environ["TG_CHAT"]
+          url = os.environ.get("BOT_PING_URL", "")
+          if not url:
+              print("MISSING SECRET: BOT_PING_URL")
+              raise SystemExit(1)
+          text = ("BOT_PING_URL (для ratescout-es):\n" + url +
+                  "\nУдали это сообщение после сохранения.")
+          data = urllib.parse.urlencode(
+              {"chat_id": chat, "text": text,
+               "disable_web_page_preview": "true"}).encode()
+          req = urllib.request.Request(
+              f"https://api.telegram.org/bot{tok}/sendMessage", data=data, method="POST")
+          with urllib.request.urlopen(req, timeout=30) as r:
+              res = json.load(r)
+          print("sent, ok:", res.get("ok"), "message_id:", (res.get("result") or {}).get("message_id"))
+          EOF
