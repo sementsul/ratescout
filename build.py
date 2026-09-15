@@ -2382,7 +2382,7 @@ def footer(lang):
                 "erid: 2VtzqvK5m96")
         links = (f'<a href="{PREF[lang]}/o-servise/">About</a> · <a href="{PREF[lang]}/aml/">AML check</a> · '
                  f'<a href="{PREF[lang]}/earn/">Earn with BestChange</a> · '
-                 f'<a href="{PREF[lang]}/vidzhet/">Site widget</a> · <a href="{PREF[lang]}/redakciya/">Editorial</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="{PREF[lang]}/raskrytie/">Disclosure</a> · <a href="{PREF[lang]}/politika/">Privacy policy</a> · <a href="{PREF[lang]}/usloviya/">Terms of Service</a>')
+                 f'<a href="{PREF[lang]}/vidzhet/">Site widget</a> · <a href="{PREF[lang]}/redakciya/">Editorial</a> · <a href="https://ratescouten.blogspot.com/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="{PREF[lang]}/raskrytie/">Disclosure</a> · <a href="{PREF[lang]}/politika/">Privacy policy</a> · <a href="{PREF[lang]}/usloviya/">Terms of Service</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
                 f"Rates change. © {S['name']} {S['domain']}.<br>"
                 f"<span class=\"erid\">Site owner: {S.get('owner','')} (self-employed, RU tax ID {S.get('owner_inn','')}).</span>")
@@ -4103,7 +4103,7 @@ def write_daily_digest_en():
     now = now_dt.strftime("%d.%m.%Y")
     chans = ("📢 Our channels: Telegram https://t.me/ratescout_kurs · Дзен https://dzen.ru/ratescout · "
              "VK https://vk.com/ratescout · Mastodon https://mastodon.social/@ratescout_ru · "
-             "Blogger https://blogger.ratescout.ru/")
+             "Blogger https://ratescouten.blogspot.com/")
     if now_dt.weekday() == 6:                     # воскресенье — сводка
         rows = _svodka_rows()
         withchg = sorted([r for r in rows if r[3] is not None], key=lambda r: r[2], reverse=True)[:20]
@@ -5063,7 +5063,7 @@ def compliance_pages(lang):
 <p><b>{S.get('owner','')}</b> (self-employed, RU tax ID {S.get('owner_inn','')}). The owner is not an exchange
    office and does not process transactions. Contact: {S.get('owner_email','')}.</p>
 <h2>Official resources</h2>
-<p>Official service blog: <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">blogger.ratescout.ru</a>.
+<p>Official service blog: <a href="https://ratescouten.blogspot.com/" target="_blank" rel="noopener me">ratescouten.blogspot.com</a>.
    Telegram channel: <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">t.me/ratescout_kurs</a>,
    VK: <a href="https://vk.com/ratescout" target="_blank" rel="noopener me">vk.com/ratescout</a>,
    Mastodon: <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">@ratescout_ru</a>.</p>"""
