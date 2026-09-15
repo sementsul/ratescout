@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:b="http://www.google.com/2005/gml/b" xmlns:data="http://www.google.com/2005/gml/data" xmlns:expr="http://www.google.com/2005/gml/expr">
+<head>
+<b:include data="blog" name="all-head-content"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<!-- ==================== PRIMARY SEO ==================== -->
+<title>RateScout — Free Crypto &amp; Cash Exchange Rates Directory | 330 Currencies</title>
+<meta name="description" content="RateScout is a free directory of crypto and cash exchange rates. Track 330 currencies and 55,285 exchange directions, updated hourly from BestChange monitoring data. No sign-up."/>
+<meta name="keywords" content="exchange rates, crypto rates, currency directory, BestChange, bitcoin rate, cash exchange, currency converter, rate comparison"/>
+<meta name="author" content="RateScout"/>
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large"/>
+<link rel="canonical" href="https://ratescout.ru/en/"/>
+
+<!-- ==================== HREFLANG ==================== -->
+<link rel="alternate" hreflang="en" href="https://ratescout.ru/en/"/>
+<link rel="alternate" hreflang="es" href="https://ratescout.oc.com.ar/"/>
+<link rel="alternate" hreflang="fr" href="https://ratescout.info.gf/"/>
+<link rel="alternate" hreflang="ru" href="https://ratescout.ru/"/>
+<link rel="alternate" hreflang="x-default" href="https://ratescout.ru/en/"/>
+
+<!-- ==================== OPEN GRAPH ==================== -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="RateScout"/>
+<meta property="og:title" content="RateScout — Free Crypto &amp; Cash Exchange Rates Directory"/>
+<meta property="og:description" content="330 currencies. 55,285 exchange directions. Rates updated hourly from BestChange data — free, no sign-up."/>
+<meta property="og:url" content="https://ratescout.ru/en/"/>
+<meta property="og:image" content="https://ratescout.ru/og-cover.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:locale:alternate" content="es_ES"/>
+<meta property="og:locale:alternate" content="fr_FR"/>
+<meta property="og:locale:alternate" content="ru_RU"/>
+
+<!-- ==================== TWITTER ==================== -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="RateScout — Free Crypto &amp; Cash Exchange Rates Directory"/>
+<meta name="twitter:description" content="330 currencies. 55,285 exchange directions. Updated hourly."/>
+<meta name="twitter:image" content="https://ratescout.ru/og-cover.png"/>
+
+<!-- ==================== THEME / ICONS ==================== -->
+<meta name="theme-color" content="#0b0f17"/>
+<link rel="icon" href="https://ratescout.ru/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="https://ratescout.ru/apple-touch-icon.png"/>
+
+<!-- ==================== JSON-LD ==================== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://ratescout.ru/#website",
+      "url": "https://ratescout.ru/en/",
+      "name": "RateScout",
+      "description": "Free directory of crypto and cash exchange rates based on BestChange monitoring data.",
+      "inLanguage": ["en","es","fr","ru"]
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://ratescout.ru/#org",
+      "name": "RateScout",
+      "url": "https://ratescout.ru/en/",
+      "logo": "https://ratescout.ru/logo.png"
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":"Is RateScout really free?","acceptedAnswer":{"@type":"Answer","text":"Yes. The directory is free to browse, with no account and no commission on the rates shown."}},
+        {"@type":"Question","name":"Where do the rates come from?","acceptedAnswer":{"@type":"Answer","text":"They are based on BestChange exchange-monitoring data. See the methodology page for details."}},
+        {"@type":"Question","name":"Are these binding offers?","acceptedAnswer":{"@type":"Answer","text":"No. Rates are provided for reference only and can change at any time. Always confirm with the exchanger."}},
+        {"@type":"Question","name":"How often do rates update?","acceptedAnswer":{"@type":"Answer","text":"Every hour. The timestamp at the top of the page shows the last sync."}}
+      ]
+    }
+  ]
+}
+</script>
+
+<b:skin><![CDATA[
+  :root{
+    --bg:#0b0f17; --bg-soft:#121826; --card:#161d2d; --border:#232c40;
+    --text:#e8ecf4; --muted:#8a95ab; --accent:#00d18f; --accent-2:#3b82f6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+  /* HEADER */
+  header{position:sticky;top:0;z-index:50;background:rgba(11,15,23,.85);
+    backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.3px}
+  .logo-mark{width:32px;height:32px;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;font-size:15px;font-weight:800;color:#04110c}
+  .nav-links{display:flex;gap:26px;font-size:14px;color:var(--muted)}
+  .nav-links a:hover{color:var(--text)}
+  .nav-right{display:flex;align-items:center;gap:14px}
+
+  /* LANG SWITCH */
+  .lang{position:relative}
+  .lang-btn{
+    display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:9px;
+    background:var(--bg-soft);border:1px solid var(--border);color:var(--text);
+    font-size:13.5px;font-weight:600;cursor:pointer;transition:.2s
+  }
+  .lang-btn:hover{border-color:var(--muted)}
+  .lang-menu{
+    position:absolute;right:0;top:calc(100% + 8px);min-width:170px;
+    background:var(--card);border:1px solid var(--border);border-radius:11px;
+    padding:6px;display:none;flex-direction:column;gap:2px;
+    box-shadow:0 20px 40px rgba(0,0,0,.5);z-index:60
+  }
+  .lang.open .lang-menu{display:flex}
+  .lang-menu button{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    padding:9px 11px;border-radius:8px;background:none;border:0;
+    color:var(--text);font-size:14px;cursor:pointer;transition:.15s
+  }
+  .lang-menu button:hover{background:var(--bg-soft)}
+  .lang-menu button[aria-current="true"]{color:var(--accent);font-weight:600}
+  .flag{font-size:15px}
+
+  .nav-cta{padding:9px 18px;border-radius:9px;font-size:14px;font-weight:600;
+    background:var(--accent);color:#04110c;transition:.2s;white-space:nowrap}
+  .nav-cta:hover{filter:brightness(1.1)}
+  @media(max-width:900px){.nav-links{display:none}}
+
+  /* HERO */
+  .hero{padding:90px 0 70px;text-align:center;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-200px;left:50%;transform:translateX(-50%);
+    width:700px;height:700px;border-radius:50%;
+    background:radial-gradient(circle,rgba(0,209,143,.14),transparent 65%);pointer-events:none}
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;
+    border-radius:100px;font-size:13px;background:var(--bg-soft);
+    border:1px solid var(--border);color:var(--muted);margin-bottom:26px;position:relative}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  h1{font-size:clamp(34px,5.5vw,58px);line-height:1.1;letter-spacing:-1.5px;
+    font-weight:800;margin-bottom:22px;position:relative}
+  h1 span{background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{font-size:clamp(16px,2vw,19px);color:var(--muted);max-width:640px;
+    margin:0 auto 36px;position:relative}
+  .btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+  .btn{padding:14px 28px;border-radius:11px;font-weight:600;font-size:15px;
+    transition:.2s;display:inline-flex;align-items:center;gap:9px}
+  .btn-primary{background:var(--accent);color:#04110c}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,209,143,.3)}
+  .btn-ghost{border:1px solid var(--border);background:var(--bg-soft)}
+  .btn-ghost:hover{border-color:var(--muted)}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--border);border:1px solid var(--border);
+    border-radius:var(--radius);overflow:hidden;margin-top:70px}
+  .stat{background:var(--bg-soft);padding:32px 20px;text-align:center}
+  .stat b{display:block;font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-1px}
+  .stat span{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  @media(max-width:640px){.stats{grid-template-columns:1fr}}
+
+  /* SECTIONS */
+  section{padding:80px 0}
+  .sec-head{text-align:center;max-width:620px;margin:0 auto 54px}
+  .sec-head h2{font-size:clamp(26px,4vw,38px);letter-spacing:-1px;font-weight:800;margin-bottom:14px}
+  .sec-head p{color:var(--muted);font-size:16px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:30px 26px;transition:.25s}
+  .card:hover{transform:translateY(-4px);border-color:rgba(0,209,143,.4)}
+  .ico{width:44px;height:44px;border-radius:11px;margin-bottom:18px;
+    background:rgba(0,209,143,.12);display:grid;place-items:center;
+    font-size:20px;color:var(--accent)}
+  .card h3{font-size:17px;margin-bottom:9px;font-weight:700}
+  .card p{font-size:14.5px;color:var(--muted)}
+
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:28px;counter-reset:s}
+  .step{position:relative;padding-top:18px}
+  .step::before{counter-increment:s;content:counter(s);font-size:52px;font-weight:800;line-height:1;
+    background:linear-gradient(180deg,var(--accent),transparent);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    display:block;margin-bottom:8px}
+  .step h3{font-size:17px;margin-bottom:8px}
+  .step p{font-size:14.5px;color:var(--muted)}
+
+  .halving{background:linear-gradient(135deg,rgba(0,209,143,.08),rgba(59,130,246,.08));
+    border:1px solid var(--border);border-radius:20px;padding:50px 30px;text-align:center}
+  .halving h2{font-size:clamp(22px,3.5vw,30px);margin-bottom:8px;letter-spacing:-.6px}
+  .halving .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
+  .timer{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .tbox{background:var(--bg);border:1px solid var(--border);border-radius:12px;
+    padding:18px 22px;min-width:92px}
+  .tbox b{display:block;font-size:30px;font-weight:800;letter-spacing:-1px;
+    font-variant-numeric:tabular-nums}
+  .tbox span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .halving .note{margin-top:24px;font-size:13px;color:var(--muted)}
+
+  .cta{text-align:center;background:var(--bg-soft);border:1px solid var(--border);
+    border-radius:20px;padding:60px 30px}
+  .cta h2{font-size:clamp(24px,4vw,34px);letter-spacing:-1px;margin-bottom:14px}
+  .cta p{color:var(--muted);max-width:520px;margin:0 auto 30px}
+
+  /* FAQ */
+  details.faq{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:0 22px;margin-bottom:12px}
+  details.faq summary{cursor:pointer;padding:20px 0;font-weight:600;font-size:16px;list-style:none;
+    display:flex;justify-content:space-between;align-items:center;gap:14px}
+  details.faq summary::-webkit-details-marker{display:none}
+  details.faq summary::after{content:"+";color:var(--accent);font-size:22px;line-height:1;transition:.2s}
+  details.faq[open] summary::after{transform:rotate(45deg)}
+  details.faq p{padding:0 0 20px;color:var(--muted);font-size:14.5px}
+
+  footer{border-top:1px solid var(--border);padding:44px 0 34px;font-size:13.5px;color:var(--muted)}
+  .foot{display:flex;justify-content:space-between;gap:26px;flex-wrap:wrap;align-items:center}
+  .foot-links{display:flex;gap:22px;flex-wrap:wrap}
+  .foot-links a:hover{color:var(--text)}
+  .disclaimer{margin-top:26px;padding-top:22px;border-top:1px solid var(--border);
+    font-size:12.5px;line-height:1.7}
+]]></b:skin>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="https://ratescout.ru/en/" data-link="logo" class="logo" aria-label="RateScout home">
+      <span class="logo-mark" aria-hidden="true">R</span> RateScout
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#halving" data-i18n="nav.halving">Halving</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
+    </nav>
+    <div class="nav-right">
+      <div class="lang" id="lang">
+        <button class="lang-btn" aria-haspopup="true" aria-expanded="false" aria-label="Change language">
+          <span class="flag" id="lang-flag">🇬🇧</span>
+          <span id="lang-label">EN</span>
+          <span aria-hidden="true" style="font-size:10px">▼</span>
+        </button>
+        <div class="lang-menu" role="menu">
+          <button role="menuitem" data-lang="en"><span class="flag">🇬🇧</span> English</button>
+          <button role="menuitem" data-lang="es"><span class="flag">🇪🇸</span> Español</button>
+          <button role="menuitem" data-lang="fr"><span class="flag">🇫🇷</span> Français</button>
+          <button role="menuitem" data-lang="ru"><span class="flag">🇷🇺</span> Русский</button>
+        </div>
+      </div>
+      <a href="#start" class="nav-cta" data-i18n="nav.cta">Browse rates</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="badge">
+      <span class="dot" aria-hidden="true"></span>
+      <span data-i18n="hero.badge">Rates updated hourly</span>
+    </div>
+    <h1>
+      <span data-i18n="hero.title1">Every crypto &amp; cash rate.</span><br/>
+      <span data-i18n="hero.title2">One free directory.</span>
+    </h1>
+    <p data-i18n="hero.sub">RateScout tracks 330 currencies and 55,285 exchange directions, powered by BestChange monitoring data. No sign-up, no fees — just clear, comparable rates.</p>
+    <div class="btns">
+      <a href="#start" class="btn btn-primary" data-i18n="hero.cta1">Browse 55,285 directions →</a>
+      <a href="#how" class="btn btn-ghost" data-i18n="hero.cta2">How it works</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>330</b><span data-i18n="stats.currencies">Currencies</span></div>
+      <div class="stat"><b>55,285</b><span data-i18n="stats.directions">Exchange directions</span></div>
+      <div class="stat"><b>1 hr</b><span data-i18n="stats.interval">Update interval</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="features-title" data-i18n="features.title">Built for people who compare before they exchange</h2>
+      <p data-i18n="features.sub">Everything you need to find a better rate — nothing you don't.</p>
+    </div>
+    <div class="grid">
+      <article class="card">
+        <div class="ico" aria-hidden="true">₿</div>
+        <h3 data-i18n="f1.title">330 currencies</h3>
+        <p data-i18n="f1.text">Crypto and cash, majors and exotics — all in one searchable directory.</p>
+      </article>
+      <article class="card">
+        <div class="ico" aria-hidden="true">⇄</div>
+        <h3 data-i18n="f2.title">55,285 directions</h3>
+        <p data-i18n="f2.text">Every pairing you can think of, with the current going rate for each.</p>
+      </article>
+      <article class="card">
+        <div class="ico" aria-hidden="true">⏱</div>
+        <h3 data-i18n="f3.title">Hourly updates</h3>
+        <p data-i18n="f3.text">Rates refresh every hour, so you're never comparing stale numbers.</p>
+      </article>
+      <article class="card">
+        <div class="ico" aria-hidden="true">✓</div>
+        <h3 data-i18n="f4.title">BestChange data</h3>
+        <p data-i18n="f4.text">Built on the monitoring data trusted by exchangers for years.</p>
+      </article>
+      <article class="card">
+        <div class="ico" aria-hidden="true">◍</div>
+        <h3 data-i18n="f5.title">Free forever</h3>
+        <p data-i18n="f5.text">No account, no paywall, no hidden commission on the rates you see.</p>
+      </article>
+      <article class="card">
+        <div class="ico" aria-hidden="true">◈</div>
+        <h3 data-i18n="f6.title">Reference-grade</h3>
+        <p data-i18n="f6.text">Rates are indicative and for reference only — never a binding offer.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="how-title" data-i18n="how.title">How RateScout works</h2>
+      <p data-i18n="how.sub">From search to decision in four steps.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <h3 data-i18n="s1.title">Pick your pair</h3>
+        <p data-i18n="s1.text">Choose the currency you have and the one you want — from BTC to cash EUR.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="s2.title">See the rate</h3>
+        <p data-i18n="s2.text">We show the current rate for that direction, pulled from BestChange monitoring.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="s3.title">Compare</h3>
+        <p data-i18n="s3.text">Scan across 55,285 directions to find where your pair sits best.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="s4.title">Exchange</h3>
+        <p data-i18n="s4.text">Head to your chosen exchanger. RateScout is a directory — we don't hold funds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="halving" aria-labelledby="halving-title">
+  <div class="wrap">
+    <div class="halving">
+      <h2 id="halving-title" data-i18n="halving.title">Bitcoin halving countdown</h2>
+      <p class="sub" data-i18n="halving.sub">Next block reward cut, tracked live.</p>
+      <div class="timer" id="timer" role="timer" aria-live="off">
+        <div class="tbox"><b id="d">576</b><span data-i18n="t.days">Days</span></div>
+        <div class="tbox"><b id="h">20</b><span data-i18n="t.hours">Hours</span></div>
+        <div class="tbox"><b id="m">19</b><span data-i18n="t.minutes">Minutes</span></div>
+        <div class="tbox"><b id="s">55</b><span data-i18n="t.seconds">Seconds</span></div>
+      </div>
+      <p class="note" data-i18n="halving.note">Blocks remaining: 83,066 → target block 1,050,000</p>
+    </div>
+  </div>
+</section>
+
+<section id="start" aria-labelledby="cta-title">
+  <div class="wrap">
+    <div class="cta">
+      <h2 id="cta-title" data-i18n="cta.title">Find your rate in seconds</h2>
+      <p data-i18n="cta.sub">Search 330 currencies and 55,285 directions — free, no sign-up required.</p>
+      <a href="https://ratescout.ru/en/" data-link="cta" class="btn btn-primary" data-i18n="cta.btn">Open RateScout →</a>
+    </div>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="faq-title" data-i18n="faq.title">Frequently asked questions</h2>
+    </div>
+    <details class="faq" open="open">
+      <summary data-i18n="q1">Is RateScout really free?</summary>
+      <p data-i18n="a1">Yes. The directory is free to browse, with no account and no commission on the rates shown.</p>
+    </details>
+    <details class="faq">
+      <summary data-i18n="q2">Where do the rates come from?</summary>
+      <p data-i18n="a2">They are based on BestChange exchange-monitoring data. See the methodology page for details.</p>
+    </details>
+    <details class="faq">
+      <summary data-i18n="q3">Are these binding offers?</summary>
+      <p data-i18n="a3">No. Rates are provided for reference only and can change at any time. Always confirm with the exchanger.</p>
+    </details>
+    <details class="faq">
+      <summary data-i18n="q4">How often do rates update?</summary>
+      <p data-i18n="a4">Every hour. The timestamp at the top of the page shows the last sync.</p>
+    </details>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a href="https://ratescout.ru/en/" data-link="logo" class="logo" aria-label="RateScout home">
+        <span class="logo-mark" aria-hidden="true">R</span> RateScout
+      </a>
+      <div class="foot-links">
+        <a href="https://ratescout.ru/en/" data-link="lang-en" hreflang="en">English</a>
+        <a href="https://ratescout.oc.com.ar/" data-link="lang-es" hreflang="es">Español</a>
+        <a href="https://ratescout.info.gf/" data-link="lang-fr" hreflang="fr">Français</a>
+        <a href="https://ratescout.ru/" data-link="lang-ru" hreflang="ru">Русский</a>
+      </div>
+    </div>
+    <p class="disclaimer" data-i18n="footer.disclaimer">
+      RateScout is a free directory of crypto and cash exchange rates based on BestChange exchange-monitoring data.
+      Rates are updated hourly and provided for reference only — not an offer. Advertising. Advertiser: IE Zuborev N.S. erid: 2VtzqvK5m96.
+      © 2026 RateScout.
+    </p>
+  </div>
+</footer>
+
+<script>
+//<![CDATA[
+/* ============================================================
+   I18N DICTIONARY
+   ============================================================ */
+const I18N = {
+  en: {
+    "nav.features":"Features","nav.how":"How it works","nav.halving":"Halving","nav.faq":"FAQ",
+    "nav.cta":"Browse rates",
+    "hero.badge":"Rates updated hourly",
+    "hero.title1":"Every crypto & cash rate.","hero.title2":"One free directory.",
+    "hero.sub":"RateScout tracks 330 currencies and 55,285 exchange directions, powered by BestChange monitoring data. No sign-up, no fees — just clear, comparable rates.",
+    "hero.cta1":"Browse 55,285 directions →","hero.cta2":"How it works",
+    "stats.currencies":"Currencies","stats.directions":"Exchange directions","stats.interval":"Update interval",
+    "features.title":"Built for people who compare before they exchange",
+    "features.sub":"Everything you need to find a better rate — nothing you don't.",
+    "f1.title":"330 currencies","f1.text":"Crypto and cash, majors and exotics — all in one searchable directory.",
+    "f2.title":"55,285 directions","f2.text":"Every pairing you can think of, with the current going rate for each.",
+    "f3.title":"Hourly updates","f3.text":"Rates refresh every hour, so you're never comparing stale numbers.",
+    "f4.title":"BestChange data","f4.text":"Built on the monitoring data trusted by exchangers for years.",
+    "f5.title":"Free forever","f5.text":"No account, no paywall, no hidden commission on the rates you see.",
+    "f6.title":"Reference-grade","f6.text":"Rates are indicative and for reference only — never a binding offer.",
+    "how.title":"How RateScout works","how.sub":"From search to decision in four steps.",
+    "s1.title":"Pick your pair","s1.text":"Choose the currency you have and the one you want — from BTC to cash EUR.",
+    "s2.title":"See the rate","s2.text":"We show the current rate for that direction, pulled from BestChange monitoring.",
+    "s3.title":"Compare","s3.text":"Scan across 55,285 directions to find where your pair sits best.",
+    "s4.title":"Exchange","s4.text":"Head to your chosen exchanger. RateScout is a directory — we don't hold funds.",
+    "halving.title":"Bitcoin halving countdown","halving.sub":"Next block reward cut, tracked live.",
+    "halving.note":"Blocks remaining: 83,066 → target block 1,050,000",
+    "t.days":"Days","t.hours":"Hours","t.minutes":"Minutes","t.seconds":"Seconds",
+    "cta.title":"Find your rate in seconds",
+    "cta.sub":"Search 330 currencies and 55,285 directions — free, no sign-up required.",
+    "cta.btn":"Open RateScout →",
+    "faq.title":"Frequently asked questions",
+    "q1":"Is RateScout really free?","a1":"Yes. The directory is free to browse, with no account and no commission on the rates shown.",
+    "q2":"Where do the rates come from?","a2":"They are based on BestChange exchange-monitoring data. See the methodology page for details.",
+    "q3":"Are these binding offers?","a3":"No. Rates are provided for reference only and can change at any time. Always confirm with the exchanger.",
+    "q4":"How often do rates update?","a4":"Every hour. The timestamp at the top of the page shows the last sync.",
+    "footer.disclaimer":"RateScout is a free directory of crypto and cash exchange rates based on BestChange exchange-monitoring data. Rates are updated hourly and provided for reference only — not an offer. Advertising. Advertiser: IE Zuborev N.S. erid: 2VtzqvK5m96. © 2026 RateScout."
+  },
+  es: {
+    "nav.features":"Características","nav.how":"Cómo funciona","nav.halving":"Halving","nav.faq":"FAQ",
+    "nav.cta":"Ver tasas",
+    "hero.badge":"Tasas actualizadas cada hora",
+    "hero.title1":"Todas las tasas de cripto y efectivo.","hero.title2":"Un directorio gratuito.",
+    "hero.sub":"RateScout rastrea 310 monedas y 47.313 direcciones de intercambio con datos del monitoreo de BestChange. Sin registro, sin comisiones: solo tasas claras y comparables.",
+    "hero.cta1":"Ver 47.313 direcciones →","hero.cta2":"Cómo funciona",
+    "stats.currencies":"Monedas","stats.directions":"Direcciones de intercambio","stats.interval":"Intervalo de actualización",
+    "features.title":"Hecho para quienes comparan antes de cambiar",
+    "features.sub":"Todo lo que necesitas para encontrar una mejor tasa, sin nada extra.",
+    "f1.title":"310 monedas","f1.text":"Cripto y efectivo, principales y exóticas, en un solo directorio.",
+    "f2.title":"47.313 direcciones","f2.text":"Todos los pares posibles, con la tasa vigente de cada uno.",
+    "f3.title":"Actualización horaria","f3.text":"Las tasas se actualizan cada hora, sin datos obsoletos.",
+    "f4.title":"Datos de BestChange","f4.text":"Basado en los datos de monitoreo que los cambistas confían desde años.",
+    "f5.title":"Gratis para siempre","f5.text":"Sin cuenta, sin muro de pago, sin comisión oculta.",
+    "f6.title":"Solo referencia","f6.text":"Las tasas son indicativas y de referencia, nunca una oferta vinculante.",
+    "how.title":"Cómo funciona RateScout","how.sub":"De la búsqueda a la decisión en cuatro pasos.",
+    "s1.title":"Elige tu par","s1.text":"Selecciona la moneda que tienes y la que quieres, de BTC a EUR en efectivo.",
+    "s2.title":"Consulta la tasa","s2.text":"Mostramos la tasa vigente para esa dirección, desde el monitoreo de BestChange.",
+    "s3.title":"Compara","s3.text":"Explora 47.313 direcciones para encontrar tu mejor opción.",
+    "s4.title":"Cambia","s4.text":"Ve a tu cambista elegido. RateScout es un directorio: no retenemos fondos.",
+    "halving.title":"Cuenta atrás del halving de Bitcoin","halving.sub":"Próxima reducción de recompensa, en vivo.",
+    "halving.note":"Bloques restantes: 83.066 → bloque objetivo 1.050.000",
+    "t.days":"Días","t.hours":"Horas","t.minutes":"Minutos","t.seconds":"Segundos",
+    "cta.title":"Encuentra tu tasa en segundos",
+    "cta.sub":"Busca entre 310 monedas y 47.313 direcciones, gratis y sin registro.",
+    "cta.btn":"Abrir RateScout →",
+    "faq.title":"Preguntas frecuentes",
+    "q1":"¿RateScout es realmente gratis?","a1":"Sí. El directorio es gratuito, sin cuenta ni comisión sobre las tasas mostradas.",
+    "q2":"¿De dónde vienen las tasas?","a2":"Se basan en los datos del monitoreo de BestChange. Consulta la página de metodología.",
+    "q3":"¿Son ofertas vinculantes?","a3":"No. Las tasas son solo de referencia y pueden cambiar en cualquier momento. Confirma siempre con el cambista.",
+    "q4":"¿Cada cuánto se actualizan?","a4":"Cada hora. La marca de tiempo arriba muestra la última sincronización.",
+    "footer.disclaimer":"RateScout es un directorio gratuito de tasas de cambio de criptomonedas y efectivo basado en los datos del monitoreo de BestChange. Las tasas se actualizan cada hora y son solo de referencia, no una oferta. Publicidad. Anunciante: IE Zuborev N.S. erid: 2VtzqvK5m96. © 2026 RateScout."
+  },
+  fr: {
+    "nav.features":"Fonctionnalités","nav.how":"Comment ça marche","nav.halving":"Halving","nav.faq":"FAQ",
+    "nav.cta":"Voir les taux",
+    "hero.badge":"Taux mis à jour chaque heure",
+    "hero.title1":"Tous les taux crypto et espèces.","hero.title2":"Un annuaire gratuit.",
+    "hero.sub":"RateScout suit 310 devises et 47 313 directions d'échange, avec les données du monitoring BestChange. Sans inscription, sans frais — des taux clairs et comparables.",
+    "hero.cta1":"Voir 47 313 directions →","hero.cta2":"Comment ça marche",
+    "stats.currencies":"Devises","stats.directions":"Directions d'échange","stats.interval":"Intervalle de mise à jour",
+    "features.title":"Conçu pour ceux qui comparent avant d'échanger",
+    "features.sub":"Tout ce qu'il faut pour trouver un meilleur taux, rien de plus.",
+    "f1.title":"310 devises","f1.text":"Crypto et espèces, majeures et exotiques, dans un seul annuaire.",
+    "f2.title":"47 313 directions","f2.text":"Toutes les paires possibles, avec le taux actuel de chacune.",
+    "f3.title":"Mise à jour horaire","f3.text":"Les taux se rafraîchissent chaque heure, jamais obsolètes.",
+    "f4.title":"Données BestChange","f4.text":"Basé sur les données de monitoring utilisées par les changeurs depuis des années.",
+    "f5.title":"Gratuit pour toujours","f5.text":"Sans compte, sans paywall, sans commission cachée.",
+    "f6.title":"À titre indicatif","f6.text":"Les taux sont indicatifs et de référence, jamais une offre ferme.",
+    "how.title":"Comment fonctionne RateScout","how.sub":"De la recherche à la décision en quatre étapes.",
+    "s1.title":"Choisissez votre paire","s1.text":"Sélectionnez la devise que vous avez et celle que vous voulez, du BTC à l'EUR en espèces.",
+    "s2.title":"Consultez le taux","s2.text":"Nous affichons le taux actuel pour cette direction, issu du monitoring BestChange.",
+    "s3.title":"Comparez","s3.text":"Parcourez 47 313 directions pour trouver la meilleure option.",
+    "s4.title":"Échangez","s4.text":"Rendez-vous chez votre changeur. RateScout est un annuaire — nous ne détenons pas de fonds.",
+    "halving.title":"Compte à rebours du halving Bitcoin","halving.sub":"Prochaine réduction de récompense, en direct.",
+    "halving.note":"Blocs restants : 83 066 → bloc cible 1 050 000",
+    "t.days":"Jours","t.hours":"Heures","t.minutes":"Minutes","t.seconds":"Secondes",
+    "cta.title":"Trouvez votre taux en quelques secondes",
+    "cta.sub":"Recherchez parmi 310 devises et 47 313 directions — gratuit, sans inscription.",
+    "cta.btn":"Ouvrir RateScout →",
+    "faq.title":"Questions fréquentes",
+    "q1":"RateScout est-il vraiment gratuit ?","a1":"Oui. L'annuaire est gratuit, sans compte ni commission sur les taux affichés.",
+    "q2":"D'où viennent les taux ?","a2":"Ils proviennent des données du monitoring BestChange. Voir la page méthodologie.",
+    "q3":"S'agit-il d'offres fermes ?","a3":"Non. Les taux sont indicatifs et peuvent changer à tout moment. Vérifiez toujours auprès du changeur.",
+    "q4":"À quelle fréquence sont-ils mis à jour ?","a4":"Chaque heure. L'horodatage en haut de page indique la dernière synchronisation.",
+    "footer.disclaimer":"RateScout est un annuaire gratuit de taux de change crypto et espèces basé sur les données du monitoring BestChange. Les taux sont mis à jour chaque heure et fournis à titre indicatif — pas une offre. Publicité. Annonceur : IE Zuborev N.S. erid: 2VtzqvK5m96. © 2026 RateScout."
+  },
+  ru: {
+    "nav.features":"Возможности","nav.how":"Как это работает","nav.halving":"Халвинг","nav.faq":"FAQ",
+    "nav.cta":"Смотреть курсы",
+    "hero.badge":"Курсы обновляются ежечасно",
+    "hero.title1":"Все курсы крипты и наличных.","hero.title2":"Один бесплатный каталог.",
+    "hero.sub":"RateScout отслеживает 330 валют и 55 285 направлений обмена на данных мониторинга BestChange. Без регистрации и комиссий — только понятные сравнимые курсы.",
+    "hero.cta1":"Смотреть 55 285 направлений →","hero.cta2":"Как это работает",
+    "stats.currencies":"Валют","stats.directions":"Направлений обмена","stats.interval":"Интервал обновления",
+    "features.title":"Для тех, кто сравнивает перед обменом",
+    "features.sub":"Всё, что нужно, чтобы найти курс лучше. И ничего лишнего.",
+    "f1.title":"330 валют","f1.text":"Крипта и наличные, основные и экзотические — в одном каталоге.",
+    "f2.title":"55 285 направлений","f2.text":"Любая пара с актуальным курсом на текущий момент.",
+    "f3.title":"Обновление каждый час","f3.text":"Курсы обновляются ежечасно — никаких устаревших цифр.",
+    "f4.title":"Данные BestChange","f4.text":"На основе мониторинга, которому доверяют обменники уже много лет.",
+    "f5.title":"Бесплатно навсегда","f5.text":"Без аккаунта, без пейволла и скрытых комиссий.",
+    "f6.title":"Справочные курсы","f6.text":"Курсы носят справочный характер и не являются офертой.",
+    "how.title":"Как работает RateScout","how.sub":"От поиска до решения — четыре шага.",
+    "s1.title":"Выберите пару","s1.text":"Укажите валюту, которая у вас есть, и ту, что хотите — от BTC до наличных EUR.",
+    "s2.title":"Посмотрите курс","s2.text":"Показываем актуальный курс по этому направлению из мониторинга BestChange.",
+    "s3.title":"Сравните","s3.text":"Просмотрите 55 285 направлений и найдите лучшее предложение.",
+    "s4.title":"Обменяйте","s4.text":"Перейдите к выбранному обменнику. RateScout — каталог, мы не держим средства.",
+    "halving.title":"Обратный отсчёт до халвинга Bitcoin","halving.sub":"Следующее сокращение награды — в реальном времени.",
+    "halving.note":"Осталось блоков: 83 066 → целевой блок 1 050 000",
+    "t.days":"Дней","t.hours":"Часов","t.minutes":"Минут","t.seconds":"Секунд",
+    "cta.title":"Найдите свой курс за секунды",
+    "cta.sub":"Поиск по 330 валютам и 55 285 направлениям — бесплатно и без регистрации.",
+    "cta.btn":"Открыть RateScout →",
+    "faq.title":"Частые вопросы",
+    "q1":"RateScout действительно бесплатный?","a1":"Да. Каталог бесплатен, без аккаунта и комиссий на показанные курсы.",
+    "q2":"Откуда берутся курсы?","a2":"На основе данных мониторинга BestChange. Подробности — на странице методологии.",
+    "q3":"Это оферта?","a3":"Нет. Курсы носят справочный характер и могут меняться. Уточняйте у обменника.",
+    "q4":"Как часто обновляются курсы?","a4":"Каждый час. Метка времени вверху страницы показывает последнюю синхронизацию.",
+    "footer.disclaimer":"RateScout — бесплатный каталог курсов обмена криптовалют и наличных на основе данных мониторинга BestChange. Курсы обновляются ежечасно и носят справочный характер — не оферта. Реклама. Рекламодатель: ИП Зуборев Н.С. erid: 2VtzqvK5m96. © 2026 RateScout."
+  }
+};
+
+/* ============================================================
+   LANGUAGE METADATA
+   ============================================================ */
+const LANGS = {
+  en:{flag:"🇬🇧",label:"EN",html:"en",url:"https://ratescout.ru/en/"},
+  es:{flag:"🇪🇸",label:"ES",html:"es",url:"https://ratescout.oc.com.ar/"},
+  fr:{flag:"🇫🇷",label:"FR",html:"fr",url:"https://ratescout.info.gf/"},
+  ru:{flag:"🇷🇺",label:"RU",html:"ru",url:"https://ratescout.ru/"}
+};
+
+/* ============================================================
+   LINK LOCALIZATION — подставляет URL по языку
+   ============================================================ */
+function updateLinks(lang){
+  const map = LANGS[lang] || LANGS.en;
+
+  // Logo + CTA → языковая версия
+  document.querySelectorAll("[data-link='logo']").forEach(a => a.href = map.url);
+  document.querySelectorAll("[data-link='cta']").forEach(a => a.href = map.url);
+
+  // Ссылки в футере — всегда ведут на соответствующие языковые версии
+  document.querySelectorAll("[data-link^='lang-']").forEach(a => {
+    const target = a.getAttribute("data-link").replace("lang-","");
+    if(LANGS[target]) a.href = LANGS[target].url;
+  });
+}
+
+/* ============================================================
+   APPLY LANGUAGE
+   ============================================================ */
+function applyLang(lang){
+  if(!I18N[lang]) lang = "en";
+  const dict = I18N[lang];
+
+  // 1. Локализуем ссылки
+  updateLinks(lang);
+
+  // 2. html lang + title
+  document.documentElement.lang = LANGS[lang].html;
+  document.title = lang === "en"
+    ? "RateScout — Free Crypto & Cash Exchange Rates Directory | 330 Currencies"
+    : dict["hero.title1"] + " " + dict["hero.title2"] + " — RateScout";
+
+  // 3. Meta description
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if(metaDesc) metaDesc.setAttribute("content", dict["hero.sub"]);
+
+  // 4. OG / Twitter
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if(ogTitle) ogTitle.setAttribute("content", document.title);
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if(ogDesc) ogDesc.setAttribute("content", dict["hero.sub"]);
+  const ogUrl = document.querySelector('meta[property="og:url"]');
+  if(ogUrl) ogUrl.setAttribute("content", LANGS[lang].url);
+  const ogLocale = document.querySelector('meta[property="og:locale"]');
+  if(ogLocale) ogLocale.setAttribute("content", LANGS[lang].html + "_" + LANGS[lang].html.toUpperCase());
+  const twTitle = document.querySelector('meta[name="twitter:title"]');
+  if(twTitle) twTitle.setAttribute("content", document.title);
+  const twDesc = document.querySelector('meta[name="twitter:description"]');
+  if(twDesc) twDesc.setAttribute("content", dict["hero.sub"]);
+
+  // 5. Canonical → языковой URL
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if(canonical) canonical.setAttribute("href", LANGS[lang].url);
+
+  // 6. Все тексты
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if(dict[key]) el.textContent = dict[key];
+  });
+
+  // 7. Кнопка языка + меню
+  document.getElementById("lang-flag").textContent = LANGS[lang].flag;
+  document.getElementById("lang-label").textContent = LANGS[lang].label;
+  document.querySelectorAll(".lang-menu button").forEach(b => {
+    b.setAttribute("aria-current", b.dataset.lang === lang ? "true" : "false");
+  });
+
+  // 8. Сохранение + ?lang= в URL (без перезагрузки)
+  try{ localStorage.setItem("rs_lang", lang); }catch(e){}
+  const url = new URL(window.location.href);
+  if(lang === "en") url.searchParams.delete("lang");
+  else url.searchParams.set("lang", lang);
+  history.replaceState(null, "", url.toString());
+}
+
+/* ============================================================
+   INIT LANGUAGE
+   ============================================================ */
+(function initLang(){
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("lang");
+  let saved = null;
+  try{ saved = localStorage.getItem("rs_lang"); }catch(e){}
+  const htmlLang = (document.documentElement.lang || "en").slice(0,2);
+  const initial = [fromUrl, saved, htmlLang].find(l => l && I18N[l]) || "en";
+  applyLang(initial);
+})();
+
+/* ============================================================
+   LANGUAGE DROPDOWN
+   ============================================================ */
+const langWrap = document.getElementById("lang");
+const langBtn = langWrap.querySelector(".lang-btn");
+langBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  const open = langWrap.classList.toggle("open");
+  langBtn.setAttribute("aria-expanded", open ? "true" : "false");
+});
+langWrap.querySelectorAll(".lang-menu button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    applyLang(btn.dataset.lang);
+    langWrap.classList.remove("open");
+    langBtn.setAttribute("aria-expanded","false");
+  });
+});
+document.addEventListener("click", () => {
+  langWrap.classList.remove("open");
+  langBtn.setAttribute("aria-expanded","false");
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){
+    langWrap.classList.remove("open");
+    langBtn.setAttribute("aria-expanded","false");
+  }
+});
+
+/* ============================================================
+   HALVING TIMER
+   ============================================================ */
+(function(){
+  const target = new Date("2028-04-15T00:00:00Z").getTime();
+  const el = {
+    d:document.getElementById("d"),
+    h:document.getElementById("h"),
+    m:document.getElementById("m"),
+    s:document.getElementById("s")
+  };
+  function tick(){
+    const diff = Math.max(0, target - Date.now());
+    el.d.textContent = Math.floor(diff/86400000);
+    el.h.textContent = String(Math.floor(diff%86400000/3600000)).padStart(2,"0");
+    el.m.textContent = String(Math.floor(diff%3600000/60000)).padStart(2,"0");
+    el.s.textContent = String(Math.floor(diff%60000/1000)).padStart(2,"0");
+  }
+  tick(); setInterval(tick,1000);
+})();
+//]]></script>
+
+
+<b:section class='hidden-feed' id='hidden-feed' maxwidgets='1' showaddelement='no'>
+<b:widget id='HTML98' locked='false' title='' type='HTML' version='2' visible='false'>
+<b:widget-settings>
+<b:widget-setting name='content'></b:widget-setting>
+<b:widget-setting name='showTitle'>false</b:widget-setting>
+</b:widget-settings>
+<b:includable id='main'></b:includable>
+</b:widget>
+</b:section>
+</body>
+</html>
