@@ -33,4 +33,15 @@ jobs:
           # Пусто на первом запуске → скрипт создаст пост и напечатает id для этого секрета.
           # Задан → PATCH одного поста (обновление на месте, без новых статей).
           BLOGGER_POST_ID: ${{ secrets.BLOGGER_POST_ID }}
-        run: python3 blogger_daily.py
+        # Ретрай: Blogger API иногда отвечает 503 — повторяем до 3 раз с паузой,
+        # чтобы разовый сбой Google не оставлял блог без свежей сводки.
+        run: |
+          for i in 1 2 3; do
+            if python3 blogger_daily.py; then
+              exit 0
+            fi
+            echo "⚠ попытка $i не удалась, жду 120с..."
+            sleep 120
+          done
+          echo "❌ публикация не удалась после 3 попыток"
+          exit 1
