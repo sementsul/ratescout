@@ -108,9 +108,11 @@ def build_video(gain, loss, date, out):
     n = len(pngs)
     fc, filt = [], []
     for i, p in enumerate(pngs):
-        fc += ["-loop", "1", "-i", p]
+        fc += ["-loop", "1", "-t", str(SEC_PER), "-i", p]
+        # d=1: один выходной кадр на входной (иначе zoompan размножит кадры);
+        # зум прогрессирует через счётчик on по всей длине сегмента.
         filt.append(f"[{i}:v]scale=1440:2560,zoompan=z='1+0.08*on/{FPS*SEC_PER}':"
-                    f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={FPS*SEC_PER}:"
+                    f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:"
                     f"s=1080x1920:fps={FPS},format=yuv420p[v{i}]")
     chained, off = "[v0]", SEC_PER
     for i in range(1, n):
