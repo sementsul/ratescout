@@ -1,0 +1,44 @@
+name: YouTube Shorts
+
+# Раз в 3 дня собирает вертикальное видео-сводку (1080×1920, ~12 сек) из daily.json
+# и заливает как Shorts. Только факты из мониторинга, без призывов и обещаний;
+# в описании — дисклеймер «не рекомендация», 18+, ссылка на свой обзор.
+# Секреты: YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN (OAuth Desktop app
+# со scope youtube.upload; refresh получается один раз в OAuth Playground).
+# Без секретов или с dry_run — сухой прогон (собирает mp4, не заливает).
+
+on:
+  schedule:
+    - cron: "0 7 */3 * *"      # ~10:00 МСК, по числам 1,4,7,... (примерно раз в 3 дня)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Сухой прогон (не заливать)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yt-shorts
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build and upload Short
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: |
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core || true
+          pip install --quiet pillow
+          python3 yt_shorts.py
