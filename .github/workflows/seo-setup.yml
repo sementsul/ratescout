@@ -1,6 +1,15 @@
 name: SEO setup
 on:
   workflow_dispatch:
+    inputs:
+      site:
+        description: "GSC-ресурс (пусто = свой из секрета)"
+        required: false
+        default: ""
+      sitemap:
+        description: "URL sitemap (пусто = свой)"
+        required: false
+        default: ""
 permissions:
   contents: read
 jobs:
@@ -17,6 +26,8 @@ jobs:
         env:
           GSC_SA_JSON: ${{ secrets.GSC_SA_JSON }}
           GSC_SITE: ${{ secrets.GSC_SITE }}
+          GSC_SITE_OVERRIDE: ${{ inputs.site }}
+          SITEMAP_URL: ${{ inputs.sitemap }}
           YANDEX_OAUTH_TOKEN: ${{ secrets.YANDEX_OAUTH_TOKEN }}
           YANDEX_HOST: ${{ secrets.YANDEX_HOST }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}

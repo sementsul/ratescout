@@ -14,8 +14,11 @@ import sys
 import urllib.parse
 import urllib.request
 
-GSC_SITE = os.environ.get("GSC_SITE") or "https://ratescout.ru/"
-SITEMAP = "https://ratescout.ru/sitemap.xml"
+GSC_SITE = (os.environ.get("GSC_SITE_OVERRIDE")
+            or os.environ.get("GSC_SITE") or "https://ratescout.ru/")
+# SITEMAP_URL — для переотправки чужого ресурса тем же сервис-аккаунтом
+# (напр. ES-домен, у которого нет своего GSC_SA_JSON в репо).
+SITEMAP = os.environ.get("SITEMAP_URL") or "https://ratescout.ru/sitemap.xml"
 Y_HOST = (os.environ.get("YANDEX_HOST") or "https://ratescout.ru").rstrip("/")
 WM = "https://api.webmaster.yandex.net/v4"
 
