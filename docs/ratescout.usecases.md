@@ -1487,14 +1487,16 @@ Last-Modified/ETag — отдаёт GitHub Pages сам (все страницы
 **РАДИУС:** `build.py` (`footer()` — все страницы). СОСЕДИ: остальная аналитика (Метрика/GA/GTM) на месте; вёрстка/данные не тронуты.
 **Проверка:** build EXIT 0; `licnt737E` на index/valuta/en/faq/404 (по 2). **Статус:** ✅ в проде.
 
-## UC-129. Страницы книги /kniga/ и /en/kniga/ (скачивание DOCX) ✅
-**Предусловие:** нужны страницы книги «Обмен криптовалюты без потерь» (RU) / «Crypto Exchange Without Losses» (EN) с
-временной кнопкой скачать DOCX; позже DOCX заменим на ссылки магазинов.
-**Шаги:** `render_book(lang)` (через `render_page`) → `/kniga/` (RU) и `/en/kniga/` (EN): аннотация + `<a download>` на DOCX
-+ заглушка «скоро в магазинах» + кросс-язык-ссылка. Файлы `book/*.docx` копируются в `dist/book/` в `copy_assets()`.
+## UC-129. Страницы книги /kniga/ и /en/kniga/ (магазины + DOCX) ✅
+**Предусловие:** первая книга вышла в магазинах: «Обмен криптовалюты без потерь» (RU) / «Crypto Exchange Without Losses» (EN).
+**Шаги:** `render_book(lang)` (через `render_page`) → `/kniga/` (RU) и `/en/kniga/` (EN): у первой книги вместо
+`<a download>` на DOCX — кнопки магазинов (RU: Ridero, OZON, Wildberries, Bookz; EN: Amazon), у второй
+(«Профессиональный монитор») — по-прежнему `<a download>` на DOCX + заглушка «скоро в магазинах».
+Файлы `book/*.docx` копируются в `dist/book/` в `copy_assets()`.
 Обе страницы в sitemap. Вызов в главном цикле языков.
-**Ожидаемо:** страницы открываются, DOCX качается (RU→obmen-kriptovalyuty-RU.docx, EN→crypto-exchange-EN.docx).
-🔴 Позже: заменить блок скачивания DOCX на ссылки магазинов (Ridero/OZON/Bookmate/Amazon/…).
+Обе страницы в sitemap. Вызов в главном цикле языков.
+**Ожидаемо:** страницы открыются, у первой книги кнопки магазинов, у второй DOCX качается
+(RU→professional-monitor-RU.docx, EN→professional-monitor-EN.docx).
 **РАДИУС:** `build.py` (`render_book`, `copy_assets`, sitemap, main-loop) + `book/*.docx`. СОСЕДИ: прочие страницы не тронуты;
 обе языковые версии есть (NO_RU/NO_EN не нужны). **Проверка:** build EXIT 0; `dist/kniga/` и `dist/en/kniga/` есть, DOCX в dist/book,
 ссылки корректны, sitemap ×2, заголовок с одним брендом. **Статус:** ✅ в проде.

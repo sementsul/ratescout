@@ -6359,53 +6359,64 @@ def render_monitor(lang):
 
 
 def render_book(lang):
-    """Страница книг RateScout: два издания с разделителем + скачивание DOCX.
-    Позже DOCX-ссылки заменим на ссылки магазинов (блок stores у каждой книги)."""
-    def blk(name, sub, lead, href, dl_label, stores):
+    """Страница книг RateScout: два издания с разделителем.
+    Первая книга («Обмен криптовалюты без потерь» / «Crypto Exchange Without Losses»)
+    продаётся в магазинах — вместо файла ссылки на магазины.
+    Вторая («Профессиональный монитор») пока скачивается бесплатно (DOCX)."""
+    def blk(name, sub, lead, action, note=""):
+        note_html = f'<p class="updnote">{note}</p>' if note else ''
         return (f'<section class="bookblk"><h2>{name}</h2><p class="sub">{sub}</p>{lead}'
-                f'<p><a class="cta" href="{href}" download>{dl_label}</a></p>'
-                f'<p class="updnote">{stores}</p></section>')
+                f'{action}{note_html}</section>')
+    def dl(href, label):
+        return f'<p><a class="cta" href="{href}" download>{label}</a></p>'
     if lang == "ru":
-        title = "Книги RateScout — скачать (обмен криптовалюты и профессиональный монитор)"
-        desc = ("Книги RateScout: практический гид «Обмен криптовалюты без потерь» и руководство "
-                "«Профессиональный монитор криптокурсов». Скачать бесплатно.")
+        title = "Книги RateScout — «Обмен криптовалюты без потерь» и «Профессиональный монитор»"
+        desc = ("Книга «Обмен криптовалюты без потерь» — купить в Ridero, OZON, Wildberries и Bookz. "
+                "Руководство «Профессиональный монитор криптокурсов» — скачать бесплатно.")
         h1 = "Книги RateScout"
         intro = ('<p class="lead">Практические книги автора Семенцул Максим — без хайпа и инвест-советов, только практика. 18+.</p>')
-        stores_ru = ("Книга готовится к публикации в магазинах (Ridero, OZON, Bookmate, Яндекс Книги, "
-                     "Wildberries и др.) — ссылки появятся здесь.")
+        buy_ru = ('<p class="getcta"><span>Купить книгу:</span> '
+                  '<a class="cta" href="https://ridero.ru/books/obmen_kriptovalyuty_bez_poter" target="_blank" rel="noopener sponsored">Ridero →</a> '
+                  '<a class="cta" href="https://www.ozon.ru/context/detail/id/5825144745/" target="_blank" rel="noopener sponsored">OZON →</a> '
+                  '<a class="cta" href="https://www.wildberries.ru/catalog/1606347499/detail.aspx" target="_blank" rel="noopener sponsored">Wildberries →</a> '
+                  '<a class="cta" href="https://bookz.ru/authors/maksim-sementsul-34069229/book-obmen-kriptovaliuty-bez-poter-1775923?ysclid=mu8hryb2lx240512857" target="_blank" rel="noopener sponsored">Bookz →</a></p>')
+        soon_ru = ("Вторая книга готовится к публикации в магазинах (Ridero, OZON, Bookmate, Яндекс Книги, "
+                   "Wildberries и др.) — ссылки появятся здесь.")
         b1 = blk("Обмен криптовалюты без потерь",
                  "Практический гид по обмену через мониторинг обменников · Автор: Семенцул Максим",
                  ("<p>Как менять криптовалюту и деньги через мониторинг обменников — выгодно и без потерь. "
                   "Курс, резерв и рейтинг, выбор надёжного обменника, защита от мошенников, сети "
                   "(TRC20/ERC20/BEP20/TON), стейблкоины и AML. Чек-лист первого безопасного обмена, словарь и типичные ошибки.</p>"),
-                 "/book/obmen-kriptovalyuty-RU.docx", "Скачать книгу (DOCX) →", stores_ru)
+                 buy_ru)
         b2 = blk("Профессиональный монитор криптокурсов",
                  "Как читать рынок обмена и собрать торговый терминал в браузере · Автор: Семенцул Максим",
                  ("<p>Полное руководство по профессиональному монитору RateScout: как читать цену в USDT, изменение и "
                   "волатильность; панели График, Watchlist, Муверы, Тепловая карта, Скринер и Спрос из поиска; активный "
                   "график, тайл-раскладка, темы, сохранение рабочего стола ссылкой. Сценарии поиска валют и пар под стратегию.</p>"),
-                 "/book/professional-monitor-RU.docx", "Скачать книгу (DOCX) →", stores_ru)
+                 dl("/book/professional-monitor-RU.docx", "Скачать книгу (DOCX) →"), soon_ru)
         crumb = "Книги"
     else:
-        title = "RateScout books — download (crypto exchange and professional monitor)"
-        desc = ("RateScout books: the practical guide Crypto Exchange Without Losses and the manual "
-                "Professional Crypto Rate Monitor. Download for free.")
+        title = "RateScout books — Crypto Exchange Without Losses and Professional Monitor"
+        desc = ("The book Crypto Exchange Without Losses — available on Amazon. "
+                "The Professional Crypto Rate Monitor manual — download for free.")
         h1 = "RateScout books"
         intro = ('<p class="lead">Practical books by Maxim Sementsul — no hype, no investment advice, just practice. 18+.</p>')
-        stores_en = ("The book is being prepared for publication in stores (Ridero, Amazon, Bookmate and others) — "
-                     "links will appear here.")
+        buy_en = ('<p class="getcta"><span>Buy the book:</span> '
+                  '<a class="cta" href="https://www.amazon.com/dp/B0HJZS298H" target="_blank" rel="noopener sponsored">Amazon →</a></p>')
+        soon_en = ("The second book is being prepared for publication in stores (Ridero, Amazon, Bookmate and others) — "
+                   "links will appear here.")
         b1 = blk("Crypto Exchange Without Losses",
                  "A practical guide to exchanging via monitors · Author: Maxim Sementsul",
                  ("<p>How to exchange crypto and money through exchange monitors — profitably and without losses. "
                   "Rate, reserve and rating, picking a reliable exchanger, avoiding scammers, networks "
                   "(TRC20/ERC20/BEP20/TON), stablecoins and AML. A safe-first-exchange checklist, a glossary and common mistakes.</p>"),
-                 "/book/crypto-exchange-EN.docx", "Download the book (DOCX) →", stores_en)
+                 buy_en)
         b2 = blk("Professional Crypto Rate Monitor",
                  "How to read the exchange market and build a trading terminal in the browser · Author: Maxim Sementsul",
                  ("<p>A full manual for the RateScout professional monitor: reading price in USDT, change and volatility; "
                   "the Chart, Watchlist, Movers, Heatmap, Screener and Search-demand panels; the active chart, tiled layout, "
                   "themes, saving your workspace as a link. Scenarios for finding currencies and pairs by strategy.</p>"),
-                 "/book/professional-monitor-EN.docx", "Download the book (DOCX) →", stores_en)
+                 dl("/book/professional-monitor-EN.docx", "Download the book (DOCX) →"), soon_en)
         crumb = "Books"
     body = f'<h1>{h1}</h1>{intro}{b1}<hr class="bkdiv">{b2}'
     render_page(lang, "kniga", title, desc, body, crumb)
