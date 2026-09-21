@@ -1490,7 +1490,7 @@ Last-Modified/ETag — отдаёт GitHub Pages сам (все страницы
 ## UC-129. Страницы книги /kniga/ и /en/kniga/ (магазины + DOCX) ✅
 **Предусловие:** первая книга вышла в магазинах: «Обмен криптовалюты без потерь» (RU) / «Crypto Exchange Without Losses» (EN).
 **Шаги:** `render_book(lang)` (через `render_page`) → `/kniga/` (RU) и `/en/kniga/` (EN): у первой книги вместо
-`<a download>` на DOCX — кнопки магазинов (RU: Ridero, OZON, Wildberries, Bookz; EN: Amazon), у второй
+`<a download>` на DOCX — кнопки магазинов (RU: Ridero, OZON, Wildberries, Bookz, ЛитРес; EN: Amazon), у второй
 («Профессиональный монитор») — по-прежнему `<a download>` на DOCX + заглушка «скоро в магазинах».
 Файлы `book/*.docx` копируются в `dist/book/` в `copy_assets()`.
 Обе страницы в sitemap. Вызов в главном цикле языков.
