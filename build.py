@@ -6371,7 +6371,7 @@ def render_book(lang):
         return f'<p><a class="cta" href="{href}" download>{label}</a></p>'
     if lang == "ru":
         title = "Книги RateScout — «Обмен криптовалюты без потерь» и «Профессиональный монитор»"
-        desc = ("Книга «Обмен криптовалюты без потерь» — купить в Ridero, OZON, Wildberries и Bookz. "
+        desc = ("Книга «Обмен криптовалюты без потерь» — купить в Ridero, OZON, Wildberries, Bookz и ЛитРес. "
                 "Руководство «Профессиональный монитор криптокурсов» — скачать бесплатно.")
         h1 = "Книги RateScout"
         intro = ('<p class="lead">Практические книги автора Семенцул Максим — без хайпа и инвест-советов, только практика. 18+.</p>')
@@ -6379,7 +6379,8 @@ def render_book(lang):
                   '<a class="cta" href="https://ridero.ru/books/obmen_kriptovalyuty_bez_poter" target="_blank" rel="noopener sponsored">Ridero →</a> '
                   '<a class="cta" href="https://www.ozon.ru/context/detail/id/5825144745/" target="_blank" rel="noopener sponsored">OZON →</a> '
                   '<a class="cta" href="https://www.wildberries.ru/catalog/1606347499/detail.aspx" target="_blank" rel="noopener sponsored">Wildberries →</a> '
-                  '<a class="cta" href="https://bookz.ru/authors/maksim-sementsul-34069229/book-obmen-kriptovaliuty-bez-poter-1775923?ysclid=mu8hryb2lx240512857" target="_blank" rel="noopener sponsored">Bookz →</a></p>')
+                  '<a class="cta" href="https://bookz.ru/authors/maksim-sementsul-34069229/book-obmen-kriptovaliuty-bez-poter-1775923?ysclid=mu8hryb2lx240512857" target="_blank" rel="noopener sponsored">Bookz →</a> '
+                  '<a class="cta" href="https://litres.ru/book/maxim-sementsul-34069232/crypto-exchange-without-losses-74465544/chitat-onlayn?ysclid=mu8hcmowvl384612638" target="_blank" rel="noopener sponsored">ЛитРес →</a></p>')
         soon_ru = ("Вторая книга готовится к публикации в магазинах (Ridero, OZON, Bookmate, Яндекс Книги, "
                    "Wildberries и др.) — ссылки появятся здесь.")
         b1 = blk("Обмен криптовалюты без потерь",
