@@ -2371,7 +2371,7 @@ def footer(lang):
                 "проводим операции. Ссылки ведут в сервис BestChange (мониторинг курсов обменных пунктов); "
                 "по партнёрской программе мы можем получать вознаграждение. Реклама. Рекламодатель: ИП Зуборев Н.С. "
                 "erid: 2VtzqvK5m96")
-        links = (f'<a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
+        links = (f'<a href="/kniga/">📖 Книги</a> · <a href="/o-servise/">О сервисе</a> · <a href="/aml/">AML-проверка</a> · '
                  f'<a href="/vidzhet/">Виджет для сайта</a> · <a href="/redakciya/">О редакции</a> · <a href="https://blogger.ratescout.ru/" target="_blank" rel="noopener me">Блог на Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Канал в Telegram</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Одноклассники</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="https://www.yell.ru/moscow/com/ratescout-ru_14524615/" target="_blank" rel="noopener me">Yell.ru</a> · <a href="/raskrytie/">Раскрытие и дисклеймеры</a> · <a href="/politika/">Политика конфиденциальности</a> · <a href="/usloviya/">Условия использования</a>')
         fine = ("18+. Информация носит справочный характер, не является рекламой, офертой или финансовой "
                 f"рекомендацией. Курсы меняются. © {S['name']} {S['domain']}.<br>"
@@ -2381,7 +2381,7 @@ def footer(lang):
                 "process transactions. Links lead to BestChange (a monitor of exchange office rates); through the "
                 "affiliate program we may earn a commission. Advertising. Advertiser: IE Zuborev N.S. "
                 "erid: 2VtzqvK5m96")
-        links = (f'<a href="{PREF[lang]}/o-servise/">About</a> · <a href="{PREF[lang]}/aml/">AML check</a> · '
+        links = (f'<a href="{PREF[lang]}/kniga/">📖 Books</a> · <a href="{PREF[lang]}/o-servise/">About</a> · <a href="{PREF[lang]}/aml/">AML check</a> · '
                  f'<a href="{PREF[lang]}/earn/">Earn with BestChange</a> · '
                  f'<a href="{PREF[lang]}/vidzhet/">Site widget</a> · <a href="{PREF[lang]}/redakciya/">Editorial</a> · <a href="https://ratescouten.blogspot.com/" target="_blank" rel="noopener me">Blog on Blogger</a> · <a href="https://t.me/ratescout_kurs" target="_blank" rel="noopener me">Telegram channel</a> · <a href="https://ok.ru/group/70000057243663" target="_blank" rel="noopener me">Odnoklassniki</a> · <a href="https://mastodon.social/@ratescout_ru" target="_blank" rel="noopener me">Mastodon</a> · <a href="{PREF[lang]}/raskrytie/">Disclosure</a> · <a href="{PREF[lang]}/politika/">Privacy policy</a> · <a href="{PREF[lang]}/usloviya/">Terms of Service</a>')
         fine = ("18+. Information is for reference only and is not advertising, an offer or financial advice. "
