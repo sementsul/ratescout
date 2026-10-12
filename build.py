@@ -177,12 +177,14 @@ def bc_host(lang="ru"):
 
 
 def bc_link(frm, to, lang="ru"):
+    # Anti-bot: static HTML contains only erid, WITHOUT ?p=REF.
+    # REF is appended client-side on human click (see assets/app.js + _REF_GATE_JS).
     f, t = CUR.get(frm, {}), CUR.get(to, {})
     host = bc_host(lang)
     if f.get("num") or t.get("num"):
-        qs = f"mt=rates&from={f.get('id')}&to={t.get('id')}&p={REF}"
+        qs = f"mt=rates&from={f.get('id')}&to={t.get('id')}"
         return f"{host}/index.php?{_bc_qs(qs)}"
-    return f"{host}/{frm}-to-{to}.html?{_bc_qs(f'p={REF}')}"
+    return f"{host}/{frm}-to-{to}.html{_bc_qs('')}"
 
 
 def cpage(lang, slug):
@@ -2441,7 +2443,7 @@ def converter_html(lang, preset_from="", rates=None):
   <label>{tr(lang,'get')}<select id="cTo"></select></label>
   {amt}
   {res}
-  <a class="cta" id="cGo" href="{bc_host(lang)}/?p={REF}&erid={ERID}" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
+  <a class="cta js-bc" id="cGo" href="{bc_host(lang)}/?erid={ERID}" data-bc="1" target="_blank" rel="nofollow noopener sponsored">{tr(lang,'find_rate')}</a>
   {ad_mark(lang)}
 </div>{rjson}"""
 
@@ -4859,6 +4861,7 @@ def geo_ref_script(elem_id, base):
     нейтральной (комплаенс-safe по умолчанию — рос. пользователи реф-ссылку не видят)."""
     return (
         '<script>(function(){try{'
+        'if(navigator.webdriver||window._phantom||window.callPhantom)return;'
         'var R=["Europe/Kaliningrad","Europe/Moscow","Europe/Simferopol","Europe/Kirov","Europe/Volgograd",'
         '"Europe/Astrakhan","Europe/Saratov","Europe/Ulyanovsk","Europe/Samara","Asia/Yekaterinburg","Asia/Omsk",'
         '"Asia/Novosibirsk","Asia/Barnaul","Asia/Tomsk","Asia/Novokuznetsk","Asia/Krasnoyarsk","Asia/Irkutsk",'
@@ -4868,6 +4871,7 @@ def geo_ref_script(elem_id, base):
         'var a=document.getElementById("' + elem_id + '");'
         'if(a&&tz&&R.indexOf(tz)===-1){var b="' + base + '";'
         'if(b.indexOf("erid=")===-1){b+=((b.indexOf("?")===-1)?"?":"&")+"erid=' + ERID + '";}'
+        'if(b.indexOf("p=")!==-1)return;'
         'b+=((b.indexOf("?")===-1)?"?":"&")+"p=' + str(REF) + '";'
         'a.href=b;a.rel="nofollow noopener sponsored";}'
         '}catch(e){}})();</script>')

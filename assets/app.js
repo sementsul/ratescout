@@ -8,6 +8,32 @@
     ? "https://www.bestchange.com" : "https://www.bestchange.ru";
   function bcQs(qs) { return qs + "&erid=" + ERID; }
 
+  // ---- Anti-bot gate: ?p=REF добавляется только по клику живого (не в href) ----
+  function isBot() {
+    try {
+      if (navigator.webdriver) return true;
+      if (window._phantom || window.callPhantom || window.__nightmare) return true;
+    } catch (e) {}
+    return false;
+  }
+  function withRef(url) {
+    if (!url || url.indexOf("bestchange.") === -1) return url;
+    if (url.indexOf("p=") !== -1) return url;
+    return url + ((url.indexOf("?") === -1) ? "?" : "&") + "p=" + REF;
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href*="bestchange."]') : null;
+    if (!a) return;
+    if (isBot()) { e.preventDefault(); return; }
+    var href = a.getAttribute("href") || "";
+    if (href.indexOf("p=") === -1) {
+      e.preventDefault();
+      var url = withRef(a.href);
+      try { window.open(url, a.target || "_blank", "noopener"); }
+      catch (err) { location.href = url; }
+    }
+  }, true);
+
   // ---- поиск по валютам (на всех страницах) ----
   (function () {
     var q = document.getElementById("q"), qres = document.getElementById("qres");
@@ -124,7 +150,7 @@
   fill(elFrom, defFrom);
   fill(elTo, defTo);
 
-  function deep(frm, to) { return BCDOM + "/" + frm + "-to-" + to + ".html?" + bcQs("p=" + REF); }
+  function deep(frm, to) { return BCDOM + "/" + frm + "-to-" + to + ".html?" + bcQs(""); }
 
   var OPEN = conv.getAttribute("data-open") || "Открыть";
   var APPROX = conv.getAttribute("data-approx") || "≈";
@@ -163,7 +189,7 @@
   function update() {
     var f = elFrom.value, t = elTo.value;
     if (f === t) {
-      elGo.href = BCDOM + "/?" + bcQs("p=" + REF);
+      elGo.href = BCDOM + "/?" + bcQs("");
       elGo.setAttribute("target", "_blank"); elGo.setAttribute("rel", "nofollow noopener sponsored");
       elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return;
     }
