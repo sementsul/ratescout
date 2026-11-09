@@ -1,0 +1,8 @@
+{
+  "name": "ratescout-go-router",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test-go-router.mjs"
+  }
+}

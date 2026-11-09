@@ -1,0 +1,23 @@
+# Cloudflare Worker: редирект-роутер партнёрских ссылок BestChange.
+# Деплой:  npx wrangler deploy worker/go-router.js
+# Или вставь go-router.js в дашборде: Workers & Pages → Create → Worker → Edit code.
+#
+# Маршруты (Workers & Pages → проект → Settings → Domains & Routes).
+# Оба хоста — одна зона ratescout.ru, уже за Cloudflare (оранжевое облако), DNS менять не нужно:
+#   ratescout.ru/go/*          — роутер для ratescout
+#   my-many.ratescout.ru/go/*  — роутер для my-many (его собственный боевой хост)
+#
+# Необязательные переменные: BC_PARTNER_ID, BC_ERID.
+
+name = "ratescout-go"
+main = "go-router.js"
+compatibility_date = "2026-01-01"
+
+routes = [
+  { pattern = "ratescout.ru/go/*", zone_name = "ratescout.ru" },
+  { pattern = "my-many.ratescout.ru/go/*", zone_name = "ratescout.ru" }
+]
+
+[vars]
+# BC_PARTNER_ID = "1116359"
+# BC_ERID = "2VtzqvK5m96"
