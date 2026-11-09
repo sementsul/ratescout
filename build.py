@@ -5369,8 +5369,10 @@ def static_files():
     _ai_bots = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-Web", "anthropic-ai",
                 "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended",
                 "CCBot", "Amazonbot", "Bytespider", "YandexAdditional"]
-    _robots = "User-agent: *\nAllow: /\n\n# AI / answer engines\n"
-    _robots += "".join(f"User-agent: {b}\nAllow: /\n\n" for b in _ai_bots)
+    # /go/ — редирект-роутер партнёрских ссылок (worker/go-router.js): индексировать нечего,
+    # обход запрещаем и обычным, и именованным ботам.
+    _robots = "User-agent: *\nAllow: /\nDisallow: /go/\n\n# AI / answer engines\n"
+    _robots += "".join(f"User-agent: {b}\nAllow: /\nDisallow: /go/\n\n" for b in _ai_bots)
     _robots += f"Sitemap: {BASE_URL}/sitemap.xml\n# LLM guidance: {BASE_URL}/llms.txt\n"
     open(os.path.join(DIST, "robots.txt"), "w", encoding="utf-8").write(_robots)
     open(os.path.join(DIST, "CNAME"), "w", encoding="utf-8").write(S["domain"] + "\n")
