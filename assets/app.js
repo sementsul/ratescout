@@ -2,37 +2,14 @@
 // Выбор «отдаю/получаю» → CTA-ссылка на конкретное направление BestChange с реф-меткой.
 (function () {
   var C = window.__CATALOG__;
-  var REF = window.__REF__ || "1116359";
-  var ERID = window.__ERID__ || "2VtzqvK5m96";
-  var BCDOM = (document.documentElement.lang || "ru").slice(0, 2) === "en"
-    ? "https://www.bestchange.com" : "https://www.bestchange.ru";
-  function bcQs(qs) { return qs + "&erid=" + ERID; }
-
-  // ---- Anti-bot gate: ?p=REF добавляется только по клику живого (не в href) ----
-  function isBot() {
-    try {
-      if (navigator.webdriver) return true;
-      if (window._phantom || window.callPhantom || window.__nightmare) return true;
-    } catch (e) {}
-    return false;
+  var ROUTER = window.__ROUTER__ || "/go/bestchange";
+  var EN = (document.documentElement.lang || "ru").slice(0, 2) === "en";
+  // Все партнёрские ссылки идут через роутер /go/bestchange: метка ?p= и erid
+  // подставляются на сервере (Cloudflare Worker) и в HTML/JS не попадают.
+  function rl(frm, to) {
+    return ROUTER + "?from=" + encodeURIComponent(frm) + "&to=" + encodeURIComponent(to) + (EN ? "&lang=en" : "");
   }
-  function withRef(url) {
-    if (!url || url.indexOf("bestchange.") === -1) return url;
-    if (url.indexOf("p=") !== -1) return url;
-    return url + ((url.indexOf("?") === -1) ? "?" : "&") + "p=" + REF;
-  }
-  document.addEventListener("click", function (e) {
-    var a = e.target && e.target.closest ? e.target.closest('a[href*="bestchange."]') : null;
-    if (!a) return;
-    if (isBot()) { e.preventDefault(); return; }
-    var href = a.getAttribute("href") || "";
-    if (href.indexOf("p=") === -1) {
-      e.preventDefault();
-      var url = withRef(a.href);
-      try { window.open(url, a.target || "_blank", "noopener"); }
-      catch (err) { location.href = url; }
-    }
-  }, true);
+  function homeLink() { return ROUTER + (EN ? "?lang=en" : ""); }
 
   // ---- поиск по валютам (на всех страницах) ----
   (function () {
@@ -150,7 +127,7 @@
   fill(elFrom, defFrom);
   fill(elTo, defTo);
 
-  function deep(frm, to) { return BCDOM + "/" + frm + "-to-" + to + ".html?" + bcQs(""); }
+  function deep(frm, to) { return rl(frm, to); }
 
   var OPEN = conv.getAttribute("data-open") || "Открыть";
   var APPROX = conv.getAttribute("data-approx") || "≈";
@@ -189,7 +166,7 @@
   function update() {
     var f = elFrom.value, t = elTo.value;
     if (f === t) {
-      elGo.href = BCDOM + "/?" + bcQs("");
+      elGo.href = homeLink();
       elGo.setAttribute("target", "_blank"); elGo.setAttribute("rel", "nofollow noopener sponsored");
       elGo.textContent = SAMEMSG; if (elOut) elOut.textContent = ""; return;
     }

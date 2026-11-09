@@ -54,7 +54,8 @@ export default {
     const partner = (env && env.BC_PARTNER_ID) || PARTNER_DEFAULT;
     const erid = (env && env.BC_ERID) || ERID_DEFAULT;
 
-    const lang = url.searchParams.get("lang") === "en" ? "en" : "ru";
+    const langParam = (url.searchParams.get("lang") || "").toLowerCase();
+    const lang = (langParam === "en" || langParam === "fr") ? "en" : "ru";
     const host = HOSTS[lang];
 
     // 1. Куки-гейт: без него — только страница-заглушка, метки не будет.
@@ -100,6 +101,11 @@ function buildTarget(params, host, partner, erid) {
 
   if (params.get("mode") === "partner") {
     return `${host}/partner/account.html?${p}`;
+  }
+
+  // page=report — AML-проверка адреса BestChange
+  if (params.get("page") === "report") {
+    return `${host}/report/?${p}`;
   }
 
   const fid = params.get("fid");

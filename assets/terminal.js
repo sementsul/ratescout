@@ -123,11 +123,13 @@
   var PAIRS = {}; // "from-to" -> 1 (ядровые пары со страницей /obmen/)
   function curUrl(slug) { return PREF + "/valuta/" + slug + "/"; }
   function bcErid() { return (DATA && DATA.erid) || "2VtzqvK5m96"; }
-  function bcDom() { return EN ? "https://www.bestchange.com" : "https://www.bestchange.ru"; }
+  // все партнёрские ссылки — через роутер /go/bestchange (метка добавляется в воркере)
+  function bcDom() { return (DATA && DATA.router) || "/go/bestchange"; }
   function bcLink(a, b) {
     var fa = DATA.cur[a] || {}, fb = DATA.cur[b] || {};
-    if (fa.num || fb.num) return bcDom() + "/index.php?mt=rates&from=" + (fa.id || "") + "&to=" + (fb.id || "") + "&p=" + DATA.ref + "&erid=" + bcErid();
-    return bcDom() + "/" + a + "-to-" + b + ".html?p=" + DATA.ref + "&erid=" + bcErid();
+    var lg = EN ? "&lang=en" : "";
+    if (fa.num || fb.num) return bcDom() + "?fid=" + (fa.id || "") + "&tid=" + (fb.id || "") + lg;
+    return bcDom() + "?from=" + encodeURIComponent(a) + "&to=" + encodeURIComponent(b) + lg;
   }
   function pairUrl(a, b) { return PAIRS[a + "-" + b] ? PREF + "/obmen/" + a + "-" + b + "/" : bcLink(a, b); }
   function pairHasPage(a, b) { return !!PAIRS[a + "-" + b]; }
