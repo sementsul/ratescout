@@ -55,15 +55,17 @@ export default {
     const erid = (env && env.BC_ERID) || ERID_DEFAULT;
 
     const langParam = (url.searchParams.get("lang") || "").toLowerCase();
-    const lang = (langParam === "en" || langParam === "fr") ? "en" : "ru";
+    const lang = (langParam === "en" || langParam === "fr" || langParam === "es") ? "en" : "ru";
     const host = HOSTS[lang];
+    const noErid = url.searchParams.get("noerid") === "1";   // зеркала ES/FR: без erid
+    const bare = noErid ? `${host}/` : `${host}/?erid=${enc(erid)}`;
 
     // 1. Куки-гейт: без него — только страница-заглушка, метки не будет.
     if (!hasGateCookie(request.headers.get("Cookie"))) {
       if (url.searchParams.get("js") === "1") {
         // JS работает, а cookie не сохранилась (приватный режим, блокировщик кук).
         // Не ломаем переход человеку, но и реферальную метку не отдаём.
-        return redirect(`${host}/?erid=${enc(erid)}`);
+        return redirect(bare);
       }
       return gatePage(url, host, erid);
     }
@@ -77,8 +79,8 @@ export default {
     }
 
     // 3. Цель: только из белого списка параметров, никаких произвольных URL.
-    const target = buildTarget(url.searchParams, host, partner, erid);
-    return redirect(target || `${host}/?erid=${enc(erid)}`);
+    const target = buildTarget(url.searchParams, host, partner, erid, noErid);
+    return redirect(target || bare);
   },
 };
 
@@ -96,8 +98,9 @@ function hasGateCookie(cookieHeader) {
   });
 }
 
-function buildTarget(params, host, partner, erid) {
-  const p = `p=${enc(partner)}&erid=${enc(erid)}`;
+function buildTarget(params, host, partner, erid, noErid) {
+  // noerid=1 — зеркала ES/FR намеренно не показывают маркировку erid: оставляем только p.
+  const p = noErid ? `p=${enc(partner)}` : `p=${enc(partner)}&erid=${enc(erid)}`;
 
   if (params.get("mode") === "partner") {
     return `${host}/partner/account.html?${p}`;
