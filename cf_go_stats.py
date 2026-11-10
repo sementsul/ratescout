@@ -98,10 +98,11 @@ def resolve_account(token: str) -> str:
 
 
 def query(token: str, account: str, statement: str) -> list:
+    # Analytics Engine SQL API принимает сам текст запроса, без JSON-обёртки.
     req = urllib.request.Request(
         SQL_API.format(acc=account),
-        data=json.dumps({"query": statement}).encode(),
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        data=statement.encode(),
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "text/plain"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=40) as resp:
