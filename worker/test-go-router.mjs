@@ -129,6 +129,21 @@ console.log(`${netOk ? "PASS" : "FAIL"}  siteverify недоступен: fail o
 globalThis.fetch = realFetch;
 
 // ── Счётчики Analytics Engine ───────────────────────────────────────────────
+// Зеркала ES/FR должны различаться в статистике (в редиректе оба идут на .com).
+const aeLang = [];
+const ENV_AE_LANG = { ANALYTICS: { writeDataPoint: (p) => aeLang.push(p.blobs[1]) } };
+await worker.fetch(
+  new Request(`${BASE}?from=bitcoin&to=usd&lang=es&noerid=1`, { headers: { Cookie: "bcr=1" } }),
+  ENV_AE_LANG,
+);
+await worker.fetch(
+  new Request(`${BASE}?from=bitcoin&to=usd&lang=fr&noerid=1`, { headers: { Cookie: "bcr=1" } }),
+  ENV_AE_LANG,
+);
+const langOk = aeLang.includes("es") && aeLang.includes("fr");
+if (!langOk) failed++;
+console.log(`${langOk ? "PASS" : "FAIL"}  в счётчике es/fr отдельно (${aeLang.join(", ")})`);
+
 const aeEvents = [];
 const ENV_AE = { ANALYTICS: { writeDataPoint: (p) => aeEvents.push(p.indexes[0]) } };
 await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`), ENV_AE);                        // гейт

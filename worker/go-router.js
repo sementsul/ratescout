@@ -69,7 +69,9 @@ export default {
     const langParam = (url.searchParams.get("lang") || "").toLowerCase();
     const lang = (langParam === "en" || langParam === "fr" || langParam === "es") ? "en" : "ru";
     const host = HOSTS[lang];
-    const ctx = { lang, host: url.hostname, cf: request.cf };   // для счётчика
+    // В статистике различаем зеркала: ru / en / fr / es (редирект у fr и es всё равно на .com).
+    const langLabel = langParam === "en" || langParam === "fr" || langParam === "es" ? langParam : "ru";
+    const ctx = { lang: langLabel, host: url.hostname, cf: request.cf };
     const noErid = url.searchParams.get("noerid") === "1";   // зеркала ES/FR: без erid
     const bare = noErid ? `${host}/` : `${host}/?erid=${enc(erid)}`;
 
