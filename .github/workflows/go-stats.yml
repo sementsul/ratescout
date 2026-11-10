@@ -4,7 +4,7 @@ name: Go-router funnel to Telegram (/go/bestchange)
 # Cloudflare, сколько получило метку, кто стучится (страна, язык, хост, ASN).
 # Данные — Workers Analytics Engine, датасет go_router (биндинг ANALYTICS у воркера).
 #
-# Секреты: CF_API_TOKEN (Account · Account Analytics · Read),
+# Секреты: CF_ANALYTICS_TOKEN (уже есть; подходит и CF_API_TOKEN с правом Account Analytics Read),
 #          TG_GO_TOKEN  (токен бота @RateScoutRUBot; иначе TELEGRAM_TOKEN),
 #          TG_GO_CHAT   (chat_id получателя; иначе ALERT_CHAT_ID).
 # Переменная: CF_ACCOUNT_ID — необязательна (если у токена один аккаунт, возьмётся сам).
@@ -32,7 +32,7 @@ jobs:
           python-version: "3.12"
       - name: Send funnel digest
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN || secrets.CF_ANALYTICS_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           TG_TOKEN: ${{ secrets.TG_GO_TOKEN || secrets.TELEGRAM_TOKEN }}
           TG_CHAT: ${{ secrets.TG_GO_CHAT || secrets.ALERT_CHAT_ID }}
