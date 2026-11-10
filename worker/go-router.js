@@ -40,6 +40,11 @@ const GATE_COOKIE = "bcr";
 const GATE_PATH = "/go";
 const IP_LIMIT = 30;                              // переходов с одного IP за 60 с
 
+// Воркер отвечает только на свои домены. Иначе он же доступен по адресу
+// *.workers.dev, который идёт мимо WAF-правила зоны: оттуда можно получить
+// метку, просто скачав ссылку.
+const ZONE_DOMAIN = "ratescout.ru";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -48,6 +53,13 @@ export default {
       return new Response("Method Not Allowed", {
         status: 405,
         headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+      });
+    }
+
+    if (url.hostname !== ZONE_DOMAIN && !url.hostname.endsWith("." + ZONE_DOMAIN)) {
+      return new Response("Not Found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" },
       });
     }
 
