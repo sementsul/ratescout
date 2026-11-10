@@ -128,7 +128,7 @@ def collect(token: str, account: str, ds: str, days: int) -> dict:
         # это не ошибка, а «данных пока нет».
         if "does not exist" in low or "unknown table" in low or "no such table" in low:
             return {"events": [], "days": [], "country": [], "lang": [], "host": [], "asn": []}
-        raise urllib.error.HTTPError(e.url, e.code, body[:300], e.headers, None)
+        raise RuntimeError(f"HTTP {e.code}: {body.strip()[:400] or 'пустой ответ'}") from None
 
 
 # ───────────────────────────── свёртка ─────────────────────────────────
