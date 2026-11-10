@@ -84,6 +84,11 @@ export default {
     // Нужна, чтобы проверять настройку, не кликая по партнёрской ссылке
     // (клики владельца BestChange считает накруткой).
     if (url.searchParams.get("diag") === "1") {
+      // ?diag=1&gate=1 — показать саму страницу-гейт: видно, отрисовывается ли
+      // виджет Turnstile на этом домене (при чужом hostname он ругается ошибкой).
+      if (url.searchParams.get("gate") === "1") {
+        return gatePage(url, turnstileOn ? tsSitekey : "");
+      }
       const cookieHeader = request.headers.get("Cookie") || "";
       return new Response(
         JSON.stringify(

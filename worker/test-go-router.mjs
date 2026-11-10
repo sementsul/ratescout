@@ -77,6 +77,17 @@ const diagOk =
 if (!diagOk) failed++;
 console.log(`${diagOk ? "PASS" : "FAIL"}  diag: конфиг и цель без редиректа`);
 
+// ?diag=1&gate=1 — сама страница-гейт, чтобы увидеть виджет без перехода.
+const gateView = await worker.fetch(new Request(`${BASE}?diag=1&gate=1`), ENV_TS_PROBE);
+const gateViewHtml = await gateView.text();
+const gateViewOk =
+  gateView.status === 200 &&
+  gateViewHtml.includes("cf-turnstile") &&
+  gateViewHtml.includes("0xTESTKEY") &&
+  (gateView.headers.get("Location") || "") === "";
+if (!gateViewOk) failed++;
+console.log(`${gateViewOk ? "PASS" : "FAIL"}  diag&gate=1: HTML с виджетом, без редиректа`);
+
 // ── Гейт ────────────────────────────────────────────────────────────────────
 // Без Turnstile (ключи не заданы) — прежнее поведение: cookie ставится страницей,
 // JS сразу возвращается с js=1 (иначе все первые клики уходили бы без метки).
