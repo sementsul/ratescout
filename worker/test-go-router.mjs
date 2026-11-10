@@ -55,16 +55,66 @@ for (const c of CASES) {
   if (!ok && c.location) console.log(`        ожидали ${c.status} ${c.location}`);
 }
 
-// Гейт: ставит cookie, возвращается на тот же адрес с js=1, закрыт от индексации.
+// ── Гейт ────────────────────────────────────────────────────────────────────
+// Без Turnstile (ключи не заданы) — прежний JS-переход, cookie не выставляется.
 const gate = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`), {});
-const cookie = gate.headers.get("Set-Cookie") || "";
-const html = await gate.text();
+const gateCookieHeader = gate.headers.get("Set-Cookie") || "";
+const gateHtml = await gate.text();
 const gateOk =
-  cookie.includes("bcr=1") && cookie.includes("Path=/go") &&
-  html.includes("location.replace") && html.includes("js=1") &&
+  gate.status === 200 &&
+  gateCookieHeader === "" &&
+  gateHtml.includes("js=1") &&
   gate.headers.get("X-Robots-Tag") === "noindex, nofollow";
 if (!gateOk) failed++;
-console.log(`${gateOk ? "PASS" : "FAIL"}  гейт: Set-Cookie + возврат с js=1 + noindex`);
+console.log(`${gateOk ? "PASS" : "FAIL"}  гейт без Turnstile: 200, без cookie, js=1, noindex`);
+
+// С настроенным Turnstile — страница с капчей и без cookie.
+const ENV_TS = { TS_SITEKEY: "0xTESTKEY", TS_SECRET: "test-secret" };
+const gateTs = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`), ENV_TS);
+const tsHtml = await gateTs.text();
+const tsOk =
+  gateTs.status === 200 &&
+  (gateTs.headers.get("Set-Cookie") || "") === "" &&
+  tsHtml.includes("cf-turnstile") &&
+  tsHtml.includes("0xTESTKEY") &&
+  tsHtml.includes("challenges.cloudflare.com") &&
+  (gateTs.headers.get("Content-Security-Policy") || "").includes("challenges.cloudflare.com");
+if (!tsOk) failed++;
+console.log(`${tsOk ? "PASS" : "FAIL"}  гейт с Turnstile: капча, sitekey, CSP, без cookie`);
+
+// Подменяем siteverify: токен "good" — успех, остальное — отказ.
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () =>
+  new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
+
+const okRes = await worker.fetch(
+  new Request(`${BASE}?from=usd&to=bitcoin&_ts=good`, { headers: { "CF-Connecting-IP": "203.0.113.7" } }),
+  ENV_TS,
+);
+const okCookie = okRes.headers.get("Set-Cookie") || "";
+const okGood =
+  okRes.status === 302 &&
+  okRes.headers.get("Location") === "https://www.bestchange.ru/usd-to-bitcoin.html?p=1116359&erid=2VtzqvK5m96" &&
+  okCookie.includes("bcr=1") && okCookie.includes("HttpOnly") && okCookie.includes("Path=/go");
+if (!okGood) failed++;
+console.log(`${okGood ? "PASS" : "FAIL"}  Turnstile пройден: 302 с меткой + HttpOnly cookie`);
+
+globalThis.fetch = async () => new Response(JSON.stringify({ success: false }));
+const badRes = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin&_ts=bad`), ENV_TS);
+const badOk =
+  badRes.status === 302 &&
+  badRes.headers.get("Location") === "https://www.bestchange.ru/?erid=2VtzqvK5m96" &&
+  (badRes.headers.get("Set-Cookie") || "") === "";
+if (!badOk) failed++;
+console.log(`${badOk ? "PASS" : "FAIL"}  Turnstile не пройден: 302 без метки, без cookie`);
+
+// Сеть до siteverify недоступна — fail open: переход без метки, без 5xx.
+globalThis.fetch = async () => { throw new Error("network down"); };
+const netRes = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin&_ts=x`), ENV_TS);
+const netOk = netRes.status === 302 && netRes.headers.get("Location") === "https://www.bestchange.ru/?erid=2VtzqvK5m96";
+if (!netOk) failed++;
+console.log(`${netOk ? "PASS" : "FAIL"}  siteverify недоступен: fail open без метки`);
+globalThis.fetch = realFetch;
 
 console.log(failed ? `\n${failed} тест(ов) упало` : "\nвсе тесты прошли");
 process.exit(failed ? 1 : 0);

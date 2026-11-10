@@ -60,14 +60,33 @@ export default {
     const noErid = url.searchParams.get("noerid") === "1";   // зеркала ES/FR: без erid
     const bare = noErid ? `${host}/` : `${host}/?erid=${enc(erid)}`;
 
-    // 1. Куки-гейт: без него — только страница-заглушка, метки не будет.
+    // Turnstile включается, когда заданы оба ключа (секрет — секретом воркера).
+    const tsSecret = env && env.TS_SECRET;
+    const tsSitekey = (env && env.TS_SITEKEY) || "";
+    const turnstileOn = Boolean(tsSecret && tsSitekey);
+
+    // 1. Куки-гейт: без него метки не будет.
     if (!hasGateCookie(request.headers.get("Cookie"))) {
+      const tsToken = url.searchParams.get("_ts");
+
+      // 1a. Клиент вернулся с токеном Turnstile — проверяем на сервере.
+      //     Токен одноразовый; при любой ошибке пускаем без метки, но не блокируем.
+      if (tsToken && tsSecret) {
+        const ok = await verifyTurnstile(tsSecret, tsToken, request.headers.get("CF-Connecting-IP"));
+        if (!ok) return redirect(bare);
+        const target = buildTarget(url.searchParams, host, partner, erid, noErid);
+        return redirect(target || bare, { "Set-Cookie": gateCookie() });
+      }
+
       if (url.searchParams.get("js") === "1") {
-        // JS работает, а cookie не сохранилась (приватный режим, блокировщик кук).
+        // Turnstile не загрузился / человек нажал «продолжить без проверки».
         // Не ломаем переход человеку, но и реферальную метку не отдаём.
         return redirect(bare);
       }
-      return gatePage(url, host, erid);
+
+      // 1b. Показываем капчу. Cookie тут НЕ ставится — иначе её получал бы любой бот
+      //     за одно скачивание страницы.
+      return gatePage(url, turnstileOn ? tsSitekey : "");
     }
 
     // 2. Анти-флуд: сотни кликов с одного адреса — это парсер, а не человек.
@@ -142,23 +161,87 @@ function redirect(location, headers = {}) {
   });
 }
 
-/** Страница-гейт: ставит cookie и сразу возвращается на тот же адрес с js=1. */
-function gatePage(url, host, erid) {
+function gateCookie() {
+  return `${GATE_COOKIE}=1; Path=${GATE_PATH}; Max-Age=15552000; SameSite=Lax; Secure; HttpOnly`;
+}
+
+/**
+ * Проверка токена Turnstile на стороне сервера.
+ * Любая сетевая/HTTP-ошибка → false (не пускаем с меткой, но и не ломаем переход).
+ */
+async function verifyTurnstile(secret, token, ip) {
+  try {
+    const body = new FormData();
+    body.append("secret", secret);
+    body.append("response", token);
+    if (ip) body.append("remoteip", ip);
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body,
+    });
+    const data = await res.json();
+    return data && data.success === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Страница-гейт с Turnstile: cookie ставится ТОЛЬКО после успешной проверки,
+ * на сервере (см. ветку с _ts в fetch). Здесь cookie не выставляется — иначе
+ * любой бот получал бы её просто за скачивание страницы.
+ */
+function gatePage(url, sitekey) {
   const next = new URL(url.toString());
-  next.searchParams.set("js", "1");
+  next.searchParams.delete("_ts");
+  next.searchParams.delete("js");
   const back = next.pathname + next.search;
+
+  // Turnstile не настроен (нет сайт-ключа) — прежнее поведение: JS-переход без проверки.
+  if (!sitekey) {
+    const legacy = back + (back.includes("?") ? "&" : "?") + "js=1";
+    return new Response(
+      `<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow"><title>Переход…</title></head><body>
+<script>location.replace(${JSON.stringify(legacy)});</script></body></html>`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      },
+    );
+  }
 
   const html = `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Переход…</title>
-<style>body{background:#000;color:#0f0;font:16px/1.5 monospace;padding:40px;text-align:center}
-a{color:#55ffff}</style></head>
+<title>Проверка…</title>
+<style>
+body{background:#000;color:#0f0;font:16px/1.5 monospace;padding:36px 20px;text-align:center}
+a{color:#55ffff}
+.box{margin:0 auto;max-width:420px}
+#ts{margin:22px 0}
+#skip{display:none;margin-top:18px;font-size:14px;opacity:.75}
+</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
 <body>
-<p>Переход на BestChange…</p>
-<p><a href="${host}/?erid=${enc(erid)}" rel="nofollow noopener">Продолжить вручную</a></p>
-<script>location.replace(${JSON.stringify(back)});</script>
+<div class="box">
+<p>Проверяем, что вы человек…</p>
+<div id="ts"><div class="cf-turnstile" data-sitekey="${sitekey}" data-callback="tsOk"></div></div>
+<p id="skip">Не грузится? <a href="${back}${back.includes("?") ? "&" : "?"}js=1" rel="nofollow noopener">Продолжить без проверки</a></p>
+</div>
+<script>
+function tsOk(token){
+  var u=${JSON.stringify(back)}+(${JSON.stringify(back)}.indexOf("?")===-1?"?":"&")+"_ts="+encodeURIComponent(token);
+  location.replace(u);
+}
+setTimeout(function(){document.getElementById("skip").style.display="block";},6000);
+</script>
 </body></html>`;
 
   return new Response(html, {
@@ -167,7 +250,11 @@ a{color:#55ffff}</style></head>
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex, nofollow",
-      "Set-Cookie": `${GATE_COOKIE}=1; Path=${GATE_PATH}; Max-Age=86400; SameSite=Lax; Secure`,
+      "Content-Security-Policy":
+        "default-src 'none'; script-src 'unsafe-inline' https://challenges.cloudflare.com; " +
+        "style-src 'unsafe-inline'; connect-src https://challenges.cloudflare.com; " +
+        "frame-src https://challenges.cloudflare.com; " +
+        "img-src data: https://challenges.cloudflare.com",
     },
   });
 }
