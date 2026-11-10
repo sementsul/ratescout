@@ -84,7 +84,15 @@ export default {
         return redirect(bare);
       }
 
-      // 1b. Показываем капчу. Cookie тут НЕ ставится — иначе её получал бы любой бот
+      // 1b. Cloudflare уже пропустил этого клиента через свой challenge (правило WAF
+      //     на /go/*) — браузер проверен, не мучаем человека второй страницей.
+      const cookieHeader = request.headers.get("Cookie") || "";
+      if (/(?:^|;\s*)cf_clearance=/.test(cookieHeader)) {
+        const target = buildTarget(url.searchParams, host, partner, erid, noErid);
+        return redirect(target || bare, { "Set-Cookie": gateCookie() });
+      }
+
+      // 1c. Показываем капчу. Cookie тут НЕ ставится — иначе её получал бы любой бот
       //     за одно скачивание страницы.
       return gatePage(url, turnstileOn ? tsSitekey : "");
     }
@@ -197,7 +205,8 @@ function gatePage(url, sitekey) {
   next.searchParams.delete("js");
   const back = next.pathname + next.search;
 
-  // Turnstile не настроен (нет сайт-ключа) — прежнее поведение: JS-переход без проверки.
+  // Turnstile не настроен (нет сайт-ключа) — прежнее поведение: cookie ставится
+  // страницей, JS сразу возвращается на тот же адрес с js=1.
   if (!sitekey) {
     const legacy = back + (back.includes("?") ? "&" : "?") + "js=1";
     return new Response(
@@ -210,6 +219,7 @@ function gatePage(url, sitekey) {
           "Content-Type": "text/html; charset=utf-8",
           "Cache-Control": "no-store",
           "X-Robots-Tag": "noindex, nofollow",
+          "Set-Cookie": gateCookie(),
         },
       },
     );
