@@ -112,14 +112,23 @@ def query(token: str, account: str, statement: str) -> list:
 
 
 def collect(token: str, account: str, ds: str, days: int) -> dict:
-    return {
-        "events": query(token, account, sql_events(ds, days)),
-        "days": query(token, account, sql_days(ds, days)),
-        "country": query(token, account, sql_dim(ds, days, "blob3")),
-        "lang": query(token, account, sql_dim(ds, days, "blob2")),
-        "host": query(token, account, sql_dim(ds, days, "blob4")),
-        "asn": query(token, account, sql_asn(ds, days)),
-    }
+    try:
+        return {
+            "events": query(token, account, sql_events(ds, days)),
+            "days": query(token, account, sql_days(ds, days)),
+            "country": query(token, account, sql_dim(ds, days, "blob3")),
+            "lang": query(token, account, sql_dim(ds, days, "blob2")),
+            "host": query(token, account, sql_dim(ds, days, "blob4")),
+            "asn": query(token, account, sql_asn(ds, days)),
+        }
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        low = body.lower()
+        # Датасета ещё нет (воркер не задеплоен или не было ни одного события) —
+        # это не ошибка, а «данных пока нет».
+        if "does not exist" in low or "unknown table" in low or "no such table" in low:
+            return {"events": [], "days": [], "country": [], "lang": [], "host": [], "asn": []}
+        raise urllib.error.HTTPError(e.url, e.code, body[:300], e.headers, None)
 
 
 # ───────────────────────────── свёртка ─────────────────────────────────
