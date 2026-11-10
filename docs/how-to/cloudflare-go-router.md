@@ -108,8 +108,9 @@
 
 ### Посмотреть
 
-Скриптом (нужен API-токен `Account · Account Analytics · Read`; `CF_ACCOUNT_ID`
-необязателен — если у токена один аккаунт, определится сам):
+Скриптом. Подойдёт уже существующий `CF_ANALYTICS_TOKEN` — проверено, что
+зональный токен читает и Analytics Engine SQL API. `CF_ACCOUNT_ID` необязателен:
+если у токена один аккаунт, определится сам.
 
 ```bash
 py -3 cf_go_stats.py --days 7
@@ -132,10 +133,10 @@ py -3 cf_go_stats.py --discover             # кто бот и какие у н�
 
 | Секрет | Что это |
 |---|---|
-| `CF_API_TOKEN` | токен `Account · Account Analytics · Read` |
+| `CF_ANALYTICS_TOKEN` | уже есть; если задан `CF_API_TOKEN` — берётся он |
 | `TG_GO_TOKEN` | токен бота проекта (необязателен, если задан `TELEGRAM_TOKEN`) |
-| `ALERT_CHAT_ID` | chat_id получателя |
-| `CF_ACCOUNT_ID` | необязателен |
+| `TG_GO_CHAT` | chat_id получателя (иначе `ALERT_CHAT_ID`) |
+| `CF_ACCOUNT_ID` | необязателен — из токена, если аккаунт один |
 
 Если Cloudflare или Telegram ответят ошибкой, скрипт пришлёт её в тот же чат —
 молчаливого отказа не будет.
