@@ -39,6 +39,9 @@ const CASES = [
     location: "https://www.bestchange.ru/?erid=2VtzqvK5m96" },
   { name: "js=1 без куки → без метки", url: "?from=usd&to=bitcoin&js=1", cookie: null, status: 302,
     location: "https://www.bestchange.ru/?erid=2VtzqvK5m96" },
+  // Cloudflare уже провёл клиента через WAF-challenge → наша страница не нужна.
+  { name: "cf_clearance → сразу с меткой", url: "?from=usd&to=bitcoin", cookie: "cf_clearance=abc", status: 302,
+    location: "https://www.bestchange.ru/usd-to-bitcoin.html?p=1116359&erid=2VtzqvK5m96" },
   { name: "POST → 405", url: "", cookie: "bcr=1", method: "POST", status: 405 },
 ];
 
@@ -56,17 +59,20 @@ for (const c of CASES) {
 }
 
 // ── Гейт ────────────────────────────────────────────────────────────────────
-// Без Turnstile (ключи не заданы) — прежний JS-переход, cookie не выставляется.
+// Без Turnstile (ключи не заданы) — прежнее поведение: cookie ставится страницей,
+// JS сразу возвращается с js=1 (иначе все первые клики уходили бы без метки).
 const gate = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`), {});
 const gateCookieHeader = gate.headers.get("Set-Cookie") || "";
 const gateHtml = await gate.text();
 const gateOk =
   gate.status === 200 &&
-  gateCookieHeader === "" &&
+  gateCookieHeader.includes("bcr=1") &&
+  gateCookieHeader.includes("Path=/go") &&
+  gateCookieHeader.includes("HttpOnly") &&
   gateHtml.includes("js=1") &&
   gate.headers.get("X-Robots-Tag") === "noindex, nofollow";
 if (!gateOk) failed++;
-console.log(`${gateOk ? "PASS" : "FAIL"}  гейт без Turnstile: 200, без cookie, js=1, noindex`);
+console.log(`${gateOk ? "PASS" : "FAIL"}  гейт без Turnstile: cookie + js=1 + noindex`);
 
 // С настроенным Turnstile — страница с капчей и без cookie.
 const ENV_TS = { TS_SITEKEY: "0xTESTKEY", TS_SECRET: "test-secret" };
