@@ -57,6 +57,7 @@ export default {
     const langParam = (url.searchParams.get("lang") || "").toLowerCase();
     const lang = (langParam === "en" || langParam === "fr" || langParam === "es") ? "en" : "ru";
     const host = HOSTS[lang];
+    const ctx = { lang, host: url.hostname, cf: request.cf };   // для счётчика
     const noErid = url.searchParams.get("noerid") === "1";   // зеркала ES/FR: без erid
     const bare = noErid ? `${host}/` : `${host}/?erid=${enc(erid)}`;
 
@@ -73,7 +74,7 @@ export default {
       //     Токен одноразовый; при любой ошибке пускаем без метки, но не блокируем.
       if (tsToken && tsSecret) {
         const ok = await verifyTurnstile(tsSecret, tsToken, request.headers.get("CF-Connecting-IP"));
-        track(env, ok ? "pass_turnstile" : "fail_turnstile", lang);
+        track(env, ok ? "pass_turnstile" : "fail_turnstile", ctx);
         if (!ok) return redirect(bare);
         const target = buildTarget(url.searchParams, host, partner, erid, noErid);
         return redirect(target || bare, { "Set-Cookie": gateCookie() });
@@ -82,7 +83,7 @@ export default {
       if (url.searchParams.get("js") === "1") {
         // Turnstile не загрузился / человек нажал «продолжить без проверки».
         // Не ломаем переход человеку, но и реферальную метку не отдаём.
-        track(env, "no_tag_js", lang);
+        track(env, "no_tag_js", ctx);
         return redirect(bare);
       }
 
@@ -90,20 +91,20 @@ export default {
       //     на /go/*) — браузер проверен, не мучаем человека второй страницей.
       const cookieHeader = request.headers.get("Cookie") || "";
       if (/(?:^|;\s*)cf_clearance=/.test(cookieHeader)) {
-        track(env, "pass_clearance", lang);
+        track(env, "pass_clearance", ctx);
         const target = buildTarget(url.searchParams, host, partner, erid, noErid);
         return redirect(target || bare, { "Set-Cookie": gateCookie() });
       }
 
       // 1c. Показываем капчу. Cookie тут НЕ ставится — иначе её получал бы любой бот
       //     за одно скачивание страницы.
-      track(env, turnstileOn ? "gate_turnstile" : "gate_js", lang);
+      track(env, turnstileOn ? "gate_turnstile" : "gate_js", ctx);
       return gatePage(url, turnstileOn ? tsSitekey : "");
     }
 
     // 2. Анти-флуд: сотни кликов с одного адреса — это парсер, а не человек.
     if (await overLimit(request)) {
-      track(env, "rate_limited", lang);
+      track(env, "rate_limited", ctx);
       return new Response("Too Many Requests", {
         status: 429,
         headers: { "Retry-After": "60", "Cache-Control": "no-store" },
@@ -112,7 +113,7 @@ export default {
 
     // 3. Цель: только из белого списка параметров, никаких произвольных URL.
     const target = buildTarget(url.searchParams, host, partner, erid, noErid);
-    track(env, target ? "tag" : "no_tag_bad", lang);
+    track(env, target ? "tag" : "no_tag_bad", ctx);
     return redirect(target || bare);
   },
 };
@@ -124,15 +125,29 @@ function enc(v) {
 }
 
 /**
- * Счётчик событий в Workers Analytics Engine (бinding ANALYTICS, необязательный).
+ * Счётчик событий в Workers Analytics Engine (биндинг ANALYTICS, необязательный).
  * Без биндинга — тихо ничего не делает. Считаем только то, что дошло до воркера:
  * запросы, которые Cloudflare отбил челленджем, сюда не попадают вообще.
+ *
+ * blobs:   [событие, язык, страна, хост, организация ASN]
+ * doubles: [1, номер ASN]
  */
-function track(env, event, lang) {
+function track(env, event, ctx) {
   try {
     const ae = env && env.ANALYTICS;
     if (ae && typeof ae.writeDataPoint === "function") {
-      ae.writeDataPoint({ indexes: [event], blobs: [event, lang || "ru"], doubles: [1] });
+      const cf = (ctx && ctx.cf) || {};
+      ae.writeDataPoint({
+        indexes: [event],
+        blobs: [
+          event,
+          (ctx && ctx.lang) || "ru",
+          cf.country || "??",
+          (ctx && ctx.host) || "",
+          cf.asOrganization || "",
+        ],
+        doubles: [1, Number(cf.asn) || 0],
+      });
     }
   } catch (e) {
     /* аналитика не должна ломать переход */

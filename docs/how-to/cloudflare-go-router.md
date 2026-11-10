@@ -102,14 +102,43 @@
 | `no_tag_js`, `no_tag_bad` | переход без метки (человека не блокируем) |
 | `rate_limited` | отсечён лимитом по IP |
 
+К каждому событию пишутся `язык`, `страна`, `хост` и `организация ASN` — по ним
+и строятся разрезы в отчёте (видно, например, что облачный ASN даёт 0% переходов
+с меткой, а обычный — 100%).
+
 ### Посмотреть
 
-Скриптом (нужен API-токен `Account · Analytics · Read` и `CF_ACCOUNT_ID`):
+Скриптом (нужен API-токен `Account · Account Analytics · Read`; `CF_ACCOUNT_ID`
+необязателен — если у токена один аккаунт, определится сам):
 
 ```bash
 py -3 cf_go_stats.py --days 7
 py -3 cf_go_stats.py --days 1 --json
+py -3 cf_go_stats.py --days 1 --tg          # отчёт в Telegram
+py -3 cf_go_stats.py --discover             # кто бот и какие у него чаты
 ```
+
+### Отправка в Telegram
+
+Скрипт умеет слать отчёт боту проекта (@RateScoutRUBot) — сводка за период,
+разбивка по дням, странам, языкам, хостам и ASN, плюс доля переходов с меткой.
+
+Переменные: `TG_TOKEN` (или `TELEGRAM_TOKEN`), `TG_CHAT` (или `ALERT_CHAT_ID`,
+либо `--chat`). Chat_id берётся из `--discover`: напишите боту `/start`, запустите
+`--discover` — он покажет id чата.
+
+Ежедневная отправка — workflow `.github/workflows/go-stats.yml` (10:10 МСК,
+вручную — `Run workflow`, можно указать число дней). Секреты репозитория:
+
+| Секрет | Что это |
+|---|---|
+| `CF_API_TOKEN` | токен `Account · Account Analytics · Read` |
+| `TG_GO_TOKEN` | токен бота проекта (необязателен, если задан `TELEGRAM_TOKEN`) |
+| `ALERT_CHAT_ID` | chat_id получателя |
+| `CF_ACCOUNT_ID` | необязателен |
+
+Если Cloudflare или Telegram ответят ошибкой, скрипт пришлёт её в тот же чат —
+молчаливого отказа не будет.
 
 Или прямо в дашборде, Workers → Analytics Engine → `go_router`:
 

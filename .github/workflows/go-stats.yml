@@ -1,0 +1,44 @@
+name: Go-router funnel to Telegram (/go/bestchange)
+
+# Воронка партнёрских переходов через /go/bestchange: сколько прошло проверку
+# Cloudflare, сколько получило метку, кто стучится (страна, язык, хост, ASN).
+# Данные — Workers Analytics Engine, датасет go_router (биндинг ANALYTICS у воркера).
+#
+# Секреты: CF_API_TOKEN (Account · Account Analytics · Read),
+#          TG_GO_TOKEN  (токен бота @RateScoutRUBot; иначе TELEGRAM_TOKEN),
+#          ALERT_CHAT_ID (chat_id получателя).
+# Переменная: CF_ACCOUNT_ID — необязательна (если у токена один аккаунт, возьмётся сам).
+
+on:
+  schedule:
+    - cron: "10 7 * * *"      # ~10:10 МСК ежедневно
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "За сколько дней"
+        required: false
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Send funnel digest
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          TG_TOKEN: ${{ secrets.TG_GO_TOKEN || secrets.TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.ALERT_CHAT_ID }}
+          DAYS: ${{ github.event.inputs.days || '1' }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "CF_API_TOKEN не задан — пропуск"; exit 0
+          fi
+          python3 cf_go_stats.py --days "$DAYS" --tg
