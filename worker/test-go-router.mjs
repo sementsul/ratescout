@@ -122,5 +122,31 @@ if (!netOk) failed++;
 console.log(`${netOk ? "PASS" : "FAIL"}  siteverify недоступен: fail open без метки`);
 globalThis.fetch = realFetch;
 
+// ── Счётчики Analytics Engine ───────────────────────────────────────────────
+const aeEvents = [];
+const ENV_AE = { ANALYTICS: { writeDataPoint: (p) => aeEvents.push(p.indexes[0]) } };
+await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`), ENV_AE);                        // гейт
+await worker.fetch(
+  new Request(`${BASE}?from=usd&to=bitcoin`, { headers: { Cookie: "cf_clearance=x" } }),
+  ENV_AE,
+);                                                                                            // прошёл CF
+await worker.fetch(
+  new Request(`${BASE}?from=usd&to=bitcoin`, { headers: { Cookie: "bcr=1" } }),
+  ENV_AE,
+);                                                                                            // метка
+const aeOk =
+  aeEvents.includes("gate_js") &&
+  aeEvents.includes("pass_clearance") &&
+  aeEvents.includes("tag") &&
+  aeEvents.every((e) => typeof e === "string");
+if (!aeOk) failed++;
+console.log(`${aeOk ? "PASS" : "FAIL"}  Analytics Engine: gate_js + pass_clearance + tag (${aeEvents.join(", ")})`);
+
+// Без биндинга счётчик не должен ломать переход.
+const noAe = await worker.fetch(new Request(`${BASE}?from=usd&to=bitcoin`, { headers: { Cookie: "bcr=1" } }), {});
+const noAeOk = noAe.status === 302;
+if (!noAeOk) failed++;
+console.log(`${noAeOk ? "PASS" : "FAIL"}  без биндинга ANALYTICS: работает`);
+
 console.log(failed ? `\n${failed} тест(ов) упало` : "\nвсе тесты прошли");
 process.exit(failed ? 1 : 0);

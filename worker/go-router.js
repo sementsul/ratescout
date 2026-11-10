@@ -73,6 +73,7 @@ export default {
       //     Токен одноразовый; при любой ошибке пускаем без метки, но не блокируем.
       if (tsToken && tsSecret) {
         const ok = await verifyTurnstile(tsSecret, tsToken, request.headers.get("CF-Connecting-IP"));
+        track(env, ok ? "pass_turnstile" : "fail_turnstile", lang);
         if (!ok) return redirect(bare);
         const target = buildTarget(url.searchParams, host, partner, erid, noErid);
         return redirect(target || bare, { "Set-Cookie": gateCookie() });
@@ -81,6 +82,7 @@ export default {
       if (url.searchParams.get("js") === "1") {
         // Turnstile не загрузился / человек нажал «продолжить без проверки».
         // Не ломаем переход человеку, но и реферальную метку не отдаём.
+        track(env, "no_tag_js", lang);
         return redirect(bare);
       }
 
@@ -88,17 +90,20 @@ export default {
       //     на /go/*) — браузер проверен, не мучаем человека второй страницей.
       const cookieHeader = request.headers.get("Cookie") || "";
       if (/(?:^|;\s*)cf_clearance=/.test(cookieHeader)) {
+        track(env, "pass_clearance", lang);
         const target = buildTarget(url.searchParams, host, partner, erid, noErid);
         return redirect(target || bare, { "Set-Cookie": gateCookie() });
       }
 
       // 1c. Показываем капчу. Cookie тут НЕ ставится — иначе её получал бы любой бот
       //     за одно скачивание страницы.
+      track(env, turnstileOn ? "gate_turnstile" : "gate_js", lang);
       return gatePage(url, turnstileOn ? tsSitekey : "");
     }
 
     // 2. Анти-флуд: сотни кликов с одного адреса — это парсер, а не человек.
     if (await overLimit(request)) {
+      track(env, "rate_limited", lang);
       return new Response("Too Many Requests", {
         status: 429,
         headers: { "Retry-After": "60", "Cache-Control": "no-store" },
@@ -107,6 +112,7 @@ export default {
 
     // 3. Цель: только из белого списка параметров, никаких произвольных URL.
     const target = buildTarget(url.searchParams, host, partner, erid, noErid);
+    track(env, target ? "tag" : "no_tag_bad", lang);
     return redirect(target || bare);
   },
 };
@@ -115,6 +121,22 @@ export default {
 
 function enc(v) {
   return encodeURIComponent(String(v));
+}
+
+/**
+ * Счётчик событий в Workers Analytics Engine (бinding ANALYTICS, необязательный).
+ * Без биндинга — тихо ничего не делает. Считаем только то, что дошло до воркера:
+ * запросы, которые Cloudflare отбил челленджем, сюда не попадают вообще.
+ */
+function track(env, event, lang) {
+  try {
+    const ae = env && env.ANALYTICS;
+    if (ae && typeof ae.writeDataPoint === "function") {
+      ae.writeDataPoint({ indexes: [event], blobs: [event, lang || "ru"], doubles: [1] });
+    }
+  } catch (e) {
+    /* аналитика не должна ломать переход */
+  }
 }
 
 function hasGateCookie(cookieHeader) {
