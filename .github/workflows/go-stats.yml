@@ -41,4 +41,4 @@ jobs:
           if [ -z "$CF_API_TOKEN" ]; then
             echo "CF_API_TOKEN не задан — пропуск"; exit 0
           fi
-          python3 cf_go_stats.py --days "$DAYS" --tg
+          python3 cf_go_stats.py --days "$DAYS" --print-only --tg
