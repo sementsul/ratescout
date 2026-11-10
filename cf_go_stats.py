@@ -412,6 +412,25 @@ def main() -> int:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return 0
 
+    total = sum(num(r) for r in data["events"])
+    if total == 0:
+        # Пусто бывает до первого клика после деплоя — не шлём таблицу из нулей.
+        msg = (f"📊 <b>/go/bestchange</b> · {args.days} дн.\n\n"
+               "Данных пока нет: счётчик ещё не получал событий "
+               "(нужен деплой воркера с биндингом <code>ANALYTICS</code> "
+               "и хотя бы один переход по партнёрской ссылке).")
+        print(msg.replace("<b>", "").replace("</b>", "").replace("<code>", "").replace("</code>", ""))
+        if args.tg:
+            if not tg_token or not args.chat:
+                print("Для --tg нужны TG_TOKEN и TG_CHAT (или --chat).", file=sys.stderr)
+                return 2
+            try:
+                tg_send(tg_token, args.chat, [msg])
+            except Exception as e:  # noqa: BLE001
+                print(f"Telegram: {e}", file=sys.stderr)
+                return 1
+        return 0
+
     if args.print_only or not args.tg:
         print(render_text(data, args.days))
 
