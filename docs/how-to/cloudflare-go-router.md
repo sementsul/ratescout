@@ -69,6 +69,57 @@
 после неё переход на `bestchange.ru/usd-to-bitcoin.html?p=…`; повторный клик по
 любой партнёрской ссылке уже проходит без капчи (cookie на 180 дней).
 
+## Статистика: сколько прошло проверку, сколько нет
+
+Две части, потому что считать их может только каждая сторона:
+
+| Что | Где считать | Насколько точно |
+|---|---|---|
+| Прошли проверку, получили метку, отсечены лимитом | наш счётчик в воркере | точно |
+| Сколько проверок **выдал** Cloudflare | Security → Events (фильтр по `/go/bestchange`) | на Free — сэмплированные события |
+
+Разница между вторым и первым ≈ те, кто проверку не прошёл. Точного «решено/не
+решено» по Managed Challenge Cloudflare на Free не отдаёт (в отличие от Turnstile,
+у которого своя аналитика).
+
+### Включить счётчик (2 клика)
+
+1. Workers → `ratescout-go` → **Settings → Bindings** → *Add* → **Analytics Engine**:
+   - Variable name: `ANALYTICS`
+   - Dataset: `go_router`
+2. Перезалить код воркера (счётчики появляются в новой версии).
+
+Без биндинга воркер работает как раньше — счётчик просто молчит.
+
+### События
+
+| Событие | Значение |
+|---|---|
+| `gate_js`, `gate_turnstile` | показана страница-гейт |
+| `pass_clearance` | прошёл проверку Cloudflare (был `cf_clearance`) |
+| `pass_turnstile`, `fail_turnstile` | результат проверки Turnstile |
+| `tag` | выдан переход с меткой |
+| `no_tag_js`, `no_tag_bad` | переход без метки (человека не блокируем) |
+| `rate_limited` | отсечён лимитом по IP |
+
+### Посмотреть
+
+Скриптом (нужен API-токен `Account · Analytics · Read` и `CF_ACCOUNT_ID`):
+
+```bash
+py -3 cf_go_stats.py --days 7
+py -3 cf_go_stats.py --days 1 --json
+```
+
+Или прямо в дашборде, Workers → Analytics Engine → `go_router`:
+
+```sql
+SELECT blob1 AS event, count() AS n
+FROM go_router
+WHERE timestamp > NOW() - INTERVAL '1' DAY
+GROUP BY event ORDER BY n DESC
+```
+
 ---
 
 ## 0. Проверить исходное состояние
