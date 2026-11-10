@@ -80,6 +80,45 @@ export default {
     const tsSitekey = (env && env.TS_SITEKEY) || "";
     const turnstileOn = Boolean(tsSecret && tsSitekey);
 
+    // Диагностика: показать состояние и цель перехода, НЕ редиректя.
+    // Нужна, чтобы проверять настройку, не кликая по партнёрской ссылке
+    // (клики владельца BestChange считает накруткой).
+    if (url.searchParams.get("diag") === "1") {
+      const cookieHeader = request.headers.get("Cookie") || "";
+      return new Response(
+        JSON.stringify(
+          {
+            host: url.hostname,
+            lang: langLabel,
+            bestchange: host,
+            partner: partner,
+            erid_configured: Boolean(erid),
+            noerid: noErid,
+            turnstile: {
+              enabled: turnstileOn,
+              sitekey_set: Boolean(tsSitekey),
+              secret_set: Boolean(tsSecret),
+            },
+            cookies: {
+              gate: hasGateCookie(cookieHeader),
+              cf_clearance: /(?:^|;\s*)cf_clearance=/.test(cookieHeader),
+            },
+            target: buildTarget(url.searchParams, host, partner, erid, noErid),
+          },
+          null,
+          2,
+        ),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        },
+      );
+    }
+
     // 1. Куки-гейт: без него метки не будет.
     if (!hasGateCookie(request.headers.get("Cookie"))) {
       const tsToken = url.searchParams.get("_ts");

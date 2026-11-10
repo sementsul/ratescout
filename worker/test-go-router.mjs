@@ -53,6 +53,7 @@ const CASES = [
 
 const BASE = "https://ratescout.ru/go/bestchange";
 let failed = 0;
+const ENV_TS_PROBE = { TS_SITEKEY: "0xTESTKEY", TS_SECRET: "test-secret" };
 
 for (const c of CASES) {
   const headers = c.cookie ? { Cookie: c.cookie } : {};
@@ -63,6 +64,18 @@ for (const c of CASES) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${c.name} → ${res.status} ${loc}`);
   if (!ok && c.location) console.log(`        ожидали ${c.status} ${c.location}`);
 }
+
+// ── Диагностика ─────────────────────────────────────────────────────────────
+const diag = await worker.fetch(new Request(`${BASE}?diag=1&from=usd&to=bitcoin`), ENV_TS_PROBE);
+const diagJson = await diag.json();
+const diagOk =
+  diag.status === 200 &&
+  diagJson.turnstile.enabled === true &&
+  diagJson.partner === "1116359" &&
+  diagJson.target === "https://www.bestchange.ru/usd-to-bitcoin.html?p=1116359&erid=2VtzqvK5m96" &&
+  (diag.headers.get("X-Robots-Tag") || "").includes("noindex");
+if (!diagOk) failed++;
+console.log(`${diagOk ? "PASS" : "FAIL"}  diag: конфиг и цель без редиректа`);
 
 // ── Гейт ────────────────────────────────────────────────────────────────────
 // Без Turnstile (ключи не заданы) — прежнее поведение: cookie ставится страницей,
