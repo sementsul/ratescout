@@ -43,6 +43,12 @@ const CASES = [
   { name: "cf_clearance → сразу с меткой", url: "?from=usd&to=bitcoin", cookie: "cf_clearance=abc", status: 302,
     location: "https://www.bestchange.ru/usd-to-bitcoin.html?p=1116359&erid=2VtzqvK5m96" },
   { name: "POST → 405", url: "", cookie: "bcr=1", method: "POST", status: 405 },
+  // workers.dev идёт мимо WAF зоны — с такого хоста метку не выдаём вообще.
+  { name: "чужой хост → 404", url: "?from=usd&to=bitcoin", cookie: "bcr=1", status: 404, base:
+    "https://ratescout-go.sementsul-maksim.workers.dev/go/bestchange" },
+  { name: "my-many.ratescout.ru → работает", url: "?from=usd&to=bitcoin", cookie: "bcr=1", status: 302,
+    base: "https://my-many.ratescout.ru/go/bestchange",
+    location: "https://www.bestchange.ru/usd-to-bitcoin.html?p=1116359&erid=2VtzqvK5m96" },
 ];
 
 const BASE = "https://ratescout.ru/go/bestchange";
@@ -50,7 +56,7 @@ let failed = 0;
 
 for (const c of CASES) {
   const headers = c.cookie ? { Cookie: c.cookie } : {};
-  const res = await worker.fetch(new Request(BASE + c.url, { method: c.method || "GET", headers }), {});
+  const res = await worker.fetch(new Request((c.base || BASE) + c.url, { method: c.method || "GET", headers }), {});
   const loc = res.headers.get("Location") || "";
   const ok = res.status === c.status && (!c.location || loc === c.location);
   if (!ok) failed++;
